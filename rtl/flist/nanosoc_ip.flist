@@ -17,9 +17,9 @@
 
 // =============    NanoSoC IP search path    =============
 
-// NanoSoC Chip Level
-$(SOCLABS_NANOSOC_RTL_TECH_DIR)/chip/chip/verilog/nanosoc_chip.v
-$(SOCLABS_NANOSOC_RTL_TECH_DIR)/chip/chip/verilog/nanosoc_chip_cfg.v
+// NanoSoC Chip Level (in nanosoc_m0_soc)
+$(SOCLABS_NANOSOC_SOC_DIR)/chip/chip/verilog/nanosoc_chip.v
+$(SOCLABS_NANOSOC_SOC_DIR)/chip/chip/verilog/nanosoc_chip_cfg.v
 
 // NanoSoC Core
 $(SOCLABS_NANOSOC_RTL_TECH_DIR)/src/nanosoc/nanosoc.sv

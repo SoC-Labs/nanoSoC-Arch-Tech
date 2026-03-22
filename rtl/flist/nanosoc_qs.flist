@@ -16,8 +16,8 @@
 +libext+.v+.vlib
 
 // =============    NanoSoC IP search path    =============
-// NanoSoC Chip Pads Level
-$(SOCLABS_NANOSOC_RTL_TECH_DIR)/chip/pads/glib/verilog/nanosoc_chip_pads.v
+// NanoSoC Chip Pads Level (in nanosoc_m0_soc)
+$(SOCLABS_NANOSOC_SOC_DIR)/chip/pads/glib/verilog/nanosoc_chip_pads.v
 $(SOCLABS_NANOSOC_RTL_TECH_DIR)/extio8x4-axis/rtl/extio8x4_axis_initiator.v
 $(SOCLABS_NANOSOC_RTL_TECH_DIR)/extio8x4-axis/rtl/extio8x4_ifsm.v
 $(SOCLABS_NANOSOC_RTL_TECH_DIR)/extio8x4-axis/rtl/extio8x4_sync.v

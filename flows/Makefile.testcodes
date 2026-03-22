@@ -1,0 +1,46 @@
+#-----------------------------------------------------------------------------
+# NanoSoC Software Compilation Makefile 
+# A joint work commissioned on behalf of SoC Labs, under Arm Academic Access license.
+#
+# Contributors
+#
+# David Mapstone (d.a.mapstone@soton.ac.uk)
+#
+# Copyright (C) 2026, SoC Labs (www.soclabs.org)
+#-----------------------------------------------------------------------------
+# Description:
+# This Makefile generates the testcode files for NanoSoC. Testcodes should be renamed
+# but having this in a separate file helps with clarity in the meantime.
+#-----------------------------------------------------------------------------
+
+# Default Testname is Hello
+TESTNAME ?= hello
+
+# Variable to determine whether this is an example NanoSoC test or not
+# - determines where to search for the testcode
+# Directory of Testcodes
+EXAMPLE_TESTCODES_DIR := $(SOCLABS_NANOSOC_FIRMWARE_TECH_DIR)/testcodes
+EXAMPLE_TEST          ?= YES
+
+ifeq ($(EXAMPLE_TEST),YES)
+    TEST_SRC_DIR := $(EXAMPLE_TESTCODES_DIR)/$(TESTNAME)
+    TEST_SRC_MAKFILE_DIR := $(TEST_SRC_DIR)
+    MAKEFILE_NAME := makefile
+else
+    TEST_SRC_DIR :=
+    TEST_SRC_MAKFILE :=
+endif
+
+# Location to find source files for testcode
+
+# Output file that is generated under testcodes
+# TODO: Need to fix this so not outputting where source files are located
+# - this will require rework of the makefiles for each test
+TESTCODE_OUT_HEX := $(TEST_DIR)/$(TESTNAME).hex
+
+# Phony target to build testcode
+.PHONY: testcode
+testcode: $(TESTCODE_OUT_HEX)
+
+$(TESTCODE_OUT_HEX):
+	$(MAKE) -C $(TEST_SRC_MAKFILE_DIR) -f $(MAKEFILE_NAME) all

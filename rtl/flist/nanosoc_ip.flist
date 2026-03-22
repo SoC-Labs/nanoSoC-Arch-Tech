@@ -1,0 +1,73 @@
+//-----------------------------------------------------------------------------
+// NanoSoC IP Filelist
+// A joint work commissioned on behalf of SoC Labs, under Arm Academic Access license.
+//
+// Contributors
+//
+// David Mapstone (d.a.mapstone@soton.ac.uk)
+//
+// Copyright � 2021-3, SoC Labs (www.soclabs.org)
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+// Abstract : Verilog Command File for NanoSoC IP
+//-----------------------------------------------------------------------------
+
+// ============= Verilog library extensions ===========
++libext+.v+.vlib
+
+// =============    NanoSoC IP search path    =============
+
+// NanoSoC Chip Level
+$(SOCLABS_NANOSOC_RTL_TECH_DIR)/chip/chip/verilog/nanosoc_chip.v
+$(SOCLABS_NANOSOC_RTL_TECH_DIR)/chip/chip/verilog/nanosoc_chip_cfg.v
+
+// NanoSoC Core
+$(SOCLABS_NANOSOC_RTL_TECH_DIR)/src/nanosoc/nanosoc.sv
+
+// NanoSoC System Level
+$(SOCLABS_NANOSOC_RTL_TECH_DIR)/src/system/nanosoc_system.v
+
+// NanoSoC Subsystems
+$(SOCLABS_NANOSOC_RTL_TECH_DIR)/src/subsystems/cpu/verilog/nanosoc_ss_cpu.v
+$(SOCLABS_NANOSOC_RTL_TECH_DIR)/src/subsystems/debug/verilog/nanosoc_ss_debug.v
+$(SOCLABS_NANOSOC_RTL_TECH_DIR)/src/subsystems/systemctrl/verilog/nanosoc_ss_systemctrl.v
+$(SOCLABS_NANOSOC_RTL_TECH_DIR)/src/subsystems/dma/verilog/nanosoc_dma_wrapper.v
+$(SOCLABS_NANOSOC_RTL_TECH_DIR)/src/subsystems/dma/verilog/nanosoc_ss_dma.sv
+$(SOCLABS_NANOSOC_RTL_TECH_DIR)/src/subsystems/extio/verilog/nanosoc_ss_extio.v
+
+// Bus Matrix (generated from nanosoc_ahb_interconnect.yaml)
+-f $(SOCLABS_PROJECT_DIR)/build/rtl/nanosoc_ahb_interconnect/flist/nanosoc_interconnect.flist
+
+// CPU Subsystem Interconnect
+-f $(SOCLABS_PROJECT_DIR)/build/rtl/nanosoc_cpu_ss_ahb_interconnect/flist/nanosoc_cpu_ss_interconnect.flist
+
+// NanoSoC Regions - Bootrom
+$(SOCLABS_NANOSOC_RTL_TECH_DIR)/src/regions/bootrom_0/nanosoc_bootrom_cpu_0.v
+$(SOCLABS_NANOSOC_RTL_TECH_DIR)/src/regions/bootrom_0/nanosoc_region_bootrom_0.v
+
+// NanoSoC Regions - CPU Memories
+$(SOCLABS_NANOSOC_RTL_TECH_DIR)/src/regions/dmem_0/nanosoc_region_dmem_0.v
+$(SOCLABS_NANOSOC_RTL_TECH_DIR)/src/regions/imem_0/nanosoc_region_imem_0.v
+
+// NanoSoC Regions - Expansion Regions
+$(SOCLABS_NANOSOC_RTL_TECH_DIR)/src/regions/exp/nanosoc_region_exp.v
+$(SOCLABS_NANOSOC_RTL_TECH_DIR)/src/regions/sram/nanosoc_region_sram.v
+
+// NanoSoC Regions - DMA Controller Config Region
+$(SOCLABS_NANOSOC_RTL_TECH_DIR)/src/regions/dmac_ctrl/nanosoc_region_dmac_ctrl.v
+
+// NanoSoC Regions - Soc Peripheral Region
+$(SOCLABS_NANOSOC_RTL_TECH_DIR)/src/regions/soc_peripheral/nanosoc_region_soc_peripheral.v
+$(SOCLABS_NANOSOC_RTL_TECH_DIR)/src/regions/soc_peripheral/nanosoc_sysctrl.v
+$(SOCLABS_NANOSOC_RTL_TECH_DIR)/src/regions/soc_peripheral/nanosoc_soc_peripheral_apb_ss.v
+$(SOCLABS_NANOSOC_RTL_TECH_DIR)/src/regions/soc_peripheral/nanosoc_soc_peripheral_decode.v
+
+// NanoSoC Regions - SysTable Region
+$(SOCLABS_NANOSOC_RTL_TECH_DIR)/src/regions/systable/nanosoc_coresight_systable.v
+$(SOCLABS_NANOSOC_RTL_TECH_DIR)/src/regions/systable/nanosoc_region_systable.v
+
+// NanoSoC Control
+$(SOCLABS_NANOSOC_RTL_TECH_DIR)/src/control/verilog/nanosoc_clkctrl.v
+$(SOCLABS_NANOSOC_RTL_TECH_DIR)/src/control/verilog/nanosoc_pin_mux.v
+
+

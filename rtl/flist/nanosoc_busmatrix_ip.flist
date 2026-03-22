@@ -1,0 +1,42 @@
+//-----------------------------------------------------------------------------
+// NanoSoC BusMatrix IP Filelist
+// A joint work commissioned on behalf of SoC Labs, under Arm Academic Access license.
+//
+// Contributors
+//
+// David Mapstone (d.a.mapstone@soton.ac.uk)
+//
+// Copyright © 2021-3, SoC Labs (www.soclabs.org)
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+// Abstract : Verilog Command File for NanoSoC IP
+//-----------------------------------------------------------------------------
+
+// ============= Verilog library extensions ===========
++libext+.v+.vlib
+
+// =============    NanoSoC BusMatrix IP search path    =============
+$(SOCLABS_PROJECT_DIR)/build/rtl/nanosoc_ahb_interconnect/verilog/nanosoc_ahb_interconnect/nanosoc_arbiter_BOOTROM_0.v
+$(SOCLABS_PROJECT_DIR)/build/rtl/nanosoc_ahb_interconnect/verilog/nanosoc_ahb_interconnect/nanosoc_arbiter_DMEM_0.v
+$(SOCLABS_PROJECT_DIR)/build/rtl/nanosoc_ahb_interconnect/verilog/nanosoc_ahb_interconnect/nanosoc_arbiter_SRAM_1.v
+$(SOCLABS_PROJECT_DIR)/build/rtl/nanosoc_ahb_interconnect/verilog/nanosoc_ahb_interconnect/nanosoc_arbiter_SRAM_0.v
+$(SOCLABS_PROJECT_DIR)/build/rtl/nanosoc_ahb_interconnect/verilog/nanosoc_ahb_interconnect/nanosoc_arbiter_EXP.v
+$(SOCLABS_PROJECT_DIR)/build/rtl/nanosoc_ahb_interconnect/verilog/nanosoc_ahb_interconnect/nanosoc_arbiter_IMEM_0.v
+$(SOCLABS_PROJECT_DIR)/build/rtl/nanosoc_ahb_interconnect/verilog/nanosoc_ahb_interconnect/nanosoc_arbiter_SYSIO.v
+$(SOCLABS_PROJECT_DIR)/build/rtl/nanosoc_ahb_interconnect/verilog/nanosoc_ahb_interconnect/nanosoc_arbiter_SYSTABLE.v
+$(SOCLABS_PROJECT_DIR)/build/rtl/nanosoc_ahb_interconnect/verilog/nanosoc_ahb_interconnect/nanosoc_ahb_interconnect_default_slave.v
+$(SOCLABS_PROJECT_DIR)/build/rtl/nanosoc_ahb_interconnect/verilog/nanosoc_ahb_interconnect/nanosoc_ahb_interconnect_lite.v
+$(SOCLABS_PROJECT_DIR)/build/rtl/nanosoc_ahb_interconnect/verilog/nanosoc_ahb_interconnect/nanosoc_ahb_interconnect.v
+$(SOCLABS_PROJECT_DIR)/build/rtl/nanosoc_ahb_interconnect/verilog/nanosoc_ahb_interconnect/nanosoc_inititator_input.v
+$(SOCLABS_PROJECT_DIR)/build/rtl/nanosoc_ahb_interconnect/verilog/nanosoc_ahb_interconnect/nanosoc_matrix_decode_CPU_0.v
+$(SOCLABS_PROJECT_DIR)/build/rtl/nanosoc_ahb_interconnect/verilog/nanosoc_ahb_interconnect/nanosoc_matrix_decode_DEBUG.v
+$(SOCLABS_PROJECT_DIR)/build/rtl/nanosoc_ahb_interconnect/verilog/nanosoc_ahb_interconnect/nanosoc_matrix_decode_DMAC_0.v
+$(SOCLABS_PROJECT_DIR)/build/rtl/nanosoc_ahb_interconnect/verilog/nanosoc_ahb_interconnect/nanosoc_matrix_decode_DMAC_1.v
+$(SOCLABS_PROJECT_DIR)/build/rtl/nanosoc_ahb_interconnect/verilog/nanosoc_ahb_interconnect/nanosoc_target_output_BOOTROM_0.v
+$(SOCLABS_PROJECT_DIR)/build/rtl/nanosoc_ahb_interconnect/verilog/nanosoc_ahb_interconnect/nanosoc_target_output_DMEM_0.v
+$(SOCLABS_PROJECT_DIR)/build/rtl/nanosoc_ahb_interconnect/verilog/nanosoc_ahb_interconnect/nanosoc_target_output_SRAM_1.v
+$(SOCLABS_PROJECT_DIR)/build/rtl/nanosoc_ahb_interconnect/verilog/nanosoc_ahb_interconnect/nanosoc_target_output_SRAM_0.v
+$(SOCLABS_PROJECT_DIR)/build/rtl/nanosoc_ahb_interconnect/verilog/nanosoc_ahb_interconnect/nanosoc_target_output_EXP.v
+$(SOCLABS_PROJECT_DIR)/build/rtl/nanosoc_ahb_interconnect/verilog/nanosoc_ahb_interconnect/nanosoc_target_output_IMEM_0.v
+$(SOCLABS_PROJECT_DIR)/build/rtl/nanosoc_ahb_interconnect/verilog/nanosoc_ahb_interconnect/nanosoc_target_output_SYSIO.v
+$(SOCLABS_PROJECT_DIR)/build/rtl/nanosoc_ahb_interconnect/verilog/nanosoc_ahb_interconnect/nanosoc_target_output_SYSTABLE.v

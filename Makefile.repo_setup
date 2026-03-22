@@ -1,0 +1,143 @@
+#-----------------------------------------------------------------------------
+# NanoSoC-Redux Repository Setup Makefile
+# A joint work commissioned on behalf of SoC Labs, under Arm Academic Access license.
+#
+# Contributors
+#
+# David Mapstone (d.a.mapstone@soton.ac.uk)
+#
+# Copyright (C) 2026, SoC Labs (www.soclabs.org)
+#-----------------------------------------------------------------------------
+# Setup Repository Makefile
+#-----------------------------------------------------------------------------
+# Description:
+# This makefile sets up the NanoSoC-Redux tech repository.
+# It performs the following tasks:
+# 1. Generates the Bootrom SystemVerilog file required for NanoSoC.
+# 2. Generates the AHB Bus Matrix Verilog RTL for the NanoSoC interconnect.
+# 3. Configures the DMA-350 IP core to work within the NanoSoC environment.
+#-----------------------------------------------------------------------------
+
+# Determine the absolute path of this Makefile
+THIS_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+ABS_DIR  := $(abspath $(THIS_DIR))
+
+# Sub-directory paths (flattened, no longer separate submodules)
+SOCLABS_NANOSOC_RTL_TECH_DIR      ?= $(ABS_DIR)/rtl
+SOCLABS_NANOSOC_FIRMWARE_TECH_DIR ?= $(ABS_DIR)/firmware
+
+# Bootrom SystemVerilog File to be generated
+BOOTROM_BUILD_DIR ?= $(SOCLABS_PROJECT_DIR)/system/src/bootrom
+BOOTROM_SV        := $(BOOTROM_BUILD_DIR)/verilog/bootrom.sv
+
+# Busmatrix build output (sentinel: generated top-level Verilog file)
+BUSMATRIX_BUILD_DIR ?= $(SOCLABS_PROJECT_DIR)/build/rtl/nanosoc_ahb_interconnect
+BUSMATRIX_VERILOG   := $(BUSMATRIX_BUILD_DIR)/verilog/nanosoc_ahb_interconnect/nanosoc_ahb_interconnect_lite.v
+
+# Configuration flag file for DMA-350
+DMA350_CONFIG_FILE := $(ABS_DIR)/.dma350_configured
+
+# DMA350 Technology Repository (inside RTL sub-repo)
+DMA350_TECH_REPO := $(SOCLABS_NANOSOC_RTL_TECH_DIR)/sldma350_tech
+
+#------------------------------------------------------------------------
+# Setup Dependencies
+#------------------------------------------------------------------------
+# List of targets to setup the NanoSoC Repository
+SETUP_DEPENDENCIES := $(BOOTROM_SV) $(BUSMATRIX_VERILOG)
+
+# Target to setup the repository
+setup_repo: $(SETUP_DEPENDENCIES)
+
+#------------------------------------------------------------------------
+# Generate the BOOTROM for NanoSoC
+#------------------------------------------------------------------------
+# Default directory for simulation
+SIM_TOP_DIR     ?= $(SOCLABS_PROJECT_DIR)/simulate/sim
+BOOTROM_SIM_DIR := $(SIM_TOP_DIR)/bootloader
+
+# Testcodes Directory (in firmware sub-repo)
+TESTCODES_DIR := $(SOCLABS_NANOSOC_FIRMWARE_TECH_DIR)/testcodes
+
+# Generate the Bootrom SV file for NanoSoC
+$(BOOTROM_SV):
+	@echo -e "\n\033[1;36m-----------------------------------------------"
+	@echo "Generating Bootrom SV File for NanoSoC"
+	@echo -e "-----------------------------------------------\033[0m"
+	@$(MAKE) -f $(ABS_DIR)/flows/Makefile.bootrom bootrom \
+		BOOTROM_BUILD_DIR=$(BOOTROM_BUILD_DIR) \
+		SIM_TOP_DIR=$(SIM_TOP_DIR) \
+		TESTCODES_DIR=$(TESTCODES_DIR)
+
+#------------------------------------------------------------------------
+# Generate the AHB Bus Matrix for NanoSoC
+#------------------------------------------------------------------------
+# Busmatrix source makefile (now in nanosoc_m0_soc)
+BUSMATRIX_MAKEFILE := $(SOCLABS_NANOSOC_SOC_DIR)/src/interconnect/makefile
+
+# Generate the Busmatrix Verilog RTL
+$(BUSMATRIX_VERILOG):
+	@echo -e "\n\033[1;36m-----------------------------------------------"
+	@echo "Generating AHB Bus Matrix Verilog for NanoSoC"
+	@echo -e "-----------------------------------------------\033[0m"
+	@$(MAKE) -f $(BUSMATRIX_MAKEFILE) build \
+		SOCLABS_NANOSOC_RTL_TECH_DIR=$(SOCLABS_NANOSOC_RTL_TECH_DIR) \
+		SOCLABS_PROJECT_DIR=$(SOCLABS_PROJECT_DIR) \
+		BUILD_DIR=$(BUSMATRIX_BUILD_DIR)
+
+#------------------------------------------------------------------------
+# Configure the DMA-350 for NanoSoC
+#------------------------------------------------------------------------
+# Location to source the generated address map for DMA-350
+NANOSOC_ADDRESS_MAP_DMA350_SRC    := $(DMA350_TECH_REPO)/config/address_map_m1_nanosoc.sv
+
+# Location to place the generated address map within the Arm IP Library
+NANOSOC_ADDRESS_MAP_DMA350_IP_LIB := $(ARM_IP_LIBRARY_PATH)/DMA-350/CG096-r0p0-00rel0/CG096-BU-50000-r0p0-00rel0/dma350/logical/models/modules/generic/address_map_m1_nanosoc.sv
+
+# Directory where configuration files are stored
+DMA_350_CONFIGURED_DIR := $(DMA350_TECH_REPO)/src
+
+# DMA-350 Configuration Directory
+$(DMA_350_CONFIGURED_DIR):
+	@$(MAKE) -C $(DMA350_TECH_REPO) config_dma_ahb
+
+# Perform the DMA-350 configuration only if not already done
+$(DMA350_CONFIG_FILE): | $(DMA_350_CONFIGURED_DIR) $(NANOSOC_ADDRESS_MAP_DMA350_IP_LIB)
+	@echo -e "\n\033[1;36m-----------------------------------------------"
+	@echo "Configuring DMA-350 within NanoSoC Technology Library"
+	@echo -e "-----------------------------------------------\033[0m"
+	@touch $@
+
+# Produce the address map file for DMA-350
+# - Copy the generated address map to the Arm IP Library location
+$(NANOSOC_ADDRESS_MAP_DMA350_IP_LIB): $(NANOSOC_ADDRESS_MAP_DMA350_SRC)
+	@cp $^ $@
+
+#------------------------------------------------------------------------
+# Unset the NanoSoC Repository Configuration
+#------------------------------------------------------------------------
+.PHONY: unset_repo
+
+# Unset the repository by cleaning generated files
+unset_repo: clean_dma_350 clean_bootrom clean_busmatrix
+	@echo "NanoSoC-Redux Tech repository unset complete."
+
+.PHONY: clean_busmatrix
+# Clean all the busmatrix generated files
+clean_busmatrix:
+	@echo "Cleaning generated NanoSoC Bus Matrix files..."
+	@rm -rf $(BUSMATRIX_BUILD_DIR)
+
+.PHONY: clean_bootrom
+# Clean all the bootrom generated files
+clean_bootrom:
+	@echo "Cleaning generated NanoSoC Bootrom files..."
+	@rm -rf $(BOOTROM_BUILD_DIR)
+	@rm -rf $(BOOTROM_SIM_DIR)
+
+.PHONY: clean_dma_350
+# Clean all the DMA-350 generated configuration files
+clean_dma_350:
+	@echo "Cleaning generated NanoSoC DMA-350 configuration files..."
+	@rm -rf $(DMA_350_CONFIGURED_DIR)
+	@rm -f $(DMA350_CONFIG_FILE)

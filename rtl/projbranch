@@ -1,0 +1,20 @@
+#-----------------------------------------------------------------------------
+# SoC Labs Sub repository branch setup
+# A joint work commissioned on behalf of SoC Labs, under Arm Academic Access license.
+#
+# Contributors
+#
+# David Mapstone (d.a.mapstone@soton.ac.uk)
+#
+# Copyright  2023-6, SoC Labs (www.soclabs.org)
+#-----------------------------------------------------------------------------
+# Each Repo needs to have its branch set manually here - they will default
+# to main if not specified.
+# NanoSoC-Redux RTL Sub-Repository Branch Index
+
+nanosoc/slcorem0_tech: main
+nanosoc/sldma230_tech: main
+nanosoc/socdebug_tech: main
+nanosoc/sldma350_tech: dm-makefile_rewrite
+nanosoc/sl_ams_tech: main
+nanosoc/synopsys_28nm_slm_integration: main

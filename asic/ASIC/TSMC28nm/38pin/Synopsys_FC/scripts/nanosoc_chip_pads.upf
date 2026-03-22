@@ -1,0 +1,115 @@
+set_design_attributes -elements . -attribute enable_bias derived
+
+################################################################################
+# Create and logically connect power ports and nets
+################################################################################
+# IO supply 
+create_supply_port VDDIO
+create_supply_net  VDDIO
+connect_supply_net VDDIO -ports VDDIO
+
+create_supply_port VSSIO
+create_supply_net  VSSIO
+connect_supply_net VSSIO -ports VSSIO
+
+# Always on VDD
+create_supply_port VDD
+create_supply_net  VDD
+connect_supply_net VDD -ports VDD
+
+# Ground
+create_supply_port VSS
+create_supply_net  VSS
+connect_supply_net VSS -ports VSS
+
+# VDDACC 
+create_supply_port VDDACC
+create_supply_net VDDACC 
+connect_supply_net VDDACC -ports VDDACC
+
+create_supply_net POC
+connect_supply_net POC -ports uPAD_VDDIO_3/POC
+
+################################################################################
+# Create supply sets
+################################################################################
+create_supply_set SS_TOP -function {power VDD} -function {ground VSS}
+create_supply_set SS_ACCEL -function {power VDDACC} -function {ground VSS}
+create_supply_set SS_IO -function {power VDDIO} -function {ground VSSIO}
+
+################################################################################
+# Create power domains
+################################################################################
+create_power_domain TOP -supply {primary SS_TOP}
+create_power_domain ACCEL -supply {primary SS_ACCEL} -elements {u_nanosoc_chip/u_system/u_ss_expansion/u_region_exp/u_ss_accelerator}
+
+
+################################################################################
+# Create level shifters
+################################################################################
+set_level_shifter TOP_TO_ACCEL -domain TOP -applies_to outputs -rule both -location self
+set_level_shifter ACCEL_TO_TOP -domain ACCEL -applies_to outputs -rule both -location self
+
+################################################################################
+# Define port states
+################################################################################
+
+add_port_state VSS              -state {on 0.0 0.0 0.0}
+add_port_state VDD              -state {on 0.81 0.9 0.99}
+add_port_state VDDACC           -state {on 0.81 0.9 0.99}
+
+################################################################################
+# Define power state table
+################################################################################
+create_pst cm0_pst -supplies           {VSS  VDD  VDDACC}
+add_pst_state run -pst cm0_pst -state  {on   on   on    }
+
+
+
+connect_supply_net POC -ports {io_filler_*/POC}
+connect_supply_net POC -ports {uPAD*/POC}
+
+connect_supply_net VDD -ports {io_filler_*/VDD}
+connect_supply_net VDD -ports {uPAD*/VDD}
+
+connect_supply_net VDDIO -ports {io_filler_*/VDDPST}
+connect_supply_net VDDIO -ports {uPAD*/VDDPST}
+
+connect_supply_net VSSIO -ports {io_filler_*/VSSPST}
+connect_supply_net VSSIO -ports {uPAD*/VSSPST}
+
+connect_supply_net VSS -ports {io_filler_*/VSS}
+connect_supply_net VSS -ports {uPAD*/VSS}
+
+
+connect_supply_net VDDACC -ports {uPAD_VDDACC_*/AVDD}
+
+connect_supply_net POC -ports {__added_corner_cell_*/POC}
+connect_supply_net VDD -ports {__added_corner_cell_*/VDD}
+connect_supply_net VDDIO -ports {__added_corner_cell_*/VDDPST}
+connect_supply_net VSSIO -ports {__added_corner_cell_*/VSSPST}
+connect_supply_net VSS -ports {__added_corner_cell_*/VSS}
+
+
+connect_supply_net VDDACC -ports {u_nanosoc_chip/u_system/u_ss_expansion/u_region_exp/u_ss_accelerator/*/VDD}
+connect_supply_net VDD -ports {u_nanosoc_chip/u_system/u_ss_cpu/u_region_bootrom_0/u_bootrom_cpu_0/u_bootrom/u_sl_rom/VDD}
+connect_supply_net VDD -ports {u_nanosoc_chip/u_system/u_ss_cpu/u_region_dmem_0/u_dmem_0/u_sram/genblk1.u_sram/VDD}
+connect_supply_net VDD -ports {u_nanosoc_chip/u_system/u_ss_cpu/u_region_imem_0/u_imem_0/u_sram/genblk1.u_sram/VDD}
+connect_supply_net VDD -ports {u_nanosoc_chip/u_system/u_ss_expansion/u_region_expram_l/u_expram_l/u_sram/genblk1.u_sram/VDD}
+connect_supply_net VDD -ports {u_nanosoc_chip/u_system/u_ss_expansion/u_region_expram_h/u_expram_h/u_sram/genblk1.u_sram/VDD}
+connect_supply_net VSS -ports {u_nanosoc_chip/u_system/u_ss_cpu/u_region_bootrom_0/u_bootrom_cpu_0/u_bootrom/u_sl_rom/VSSE}
+connect_supply_net VSS -ports {u_nanosoc_chip/u_system/u_ss_cpu/u_region_dmem_0/u_dmem_0/u_sram/genblk1.u_sram/VSS}
+connect_supply_net VSS -ports {u_nanosoc_chip/u_system/u_ss_cpu/u_region_imem_0/u_imem_0/u_sram/genblk1.u_sram/VSS}
+connect_supply_net VSS -ports {u_nanosoc_chip/u_system/u_ss_expansion/u_region_expram_l/u_expram_l/u_sram/genblk1.u_sram/VSS}
+connect_supply_net VSS -ports {u_nanosoc_chip/u_system/u_ss_expansion/u_region_expram_h/u_expram_h/u_sram/genblk1.u_sram/VSS}
+
+set_related_supply_net -object {u_nanosoc_chip/u_system/u_ss_cpu/u_region_bootrom_0/u_bootrom_cpu_0/u_bootrom/u_sl_rom/*} -ground VSS -power VDD
+
+# Synopsys PVT
+connect_supply_net VDD -ports {u_nanosoc_chip/u_system/u_ss_systemctrl/u_region_soc_peripheral/u_nanosoc_soc_peripheral_snps_pvt_ss/gen_snps_PVT_ts0.u_snps_PVT_ts0/u_synopsys_ts/VDD}
+connect_supply_net VDD -ports {u_nanosoc_chip/u_system/u_ss_systemctrl/u_region_soc_peripheral/u_nanosoc_soc_peripheral_snps_pvt_ss/gen_snps_PVT_ts0.u_snps_PVT_ts0/u_synopsys_ts/VDDA}
+connect_supply_net VSS -ports {u_nanosoc_chip/u_system/u_ss_systemctrl/u_region_soc_peripheral/u_nanosoc_soc_peripheral_snps_pvt_ss/gen_snps_PVT_ts0.u_snps_PVT_ts0/u_synopsys_ts/VSS}
+
+connect_supply_net VSS -ports {u_nanosoc_chip/u_system/u_ss_systemctrl/u_region_soc_peripheral/u_nanosoc_soc_peripheral_snps_pvt_ss/gen_snps_PVT_pd0.u_snps_PVT_pd0/u_synopsys_pd/VSS}
+connect_supply_net VDD -ports {u_nanosoc_chip/u_system/u_ss_systemctrl/u_region_soc_peripheral/u_nanosoc_soc_peripheral_snps_pvt_ss/gen_snps_PVT_pd0.u_snps_PVT_pd0/u_synopsys_pd/VDD}
+connect_supply_net VSS -ports {u_nanosoc_chip/u_system/u_ss_systemctrl/u_region_soc_peripheral/u_nanosoc_soc_peripheral_snps_pvt_ss/gen_snps_PVT_pd0.u_snps_PVT_pd0/u_synopsys_pd/VDDA}

@@ -131,8 +131,8 @@ void FlashLoader_ASM(void)
 
 void FlashLoader(void)
 {
-  if (CMSDK_SYSCON->REMAP==0) {
-    /* Remap is already cleared. Something has gone wrong.
+  if (CMSDK_SYSCON->REMAP==1) {
+    /* Remap is already Set. Something has gone wrong.
     Likely that the user is trying to run bootloader as a test,
      which is not what this program is for.
     */
@@ -141,7 +141,7 @@ void FlashLoader(void)
     while (1);
     }
   UartPuts("REMAP->IMEM0\n"); // CMSDK boot loader\n");
-  CMSDK_SYSCON->REMAP = 0;  // Clear remap
+  CMSDK_SYSCON->REMAP = 1;  // Set remap
   __DSB();
   __ISB();
 

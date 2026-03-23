@@ -238,7 +238,6 @@ module nanosoc #(
     wire               [7:0] adp_gpi8 = adp_gpo8;   // ADP General Purpose Input
     
     // Bus Matrix Remap Control - To Interconnect Subsystem
-    wire                   soc_peripheral_remap_ctrl;   // REMAP control bit
     wire             [3:0] sys_remap_ctrl;              // REMAP control bit
 
     //--------------------------
@@ -866,10 +865,6 @@ module nanosoc #(
     assign sys_gpio0_any_irq = |sys_gpio0_irq;
     assign sys_gpio1_any_irq = |sys_gpio1_irq;
 
-    // Remap Wiring
-    //--------------------------
-    assign sys_remap_ctrl[3:0] = {3'b000, !soc_peripheral_remap_ctrl};
-
     // Combined CPU Wiring
     //--------------------------
     assign cpu_sysresetreq  = cpu_0_sysresetreq;
@@ -949,7 +944,7 @@ module nanosoc #(
         .SYS_GPIO1_IRQ(sys_gpio1_irq),
 
         // CPU power/reset control
-        .SYS_REMAP_CTRL(soc_peripheral_remap_ctrl),
+        .SYS_REMAP_CTRL(sys_remap_ctrl),
         .SYS_WDOGRESETREQ(sys_wdogresetreq),
         .SYS_LOCKUPRESET(sys_lockupreset),
 

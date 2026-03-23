@@ -71,7 +71,7 @@ module nanosoc_region_soc_peripheral #(
     output wire         [15:0]  SYS_GPIO1_IRQ,    // GPIO 0 irqs
     
     // CPU power/reset control
-    output wire                 REMAP_CTRL,       // REMAP control bit
+    output wire          [3:0]  REMAP_CTRL,       // REMAP control bit
     output wire                 APBACTIVE,        // APB bus active (for clock gating of PCLKG)
     input  wire                 SYSRESETREQ,      // Processor control - system reset request
     output wire                 WDOGRESETREQ,     // Watchdog reset request

@@ -38,7 +38,7 @@
 // Programmer's model
 // -------------------------------
 // 0x000 RW    MEM_CTRL
-//      bit [  0]  REMAP - default value 1
+//      bit [3:0]  REMAP - default value 0
 // 0x004 RW    PMU_CTRL
 //      bit [  0]  PMUENABLE - default value 0
 // 0x008 R/W   SYS_CTRL
@@ -112,7 +112,7 @@ module nanosoc_sysctrl (
   // --------------------------------------------------------------------------
 
   reg    [31:0] read_mux;
-  reg           reg_remap;
+  reg     [3:0] reg_remap;
 `ifdef CORTEX_M0DESIGNSTART
   wire          reg_pmuenable;
 `else
@@ -168,7 +168,7 @@ module nanosoc_sysctrl (
       1'b1: begin
         if (reg_addr[11:5] == 7'h00) begin
           case(reg_addr[4:2])
-            3'b000: read_mux = {{31{1'b0}}, reg_remap};
+            3'b000: read_mux = {{28{1'b0}}, reg_remap};
             3'b001: read_mux = {{31{1'b0}}, reg_pmuenable};
             3'b010: read_mux = {{31{1'b0}}, reg_lockupreset};
             3'b100: read_mux = {{29{1'b0}}, reg_resetinfo};
@@ -214,9 +214,9 @@ module nanosoc_sysctrl (
   // registering stage
   always @(posedge HCLK or negedge HRESETn) begin
     if (~HRESETn)
-      reg_remap <= 1'b1;
+      reg_remap <= 4'b0000;
     else if (reg_remap_write)
-      reg_remap <= HWDATA[0];
+      reg_remap <= HWDATA[3:0];
   end
 
   // ----------------------------------------------------------

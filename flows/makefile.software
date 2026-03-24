@@ -79,8 +79,12 @@ $(SIM_DIR):
 ADP_FILE   := $(SIM_DIR)/adp.cmd
 ADP_SOURCE := $(TESTCODES_DIR)/$(TESTNAME)/adp.cmd
 
-$(ADP_FILE): $(ADP_SOURCE) | $(SIM_DIR)
-	@cp $(ADP_SOURCE) $(ADP_FILE)
+$(ADP_FILE): | $(SIM_DIR)
+	@if [ -e $(ADP_SOURCE) ]; then \
+	  cp $(ADP_SOURCE) $(ADP_FILE); \
+	else \
+	  echo "# Default empty ADP command file" > $(ADP_FILE); \
+	fi
 
 # Copy DATA CSV
 DATA_CSV := $(SIM_DIR)/data_in.csv
@@ -88,7 +92,7 @@ DATA_CSV_SOURCE := $(TESTCODES_DIR)/$(TESTNAME)/data_in.csv
 
 $(DATA_CSV): $(DATA_CSV_SOURCE) | $(SIM_DIR)
 	@cp $(DATA_CSV_SOURCE) $(DATA_CSV)
-	
+
 # Only create DATA_CSV target if source file exists
 ifneq ($(wildcard $(DATA_CSV_SOURCE)),)
     OPTIONAL_TESTCODE_DEPS += $(DATA_CSV)

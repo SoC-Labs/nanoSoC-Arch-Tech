@@ -141,7 +141,6 @@ module nanosoc_ss_dma #(
     output wire   [DMAC_0_CHANNEL_NUM-1:0] dmac_0_dma_done,
     output wire                            dmac_0_dma_err,
 
-    input  wire   [DMAC_1_CHANNEL_NUM-1:0] dmac_1_dma_req,
     output wire   [DMAC_1_CHANNEL_NUM-1:0] dmac_1_dma_done,
     output wire                            dmac_1_dma_err,
 
@@ -151,6 +150,12 @@ module nanosoc_ss_dma #(
     output wire                            dmac_any_done,
     output wire                            dmac_any_error
 );
+
+    // ========================================================================
+    // DMA Request Wiring
+    // ========================================================================
+    wire  [DMAC_1_CHANNEL_NUM-1:0] dmac_1_dma_req;
+    assign dmac_1_dma_req = {DMAC_1_CHANNEL_NUM{1'b0}};
 
     // ========================================================================
     // Internal wiring — DMAC_CTRL region APB bus

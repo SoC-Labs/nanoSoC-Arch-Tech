@@ -155,7 +155,7 @@ run_mti : code compile_mti
 	@echo "run -all" > $(SIM_DIR)/run.tcl.tmp
 	@echo "quit -f" >> $(SIM_DIR)/run.tcl.tmp
 	@mv  $(SIM_DIR)/run.tcl.tmp $(SIM_DIR)/run.tcl
-	cd $(SIM_DIR); vsim $(MTI_RUN_OPTIONS) +CODEFILENAME=/home/dam1n19/nanosoc_software_flow/accelerator-project/build/software/ds5/hello/out/hello.hex -c $(TB_TOP) -do run.tcl | tee $(SIM_DIR)/logs/run_$(TESTNAME).log ;
+	cd $(SIM_DIR); vsim $(MTI_RUN_OPTIONS) -c $(TB_TOP) -do run.tcl | tee $(SIM_DIR)/logs/run_$(TESTNAME).log ;
 
 run_mti_to:
 	timeout 2s $(MAKE) run_mti >> /dev/null 2>&1 

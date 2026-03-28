@@ -1,0 +1,209 @@
+#-----------------------------------------------------------------------------
+# CMSDK APB UART Register Map
+# Based on ARM Cortex-M System Design Kit r1p1
+#
+# A joint work commissioned on behalf of SoC Labs, under Arm Academic Access license.
+# Copyright 2026, SoC Labs (www.soclabs.org)
+#-----------------------------------------------------------------------------
+
+register_map:
+  name: cmsdk_apb_uart
+  module: cmsdk_apb_uart
+  description: >
+    Simple UART with TX/RX buffers, programmable baud rate divider, and
+    interrupt support. Supports TX/RX overrun detection and high-speed
+    test mode.
+  address_width: 12
+  data_width: 32
+
+  identification:
+    pid4: 0x04
+    pid5: 0x00
+    pid6: 0x00
+    pid7: 0x00
+    pid0: 0x21
+    pid1: 0xB8
+    pid2: 0x1B
+    pid3: 0x00
+    cid0: 0x0D
+    cid1: 0xF0
+    cid2: 0x05
+    cid3: 0xB1
+
+  registers:
+    - name: DATA
+      offset: 0x000
+      width: 32
+      access: RW
+      description: TX/RX data register (write=transmit, read=receive)
+      fields:
+        - name: DATA
+          bits: "7:0"
+          access: RW
+          description: Transmit/receive data byte
+
+    - name: STATE
+      offset: 0x004
+      width: 32
+      access: RO
+      description: UART status register
+      fields:
+        - name: TX_FULL
+          bits: "0"
+          access: RO
+          description: TX buffer full
+        - name: RX_FULL
+          bits: "1"
+          access: RO
+          description: RX buffer full
+        - name: TX_OVERRUN
+          bits: "2"
+          access: RO
+          description: TX buffer overrun (write when full)
+        - name: RX_OVERRUN
+          bits: "3"
+          access: RO
+          description: RX buffer overrun (receive when full)
+
+    - name: CTRL
+      offset: 0x008
+      width: 32
+      access: RW
+      reset_value: 0x00000000
+      description: UART control register
+      fields:
+        - name: TX_ENABLE
+          bits: "0"
+          access: RW
+          description: Transmit enable
+        - name: RX_ENABLE
+          bits: "1"
+          access: RW
+          description: Receive enable
+        - name: TX_INT_ENABLE
+          bits: "2"
+          access: RW
+          description: Transmit interrupt enable
+        - name: RX_INT_ENABLE
+          bits: "3"
+          access: RW
+          description: Receive interrupt enable
+        - name: TX_OVERRUN_INT_ENABLE
+          bits: "4"
+          access: RW
+          description: TX overrun interrupt enable
+        - name: RX_OVERRUN_INT_ENABLE
+          bits: "5"
+          access: RW
+          description: RX overrun interrupt enable
+        - name: HIGH_SPEED_TEST
+          bits: "6"
+          access: RW
+          description: High-speed test mode (baud counter = 16)
+
+    - name: INTCLEAR
+      offset: 0x00C
+      width: 32
+      access: W1C
+      description: Interrupt status / clear (read shows status, write 1 clears)
+      fields:
+        - name: TX_INT
+          bits: "0"
+          access: W1C
+          description: TX interrupt (write 1 to clear)
+        - name: RX_INT
+          bits: "1"
+          access: W1C
+          description: RX interrupt (write 1 to clear)
+        - name: TX_OVERRUN_INT
+          bits: "2"
+          access: W1C
+          description: TX overrun interrupt (write 1 to clear)
+        - name: RX_OVERRUN_INT
+          bits: "3"
+          access: W1C
+          description: RX overrun interrupt (write 1 to clear)
+
+    - name: BAUDDIV
+      offset: 0x010
+      width: 32
+      access: RW
+      reset_value: 0x00000000
+      description: Baud rate divider (BAUDDIV = PCLK / (baud_rate x 16))
+      fields:
+        - name: BAUDDIV
+          bits: "19:0"
+          access: RW
+          description: Baud rate divider value
+
+    - name: PID4
+      offset: 0xFD0
+      width: 32
+      access: RO
+      description: Peripheral ID 4
+
+    - name: PID5
+      offset: 0xFD4
+      width: 32
+      access: RO
+      description: Peripheral ID 5
+
+    - name: PID6
+      offset: 0xFD8
+      width: 32
+      access: RO
+      description: Peripheral ID 6
+
+    - name: PID7
+      offset: 0xFDC
+      width: 32
+      access: RO
+      description: Peripheral ID 7
+
+    - name: PID0
+      offset: 0xFE0
+      width: 32
+      access: RO
+      description: Peripheral ID 0
+
+    - name: PID1
+      offset: 0xFE4
+      width: 32
+      access: RO
+      description: Peripheral ID 1
+
+    - name: PID2
+      offset: 0xFE8
+      width: 32
+      access: RO
+      description: Peripheral ID 2
+
+    - name: PID3
+      offset: 0xFEC
+      width: 32
+      access: RO
+      description: Peripheral ID 3
+
+    - name: CID0
+      offset: 0xFF0
+      width: 32
+      access: RO
+      description: Component ID 0
+
+    - name: CID1
+      offset: 0xFF4
+      width: 32
+      access: RO
+      description: Component ID 1
+
+    - name: CID2
+      offset: 0xFF8
+      width: 32
+      access: RO
+      description: Component ID 2
+
+    - name: CID3
+      offset: 0xFFC
+      width: 32
+      access: RO
+      description: Component ID 3

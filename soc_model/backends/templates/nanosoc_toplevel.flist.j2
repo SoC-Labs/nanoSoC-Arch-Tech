@@ -1,0 +1,23 @@
+//-----------------------------------------------------------------------------
+// NanoSoC Top-Level Generated IP Filelist
+// A joint work commissioned on behalf of SoC Labs, under Arm Academic Access license.
+//
+// Copyright (C) 2026, SoC Labs (www.soclabs.org)
+//-----------------------------------------------------------------------------
+// AUTO-GENERATED FILE - DO NOT EDIT DIRECTLY.
+// Template:  nanosoc_toplevel.flist.j2
+// Generated: {{ generated_date }}
+//-----------------------------------------------------------------------------
+
+// ============= Verilog library extensions ===========
++libext+.v+.vlib+.sv
+
+// =============    Generated Top-Level Module    =============
+$(SOCLABS_PROJECT_DIR)/nanosoc_m0_soc/build_soc/soc/rtl/{{ module_name }}.sv
+
+// =============    Structural Glue Logic Helpers    =============
+$(SOCLABS_NANOSOC_RTL_TECH_DIR)/src/soc_glue/soc_glue_passthrough.sv
+$(SOCLABS_NANOSOC_RTL_TECH_DIR)/src/soc_glue/soc_glue_or_reduce.sv
+$(SOCLABS_NANOSOC_RTL_TECH_DIR)/src/soc_glue/soc_glue_or_combine.sv
+$(SOCLABS_NANOSOC_RTL_TECH_DIR)/src/soc_glue/soc_glue_and_gate.sv
+$(SOCLABS_NANOSOC_RTL_TECH_DIR)/src/soc_glue/soc_glue_constant.sv

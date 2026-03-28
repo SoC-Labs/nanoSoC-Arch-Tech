@@ -1,0 +1,34 @@
+#-----------------------------------------------------------------------------
+# NanoSoC Instruction Memory Region Module
+# A joint work commissioned on behalf of SoC Labs, under Arm Academic Access license.
+#
+# Contributors
+#
+# David Mapstone (d.a.mapstone@soton.ac.uk)
+#
+# Copyright 2026, SoC Labs (www.soclabs.org)
+#-----------------------------------------------------------------------------
+# Derived from RTL: nanosoc_arch_tech/rtl/src/regions/imem_0/nanosoc_region_imem_0.v
+
+module:
+  name: nanosoc_region_imem_0
+  gen: False
+  desc: >
+    Instruction memory region. Conditionally instantiates sl_ahb_rom (preloadable)
+    or sl_ahb_sram depending on IMEM_0_RAM_PRELOAD preprocessor flag. Supports
+    FPGA image preloading via IMEM_MEM_FPGA_IMG parameter.
+
+  params:
+    SYS_ADDR_W:        { type: int, default: 32,           desc: "System address width" }
+    SYS_DATA_W:        { type: int, default: 32,           desc: "System data width" }
+    IMEM_RAM_ADDR_W:   { type: int, default: 14,           desc: "IMEM address width (phys = 4 * 2^N bytes, default 64 KB)" }
+    IMEM_RAM_DATA_W:   { type: int, default: 32,           desc: "IMEM data width" }
+    IMEM_MEM_FPGA_IMG: { type: str, default: "image.hex",  desc: "Hex image to preload into SRAM for FPGA" }
+
+  interfaces:
+    # Clock and Reset
+    - { name: HCLK,    type: wire, direction: in, params: { WIDTH: 1 }, desc: AHB clock }
+    - { name: HRESETn, type: wire, direction: in, params: { WIDTH: 1 }, desc: AHB reset (active low) }
+
+    # AHB slave port
+    - { name: ahb_slave, type: ahb, direction: target, params: { ADDR_WIDTH: $SYS_ADDR_W, DATA_WIDTH: $SYS_DATA_W }, desc: AHB slave port for instruction memory access }

@@ -1,0 +1,25 @@
+#-----------------------------------------------------------------------------
+# CMSDK APB Test Slave Register Map
+# Based on ARM Cortex-M System Design Kit r1p1
+#
+# A joint work commissioned on behalf of SoC Labs, under Arm Academic Access license.
+# Copyright 2026, SoC Labs (www.soclabs.org)
+#-----------------------------------------------------------------------------
+
+register_map:
+  name: cmsdk_apb_test_slave
+  module: cmsdk_apb_test_slave
+  description: >
+    APB test slave for validation purposes. Provides a 4KB read/write
+    scratchpad memory space with configurable wait states and error responses.
+  address_width: 12
+  data_width: 32
+
+  registers:
+    - name: SCRATCHPAD
+      offset: 0x000
+      width: 32
+      access: RW
+      description: >
+        Scratchpad memory. Full 4KB address range is writable and readable.
+        Supports byte, halfword, and word access via PSTRB.

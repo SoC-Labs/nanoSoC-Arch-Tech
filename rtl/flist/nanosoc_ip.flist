@@ -21,8 +21,8 @@
 $(SOCLABS_NANOSOC_SOC_DIR)/chip/chip/verilog/nanosoc_chip.v
 $(SOCLABS_NANOSOC_SOC_DIR)/chip/chip/verilog/nanosoc_chip_cfg.v
 
-// NanoSoC Core
-$(SOCLABS_NANOSOC_RTL_TECH_DIR)/src/nanosoc/nanosoc.sv
+// NanoSoC Core (generated top-level + glue logic helpers)
+-f $(SOCLABS_PROJECT_DIR)/nanosoc_m0_soc/build_soc/soc/flist/nanosoc_toplevel.flist
 
 // NanoSoC System Level
 $(SOCLABS_NANOSOC_RTL_TECH_DIR)/src/system/nanosoc_system.v

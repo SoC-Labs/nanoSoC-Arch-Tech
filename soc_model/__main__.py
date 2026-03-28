@@ -21,6 +21,7 @@ from .backends.ahb import SoCAhbBackend
 from .backends.firmware import SoCFirmwareBackend
 from .backends.rdl import SoCRdlBackend
 from .backends.toplevel import SoCTopLevelBackend
+from .backends.lint import SoCLintBackend
 
 
 def main():
@@ -35,6 +36,12 @@ def main():
                       help='Library directory for component YAMLs (modules, interfaces, register_maps)')
     argp.add_argument('--arm-ip-library-path', default=None,
                       help='Path to ARM IP library (overrides ARM_IP_LIBRARY_PATH env var)')
+    argp.add_argument('--lint', action='store_true', default=False,
+                      help='Run slang linter on all generated RTL files')
+    argp.add_argument('--slang-bin', default=None,
+                      help='Path to slang binary (default: auto-detect from PATH)')
+    argp.add_argument('--slang-args', default=None,
+                      help='Extra arguments to pass to slang (space-separated)')
     args = argp.parse_args()
 
     yaml_path = Path(args.yaml_file).resolve()
@@ -159,6 +166,15 @@ def main():
     fw_backend = SoCFirmwareBackend(top_module)
     fw_dir = soc_dir / 'firmware_config'
     fw_backend.generate(fw_dir)
+
+    # --- Lint generated RTL ---
+    if args.lint:
+        print("\n--- RTL Lint (slang) ---")
+        lint_backend = SoCLintBackend(slang_bin=args.slang_bin)
+        extra_args = args.slang_args.split() if args.slang_args else None
+        lint_passed = lint_backend.lint_and_report(build_dir, extra_args=extra_args)
+        if not lint_passed:
+            print("\n  Lint did not pass — see above for details.")
 
     print("\nDone.")
 

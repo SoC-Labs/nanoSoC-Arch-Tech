@@ -185,10 +185,14 @@ class SoCTopLevelBackend:
         """Build parameter list for module declaration."""
         params = []
         for name, p in self.top.params.items():
+            default = p.default
+            # Format large integers as sized hex to avoid signed overflow warnings
+            if p.type == 'int' and isinstance(default, int) and default >= 2**31:
+                default = f"32'h{default:08X}"
             params.append({
                 'name': name,
                 'type': p.type,
-                'default': p.default,
+                'default': default,
                 'desc': p.desc,
             })
         return params
@@ -303,8 +307,12 @@ class SoCTopLevelBackend:
 
     def _build_internal_wires(self) -> List[Dict[str, Any]]:
         """Build internal wire declarations from the model."""
+        # Collect top-level port names to avoid duplicate declarations
+        port_names = {iface.name for iface in self.top.interfaces}
         wires = []
         for w in self.top.internal_wires:
+            if w.name in port_names:
+                continue  # already declared as a top-level port
             width = w.params.get('WIDTH', 1)
             # Resolve parameterised widths
             if isinstance(width, str) and width.startswith('$'):
@@ -472,12 +480,22 @@ class SoCTopLevelBackend:
                     # Otherwise it's an instance.port cross-reference — resolve to wire name
                     # These are resolved to intermediate wires by the wire mapping
                     signal = self._resolve_conn_to_wire(signal)
+                else:
+                    # Bare signal name — check if it maps to a top-level protocol interface
+                    top_iface = self._find_top_interface(port_name)
+                    if top_iface and top_iface.type in ('axis', 'axis_stream', 'axis_byte', 'swd'):
+                        self._expand_protocol_connection(inst, inst_data, port, top_iface)
+                        continue
 
                 inst_data['connections'].append({
                     'port': port,
                     'signal': signal,
                     'desc': conn.desc,
                 })
+
+            # Post-process: coalesce port bit-selects into valid SV connections
+            inst_data['connections'] = self._coalesce_bit_select_ports(
+                inst_data['connections'], inst)
 
             instances.append(inst_data)
         return instances
@@ -530,6 +548,122 @@ class SoCTopLevelBackend:
         # YAML connection refs and actual wire names is handled via
         # the internal_wires and bus_wires infrastructure.
         return conn
+
+    def _find_top_interface(self, name: str) -> Optional[Interface]:
+        """Find a top-level interface by name."""
+        return next((i for i in self.top.interfaces if i.name == name), None)
+
+    def _find_instance_interface(self, inst: Instance, port_name: str) -> Optional[Interface]:
+        """Find an interface on an instance's module by port name."""
+        if inst.resolved_module:
+            for iface in inst.resolved_module.interfaces:
+                if iface.name == port_name:
+                    return iface
+        for iface in inst.inline_interfaces:
+            if iface.name == port_name:
+                return iface
+        return None
+
+    def _top_iface_signal_name(self, iface: Interface, sig_name: str) -> str:
+        """Get the top-level port signal name for a protocol interface signal.
+
+        SWD interfaces named '*_swd' strip the '_swd' suffix before appending
+        the signal name (e.g. cpu_0_swd + swdi -> cpu_0_swdi).
+        """
+        if iface.type == 'swd' and iface.name.endswith('_swd'):
+            return f'{iface.name[:-4]}_{sig_name}'
+        return f'{iface.name}_{sig_name}'
+
+    def _expand_protocol_connection(self, inst: Instance, inst_data: Dict,
+                                     port: str, top_iface: Interface):
+        """Expand a protocol interface connection into individual signal connections."""
+        if top_iface.type in ('axis', 'axis_stream'):
+            for sig_name, _, _ in AXIS_SIGNALS:
+                inst_data['connections'].append({
+                    'port': f'{port}_{sig_name}',
+                    'signal': self._top_iface_signal_name(top_iface, sig_name),
+                })
+            # Add flush signal if either side declares HAS_FLUSH
+            inst_iface = self._find_instance_interface(inst, port)
+            has_flush = top_iface.params.get('HAS_FLUSH', 0)
+            if not has_flush and inst_iface:
+                has_flush = inst_iface.params.get('HAS_FLUSH', 0)
+            if has_flush:
+                inst_data['connections'].append({
+                    'port': f'{port}_flush',
+                    'signal': self._top_iface_signal_name(top_iface, 'flush'),
+                })
+        elif top_iface.type == 'axis_byte':
+            for sig_name, _, _ in AXIS_BYTE_SIGNALS:
+                inst_data['connections'].append({
+                    'port': f'{port}_{sig_name}',
+                    'signal': self._top_iface_signal_name(top_iface, sig_name),
+                })
+        elif top_iface.type == 'swd':
+            for sig_name, _, _ in SWD_SIGNALS:
+                inst_data['connections'].append({
+                    'port': f'{port}_{sig_name}',
+                    'signal': self._top_iface_signal_name(top_iface, sig_name),
+                })
+
+    def _coalesce_bit_select_ports(self, connections: List[Dict],
+                                    inst: Instance) -> List[Dict]:
+        """Coalesce port bit-select connections into valid SV port connections.
+
+        Converts .port[0](signal) into .port(signal) when the port is 1-bit,
+        or groups multiple bit connections into a concatenation.
+        """
+        from collections import OrderedDict
+
+        result = []
+        bit_groups: Dict[str, List[Tuple]] = OrderedDict()
+
+        for conn in connections:
+            if conn.get('signal') is None:
+                result.append(conn)
+                continue
+            port = conn['port']
+            base, high, low = parse_bit_slice(port)
+            if high is not None:
+                if base not in bit_groups:
+                    bit_groups[base] = []
+                bit_groups[base].append((high, low, conn['signal'], conn.get('desc')))
+            else:
+                result.append(conn)
+
+        for base, bits in bit_groups.items():
+            # Sort by bit position descending (MSB first for concatenation)
+            bits.sort(key=lambda x: x[0], reverse=True)
+
+            # Check if this is a single-bit port (resolves the FT1248_WIDTH=1 case)
+            port_width = self._get_instance_port_width(inst, base)
+            total_connected = sum(h - l + 1 for h, l, _, _ in bits)
+
+            if port_width is not None and port_width == 1 and len(bits) == 1:
+                # 1-bit port — just use the base port name
+                result.append({'port': base, 'signal': bits[0][2]})
+            elif len(bits) == 1 and port_width is not None and total_connected == port_width:
+                # Single connection covering the full port width
+                result.append({'port': base, 'signal': bits[0][2]})
+            elif len(bits) == 1:
+                # Single partial bit — connect directly (best effort)
+                result.append({'port': base, 'signal': bits[0][2]})
+            else:
+                # Multiple bit connections — build concatenation {msb, ..., lsb}
+                concat_parts = [sig for _, _, sig, _ in bits]
+                result.append({'port': base, 'signal': '{' + ', '.join(concat_parts) + '}'})
+
+        return result
+
+    def _get_instance_port_width(self, inst: Instance, port_name: str) -> Optional[int]:
+        """Get resolved width of a port on an instance's module."""
+        iface = self._find_instance_interface(inst, port_name)
+        if iface is None:
+            return None
+        width = iface.params.get('WIDTH', 1)
+        if isinstance(width, str):
+            width = resolve_param_ref(width, self.flat_params)
+        return width if isinstance(width, int) else None
 
     def _build_interconnect(self) -> Optional[Dict[str, Any]]:
         """Build interconnect instance data."""

@@ -1,4 +1,8 @@
 #//-----------------------------------------------------------------------------
+#// DEPRECATED: This file is superseded by firmware/build/testcode.mk
+#// which provides a shared build template for all test codes.
+#// This file is retained for backward compatibility only.
+#//-----------------------------------------------------------------------------
 #// NanoSoC Software Build Defs Makefile
 #// A joint work commissioned on behalf of SoC Labs, under Arm Academic Access license.
 #//

@@ -37,7 +37,10 @@ def main():
     argp.add_argument('--arm-ip-library-path', default=None,
                       help='Path to ARM IP library (overrides ARM_IP_LIBRARY_PATH env var)')
     argp.add_argument('--lint', action='store_true', default=False,
-                      help='Run slang linter on all generated RTL files')
+                      help='Run slang linter on all design RTL files')
+    argp.add_argument('--lint-flist', default=None,
+                      help='Filelist (.flist) for design RTL sources to lint '
+                           '(default: nanosoc_arch_tech/rtl/flist/nanosoc.flist)')
     argp.add_argument('--slang-bin', default=None,
                       help='Path to slang binary (default: auto-detect from PATH)')
     argp.add_argument('--slang-args', default=None,
@@ -172,7 +175,25 @@ def main():
         print("\n--- RTL Lint (slang) ---")
         lint_backend = SoCLintBackend(slang_bin=args.slang_bin)
         extra_args = args.slang_args.split() if args.slang_args else None
-        lint_passed = lint_backend.lint_and_report(build_dir, extra_args=extra_args)
+
+        # Derive directories: base_dir is the yaml dir (sys_desc/),
+        # soc_root is nanosoc_m0_soc/, project_dir is its parent
+        soc_root = base_dir.parent
+        project_dir = str(soc_root.parent)
+
+        # Default flist: nanosoc.flist (the top-level design filelist)
+        flist = args.lint_flist
+        if not flist:
+            default_flist = soc_root / 'nanosoc_arch_tech' / 'rtl' / 'flist' / 'nanosoc.flist'
+            if default_flist.exists():
+                flist = str(default_flist)
+
+        lint_passed = lint_backend.lint_and_report(
+            build_dir,
+            project_dir=project_dir,
+            flist_path=flist,
+            extra_args=extra_args,
+        )
         if not lint_passed:
             print("\n  Lint did not pass — see above for details.")
 

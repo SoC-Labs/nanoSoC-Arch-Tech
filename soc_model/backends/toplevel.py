@@ -512,7 +512,10 @@ class SoCTopLevelBackend:
             # Instance is an initiator — its port drives the bus
             signals = AHB_INITIATOR_SIGNALS
             for sig, sig_dir, _ in signals:
-                inst_port = f'{port}_{sig}'
+                if port.isupper():
+                    inst_port = f'{port}_{sig.upper()}'
+                else:
+                    inst_port = f'{port}_{sig}'
                 wire_name = f'{ic_port}_{sig}'
                 inst_data['connections'].append({
                     'port': inst_port,
@@ -521,7 +524,12 @@ class SoCTopLevelBackend:
         else:
             # Instance is a target — the bus drives its port
             signals = AHB_TARGET_SIGNALS
+            # Check for excluded signals (e.g. EXCLUDE: [hready, hburst])
+            inst_iface = self._find_instance_interface(inst, port)
+            exclude = set(inst_iface.params.get('EXCLUDE', [])) if inst_iface else set()
             for sig, sig_dir, _ in signals:
+                if sig in exclude:
+                    continue
                 inst_port = f'{port}_{sig}' if port != 'ahb_slave' else sig.upper()
                 if port == 'ahb_slave':
                     # Regions use uppercase port names without prefix
@@ -601,8 +609,13 @@ class SoCTopLevelBackend:
                 })
         elif top_iface.type == 'swd':
             for sig_name, _, _ in SWD_SIGNALS:
+                # SWD ports strip '_swd' suffix: cpu_0_swd + swdi -> cpu_0_swdi
+                if port.endswith('_swd'):
+                    inst_port = f'{port[:-4]}_{sig_name}'
+                else:
+                    inst_port = f'{port}_{sig_name}'
                 inst_data['connections'].append({
-                    'port': f'{port}_{sig_name}',
+                    'port': inst_port,
                     'signal': self._top_iface_signal_name(top_iface, sig_name),
                 })
 

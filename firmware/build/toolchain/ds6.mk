@@ -1,0 +1,34 @@
+#-----------------------------------------------------------------------------
+# NanoSoC Firmware Build - DS-6 (armclang/armlink) Toolchain Configuration
+# A joint work commissioned on behalf of SoC Labs, under Arm Academic Access license.
+#
+# Contributors
+#
+# David Mapstone (d.a.mapstone@soton.ac.uk)
+#
+# Copyright (C) 2021-6, SoC Labs (www.soclabs.org)
+#-----------------------------------------------------------------------------
+
+# Compiler and assembler tools
+ARM_TARGET := --target=arm-$(TARGET)
+CC_TOOL    := armclang
+ASM_TOOL   := armclang -masm=armasm $(ARM_TARGET) -c
+LINK_TOOL  := armlink
+
+# DS-6 specific target flag
+CC_TARGET ?=
+
+# CPU type flags
+ifeq ($(CPU_PRODUCT),CORTEX_M0PLUS)
+  CPU_TYPE := -mcpu=Cortex-M0plus
+else
+  CPU_TYPE := -mcpu=Cortex-M0
+endif
+
+# Startup code directory
+STARTUP_DIR := $(DEVICE_DIR)/Source/ARM
+
+# Output tools (same as DS-5)
+HEX_CMD  = fromelf --vhx --8x1 $< --output $@
+BIN_CMD  = fromelf --bin $< --output $@
+LST_CMD  = fromelf -c -d -e -s -z -v $< --output $@

@@ -693,7 +693,7 @@ module nanosoc #(
     wire [7:0] ft_adp_txd_tdata;
     wire       ft_adp_txd_tready;
 
-    // EXT DAT DMA trigger wires (driven by nanosoc_ss_extio)
+    // EXT DAT DMA trigger wires (driven by nanosoc_ss_hostio4)
     wire       ext_dat_rxd_tready;
     wire       ext_dat_txd_tvalid;
 
@@ -1014,7 +1014,7 @@ module nanosoc #(
     //--------------------------
     // EXTIO Subsystem
     //--------------------------
-    nanosoc_ss_extio u_ss_extio (
+    nanosoc_ss_hostio4 u_ss_hostio4 (
         .SYS_HCLK           (sys_hclk),
         .SYS_HRESETn        (sys_hresetn),
         .SYS_TESTMODE       (sys_testmode),

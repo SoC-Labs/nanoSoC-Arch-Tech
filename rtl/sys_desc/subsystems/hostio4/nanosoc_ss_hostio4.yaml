@@ -1,5 +1,5 @@
 #-----------------------------------------------------------------------------
-# NanoSoC External I/O Subsystem Module
+# NanoSoC HOSTIO4 Subsystem Module
 # A joint work commissioned on behalf of SoC Labs, under Arm Academic Access license.
 #
 # Contributors
@@ -8,7 +8,7 @@
 #
 # Copyright 2026, SoC Labs (www.soclabs.org)
 #-----------------------------------------------------------------------------
-# Derived from RTL: nanosoc_arch_tech/rtl/src/subsystems/extio/verilog/nanosoc_ss_extio.v
+# Derived from RTL: nanosoc_arch_tech/rtl/src/subsystems/hostio4/verilog/nanosoc_ss_hostio4.v
 #
 # Manages FT1248 FTDI interface routing and GPIO P1[6:0] muxing.
 # Routes ADP, USRT0, USRT1 byte streams between internal subsystems
@@ -17,14 +17,14 @@
 # NOTE: This module has ZERO parameters in RTL.
 
 module:
-  name: nanosoc_ss_extio
+  name: nanosoc_ss_hostio4
   gen: False
   desc: >
-    External I/O subsystem. Routes AXI byte streams between debug/peripheral
+    HOSTIO4 subsystem. Routes AXI byte streams between debug/peripheral
     subsystems and the external FTDI FT1248 interface. Multiplexes GPIO P1[6:0]
-    between FT1248 physical signals and EXTIO data/control signals based on
+    between FT1248 physical signals and HOSTIO4 data/control signals based on
     FT1248MODE input (driven by p1_in[7] in nanosoc.sv). Contains
-    extio8x4_axis_initiator internally.
+    hostio4_controller internally.
 
   # No parameters — RTL has none
   params: {}

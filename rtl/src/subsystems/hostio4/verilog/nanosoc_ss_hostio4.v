@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
-// NanoSoC EXTIO Subsystem
-// Encapsulates FT1248/EXTIO stream muxing, extio8x4_axis_initiator instance,
+// NanoSoC HOSTIO4 Subsystem
+// Encapsulates FT1248/HOSTIO4 stream muxing, hostio4_controller instance,
 // and P1[6:0] GPIO pad muxing.
 // A joint work commissioned on behalf of SoC Labs, under Arm Academic Access license.
 //
@@ -11,7 +11,7 @@
 //
 // Copyright (C) 2023, SoC Labs (www.soclabs.org)
 //-----------------------------------------------------------------------------
-module nanosoc_ss_extio (
+module nanosoc_ss_hostio4 (
     // System Clocks and Resets
     input  wire        SYS_HCLK,
     input  wire        SYS_HRESETn,
@@ -78,7 +78,7 @@ module nanosoc_ss_extio (
 );
 
     // -------------------------------------------------------------------------
-    // Internal AXI stream wires for extio8x4_axis_initiator
+    // Internal AXI stream wires for hostio4_controller
     // -------------------------------------------------------------------------
     wire        EXT_ADP_RXD_TVALID;
     wire  [7:0] EXT_ADP_RXD_TDATA;
@@ -142,9 +142,9 @@ module nanosoc_ss_extio (
     assign EXT_DAT_TXD_TREADY = (FT1248MODE) ? 1'b0        : USRT1_RXD_TREADY;
 
     // -------------------------------------------------------------------------
-    // extio8x4_axis_initiator instantiation
+    // hostio4_controller instantiation
     // -------------------------------------------------------------------------
-    extio8x4_axis_initiator u_extio8x4_axis_initiator (
+    hostio4_controller u_hostio4_controller (
         .clk              (SYS_HCLK),
         .resetn           (SYS_HRESETn),
         .testmode         (SYS_TESTMODE),

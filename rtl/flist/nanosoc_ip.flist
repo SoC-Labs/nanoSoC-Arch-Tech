@@ -33,7 +33,7 @@ $(SOCLABS_NANOSOC_RTL_TECH_DIR)/src/subsystems/debug/verilog/nanosoc_ss_debug.v
 $(SOCLABS_NANOSOC_RTL_TECH_DIR)/src/subsystems/systemctrl/verilog/nanosoc_ss_systemctrl.v
 $(SOCLABS_NANOSOC_RTL_TECH_DIR)/src/subsystems/dma/verilog/nanosoc_dma_wrapper.v
 $(SOCLABS_NANOSOC_RTL_TECH_DIR)/src/subsystems/dma/verilog/nanosoc_ss_dma.sv
-$(SOCLABS_NANOSOC_RTL_TECH_DIR)/src/subsystems/extio/verilog/nanosoc_ss_extio.v
+$(SOCLABS_NANOSOC_RTL_TECH_DIR)/src/subsystems/hostio4/verilog/nanosoc_ss_hostio4.v
 
 // Bus Matrix (generated from nanosoc_ahb_interconnect.yaml)
 -f $(SOCLABS_PROJECT_DIR)/build/rtl/nanosoc_ahb_interconnect/flist/nanosoc_interconnect.flist

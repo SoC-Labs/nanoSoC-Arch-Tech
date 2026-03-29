@@ -19,6 +19,62 @@ TEMPLATE_NAME = 'bootrom_templ.sv.jinja'
 DATA_WIDTH    = 32
 ADDRESS_WIDTH = 9
 
+def normalise_hex_file(input_hex):
+    """Read a hex file and return a flat list of hex byte strings.
+
+    Handles hex files with:
+    - @address lines (with arbitrary base address offsets)
+    - Multiple space-separated bytes per line
+    - One byte per line
+    - Non-contiguous address sections (gaps filled with 00)
+    """
+    with open(input_hex, "r") as f:
+        hex_lines = f.readlines()
+
+    # First pass: collect addressed sections
+    sections = []  # list of (address, [byte_strings])
+    base_address = None
+    current_address = None
+    current_bytes = []
+    has_address_lines = False
+
+    for line in hex_lines:
+        line = line.strip()
+        if not line:
+            continue
+        if line.startswith('@'):
+            has_address_lines = True
+            # Save previous section
+            if current_address is not None and current_bytes:
+                sections.append((current_address, current_bytes))
+            current_address = int(line[1:], 16)
+            if base_address is None:
+                base_address = current_address
+            current_bytes = []
+        else:
+            # Parse space-separated hex bytes from line
+            for b in line.split():
+                current_bytes.append(b)
+
+    # Save final section
+    if current_address is not None and current_bytes:
+        sections.append((current_address, current_bytes))
+
+    if not has_address_lines:
+        # No @ lines found - return all parsed bytes directly
+        return current_bytes
+
+    # Build flat byte list from sections, filling gaps with 00
+    hex_bytes = []
+    for addr, data in sections:
+        relative_addr = addr - base_address
+        # Fill gap between previous data and this section
+        while len(hex_bytes) < relative_addr:
+            hex_bytes.append("00")
+        hex_bytes.extend(data)
+
+    return hex_bytes
+
 def bootrom_gen(args):
     # Extract Data from Parsed Arguments
     input_hex = args.input_hex
@@ -91,26 +147,9 @@ def output_construct(input_hex, address_width):
     return bootrom_verilog, bootrom_binary
 
 def output_construct_gcc(input_hex, address_width):
-    # Read in Hex File
-    f = open(input_hex, "r")
-    hex_lines = f.readlines()
-    f.close()
+    # Read and normalise hex file to a flat list of byte strings
+    hex_bytes = normalise_hex_file(input_hex)
 
-    hex_counter = 0
-    hex_bytes = []
-    for lines in hex_lines:
-        line = lines.strip()
-        if(line[0]!='@'):
-            hex = line.split(' ')
-            for byte in hex:
-                hex_bytes.append(byte)
-                hex_counter+=1
-        else:
-            addr = int(line[1:], 16)
-            if(addr!=hex_counter):
-                print("ERROR")
-                break
-            
     # Number of bytes expected depending on address_width
     address_bytes = 1 << (address_width + 2)
 

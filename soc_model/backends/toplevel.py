@@ -407,25 +407,58 @@ class SoCTopLevelBackend:
             if high is not None and low is not None:
                 return high - low + 1
 
-        # Check internal_wires
+        # Build list of candidate base names from both input and output signals
         base, _, _ = parse_bit_slice(signal)
-        # Strip instance prefix
+        inst_name = None
         if '.' in base:
-            base = base.split('.', 1)[1]
-        for w in self.top.internal_wires:
-            if w.name == base:
-                width = w.params.get('WIDTH', 1)
-                if isinstance(width, str):
-                    width = resolve_param_ref(width, self.flat_params)
-                if isinstance(width, int):
-                    return width
+            inst_name, base = base.split('.', 1)
+        candidates = [base]
+        if output:
+            out_base, _, _ = parse_bit_slice(output)
+            if out_base and out_base != base:
+                candidates.append(out_base)
 
-        # Check top-level interfaces
-        for iface in self.top.interfaces:
-            if iface.name == base:
-                width = iface.params.get('WIDTH', 1)
-                if isinstance(width, int):
-                    return width
+        # Check internal_wires
+        for cand in candidates:
+            for w in self.top.internal_wires:
+                if w.name == cand:
+                    width = w.params.get('WIDTH', 1)
+                    if isinstance(width, str):
+                        width = resolve_param_ref(width, self.flat_params)
+                    if isinstance(width, int):
+                        return width
+
+        # Check top-level interfaces (direct name match)
+        for cand in candidates:
+            for iface in self.top.interfaces:
+                if iface.name == cand:
+                    width = iface.params.get('WIDTH', 1)
+                    if isinstance(width, int):
+                        return width
+
+        # Check GPIO-expanded top-level port names (e.g. p0_out from gpio iface p0)
+        # Check both input base and output base since either might be the GPIO port
+        for check_name in candidates:
+            if not check_name:
+                continue
+            for iface in self.top.interfaces:
+                if iface.type == 'gpio':
+                    gpio_width = iface.params.get('WIDTH', 16)
+                    for suffix in ('in', 'out', 'outen'):
+                        if check_name == f'{iface.name}_{suffix}':
+                            return gpio_width if isinstance(gpio_width, int) else 16
+
+        # Check instance module interfaces for hierarchical references
+        if inst_name:
+            inst_obj = self.top.get_instance(inst_name)
+            if inst_obj and inst_obj.resolved_module:
+                for mod_iface in inst_obj.resolved_module.interfaces:
+                    if mod_iface.name == base:
+                        width = mod_iface.params.get('WIDTH', 1)
+                        if isinstance(width, str):
+                            width = resolve_param_ref(width, self.flat_params)
+                        if isinstance(width, int):
+                            return width
 
         return 1  # default
 

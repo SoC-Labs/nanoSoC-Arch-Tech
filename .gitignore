@@ -125,3 +125,4 @@ novas.rc
 *.hex
 *.elf
 *.o
+*.lst

@@ -28,7 +28,7 @@ SW_MAKE_OPTIONS = CPU_PRODUCT=CORTEX_M0 TOOL_CHAIN=$(TOOL_CHAIN)
 # Boot Loader image
 BOOTLOADER        ?= bootloader
 BOOTROM_ADDRW     ?= 8
-BOOTROM_HEX       ?= $(SOCLABS_NANOSOC_FIRMWARE_TECH_DIR)/testcodes/bootloader/$(BOOTLOADER).hex
+BOOTROM_HEX       ?= $(SOCLABS_PROJECT_DIR)/build/software/$(TOOL_CHAIN)/$(BOOTLOADER)/out/$(BOOTLOADER).hex
 BOOTROM_BUILD_DIR ?= $(SOCLABS_PROJECT_DIR)/system/src/bootrom
 
 # Boot ROM generation
@@ -45,7 +45,7 @@ BOOTROM_SIM_DIR := $(SIM_TOP_DIR)/bootloader
 BOOTROM_SIM_HEX := $(BOOTROM_SIM_DIR)/$(BOOTLOADER).hex
 
 # Intermediate files
-BOOTLOADER_HEX := $(TESTCODES_DIR)/$(BOOTLOADER)/$(BOOTLOADER).hex
+BOOTLOADER_HEX := $(SOCLABS_PROJECT_DIR)/build/software/$(TOOL_CHAIN)/$(BOOTLOADER)/out/$(BOOTLOADER).hex
 BOOTROM_GEN_PY := $(SOCLABS_NANOSOC_FIRMWARE_TECH_DIR)/testcodes/bootloader/bootrom_gen.py
 
 bootrom: $(BOOTROM_SV) $(BOOTROM_BIN) $(BOOTROM_SIM_HEX)

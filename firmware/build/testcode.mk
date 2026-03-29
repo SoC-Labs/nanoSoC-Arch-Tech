@@ -91,6 +91,17 @@ SOURCE_DIR ?= $(TEST_DIR)
 DEPS_LIST := makefile
 
 #=============================================================================
+# Build Output Directory Setup
+#=============================================================================
+SOFTWARE_BUILD_DIR ?= $(SOCLABS_PROJECT_DIR)/build/software
+TEST_BUILD_DIR    := $(SOFTWARE_BUILD_DIR)/$(TOOL_CHAIN)/$(TESTNAME)
+COMPILE_DIR       := $(TEST_BUILD_DIR)/compile
+OUTPUT_DIR        := $(TEST_BUILD_DIR)/out
+
+$(COMPILE_DIR) $(OUTPUT_DIR):
+	@mkdir -p $@
+
+#=============================================================================
 # Linker Base Addresses
 #=============================================================================
 LINKER_BASE_RO ?= $(CMSDK_CM0_RO_BASE)
@@ -207,39 +218,42 @@ all: all_$(TOOL_CHAIN)
 # ---------------------------------------------------------------------------------------
 # DS-5 / DS-6 Build
 # ---------------------------------------------------------------------------------------
-all_ds5 : $(TESTNAME).hex $(TESTNAME).lst
-all_ds6 : $(TESTNAME).hex $(TESTNAME).lst
+all_ds5 : $(OUTPUT_DIR)/$(TESTNAME).hex $(OUTPUT_DIR)/$(TESTNAME).lst
+all_ds6 : $(OUTPUT_DIR)/$(TESTNAME).hex $(OUTPUT_DIR)/$(TESTNAME).lst
 
 ifneq ($(TOOL_CHAIN),gcc)
 
+# Full paths for compile objects
+COMPILE_OBJECTS_FULL := $(addprefix $(COMPILE_DIR)/,$(COMPILE_OBJECTS))
+
 # Pattern rule for C sources
-%.o: %.c $(DEPS_LIST)
+$(COMPILE_DIR)/%.o: %.c $(DEPS_LIST) | $(COMPILE_DIR)
 	$(CC_TOOL) $(ARM_CC_OPTIONS) $(CPU_TYPE) $< -o $@
 
 # Static pattern rule for driver files (different flags)
 ifneq ($(DRIVER_OBJECTS),)
-$(DRIVER_OBJECTS): %.o: %.c $(DEPS_LIST)
+$(addprefix $(COMPILE_DIR)/,$(DRIVER_OBJECTS)): $(COMPILE_DIR)/%.o: %.c $(DEPS_LIST) | $(COMPILE_DIR)
 	$(CC_TOOL) $(DRIVER_CC_OPTIONS) $(CPU_TYPE) $< -o $@
 endif
 
 # Pattern rule for assembly sources
-%.o: %.s $(DEPS_LIST)
+$(COMPILE_DIR)/%.o: %.s $(DEPS_LIST) | $(COMPILE_DIR)
 	$(ASM_TOOL) $(ARM_ASM_OPTIONS) $(CPU_TYPE) $< -o $@
 
 # Link
-$(TESTNAME).ELF : $(COMPILE_OBJECTS)
-	$(LINK_TOOL) $(ARM_LINK_OPTIONS) -o $@ $(COMPILE_OBJECTS)
+$(COMPILE_DIR)/$(TESTNAME).ELF : $(COMPILE_OBJECTS_FULL)
+	$(LINK_TOOL) $(ARM_LINK_OPTIONS) -o $@ $(COMPILE_OBJECTS_FULL)
 
 # Generate Verilog hex
-$(TESTNAME).hex : $(TESTNAME).ELF
+$(OUTPUT_DIR)/$(TESTNAME).hex : $(COMPILE_DIR)/$(TESTNAME).ELF | $(OUTPUT_DIR)
 	$(HEX_CMD)
 
 # Generate binary
-$(TESTNAME).bin : $(TESTNAME).ELF
+$(OUTPUT_DIR)/$(TESTNAME).bin : $(COMPILE_DIR)/$(TESTNAME).ELF | $(OUTPUT_DIR)
 	$(BIN_CMD)
 
 # Generate listing
-$(TESTNAME).lst : $(TESTNAME).ELF
+$(OUTPUT_DIR)/$(TESTNAME).lst : $(COMPILE_DIR)/$(TESTNAME).ELF | $(OUTPUT_DIR)
 	$(LST_CMD)
 
 endif # ifneq gcc
@@ -249,20 +263,20 @@ endif # ifneq gcc
 # ---------------------------------------------------------------------------------------
 ifeq ($(TOOL_CHAIN),gcc)
 
-all_gcc:
+all_gcc: | $(COMPILE_DIR) $(OUTPUT_DIR)
 	$(CC_TOOL) $(GNU_CC_FLAGS) \
 		$(GCC_ALL_SOURCES) \
 		$(ALL_INCLUDES) \
 		$(FIRMWARE_LINKER_SEARCH) \
 		-D__STACK_SIZE=0x200 \
 		-D__HEAP_SIZE=0x1000 \
-		-T $(LINKER_SCRIPT) -o $(TESTNAME).o
+		-T $(LINKER_SCRIPT) -o $(COMPILE_DIR)/$(TESTNAME).o
 	# Generate disassembly code
-	$(GNU_OBJDUMP) -S $(TESTNAME).o > $(TESTNAME).lst
+	$(GNU_OBJDUMP) -S $(COMPILE_DIR)/$(TESTNAME).o > $(OUTPUT_DIR)/$(TESTNAME).lst
 	# Generate binary file
-	$(GNU_OBJCOPY) -S $(TESTNAME).o -O binary $(TESTNAME).bin
+	$(GNU_OBJCOPY) -S $(COMPILE_DIR)/$(TESTNAME).o -O binary $(OUTPUT_DIR)/$(TESTNAME).bin
 	# Generate hex file
-	$(GNU_OBJCOPY) -S $(TESTNAME).o $(OBJCOPY_EXTRA) -O verilog $(TESTNAME).hex
+	$(GNU_OBJCOPY) -S $(COMPILE_DIR)/$(TESTNAME).o $(OBJCOPY_EXTRA) -O verilog $(OUTPUT_DIR)/$(TESTNAME).hex
 
 endif # ifeq gcc
 
@@ -276,14 +290,11 @@ all_keil:
 # ---------------------------------------------------------------------------------------
 # Binary (generate hex from pre-existing binary)
 # ---------------------------------------------------------------------------------------
-all_bin: $(TESTNAME).bin
-	od -v -A n -t x1 --width=1 $(TESTNAME).bin > $(TESTNAME).hex
+all_bin: $(OUTPUT_DIR)/$(TESTNAME).bin
+	od -v -A n -t x1 --width=1 $(OUTPUT_DIR)/$(TESTNAME).bin > $(OUTPUT_DIR)/$(TESTNAME).hex
 
 # ---------------------------------------------------------------------------------------
 # Clean
 # ---------------------------------------------------------------------------------------
 clean :
-	@rm -rf *.o
-	@rm -f $(TESTNAME).hex $(TESTNAME).lst $(TESTNAME).ELF $(TESTNAME).bin
-	@rm -rf *.crf *.plg *.tra *.htm *.map *.dep *.d
-	@rm -rf *.lnp *.bak *.axf *.sct *.__i *._ia
+	@rm -rf $(TEST_BUILD_DIR)

@@ -60,8 +60,8 @@ else
     TESTCODES_DIR := $(PROJ_SW_DIR)
 endif
 
-# Testcode hex is built in-place in the testcodes directory
-TESTCODE_HEX := $(TESTCODES_DIR)/$(TESTNAME)/$(TESTNAME).hex
+# Testcode hex is built into the project-level build directory
+TESTCODE_HEX := $(OUTPUT_DIR)/$(TESTNAME).hex
 
 # image.hex in the sim dir is what the IMEM reads at simulation time
 IMAGE_HEX := $(SIM_DIR)/image.hex
@@ -239,22 +239,11 @@ compile_all_code: bootrom debugtester
 
 # Remove all software compilation results
 clean_all_code:
-	@(cd $(NANOSOC_SW_DIR)/debug_tester ; $(MAKE) clean; )
-	@(cd $(TESTCODES_DIR)/$(BOOTLOADER) ; $(MAKE) clean; )
-	@for thistest in $(TEST_LIST) ; do \
-	  echo Cleaning $$thistest ...  ; \
-	  if [ -e $(TESTCODES_DIR)/$$thistest ]; then \
-	  	cd $(TESTCODES_DIR)/$$thistest ; \
-	  	$(MAKE) clean; \
-	  elif [ -e $(PROJ_SW_DIR)/$$thistest ]; then \
-	  	cd $(PROJ_SW_DIR)/$$thistest ; \
-	  	$(MAKE) clean; \
-	  fi \
-	done
+	@rm -rf $(SOCLABS_PROJECT_DIR)/build/software
 	@$(MAKE) -f $(SOCLABS_NANOSOC_TECH_DIR)/flows/Makefile.bootrom clean \
 		BOOTROM_BUILD_DIR=$(BOOTROM_BUILD_DIR)
 
 # Remove only bootloader and default selected test
 clean_code:
-	@(cd $(TESTCODES_DIR)/$(BOOTLOADER) ; $(MAKE) clean; cd $(SIM_DIR); )
-	@(cd $(TESTCODES_DIR)/$(TESTNAME)   ; $(MAKE) clean; cd $(SIM_DIR); )
+	@rm -rf $(SOCLABS_PROJECT_DIR)/build/software/$(TOOL_CHAIN)/$(BOOTLOADER)
+	@rm -rf $(SOCLABS_PROJECT_DIR)/build/software/$(TOOL_CHAIN)/$(TESTNAME)

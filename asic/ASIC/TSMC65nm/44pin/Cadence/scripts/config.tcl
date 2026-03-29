@@ -27,7 +27,7 @@ set REPORT_DIR ../reports
 set OUT_DIR ../outputs
 
 set hdl_file_list $::env(SOCLABS_PROJECT_DIR)/imp/ASIC/nanosoc/flist/genus_flist.tcl
-set top_level_hdl $::env(SOCLABS_NANOSOC_TECH_DIR)/ASIC/nanosoc_chip_pads/tsmc65lp/nanosoc_chip_pads_44pin.v
+set top_level_hdl $::env(SOCLABS_NANOSOC_ARCH_TECH_DIR)/ASIC/nanosoc_chip_pads/tsmc65lp/nanosoc_chip_pads_44pin.v
 
 set constraints_file ../inputs/constraints.sdc
 

@@ -10,7 +10,7 @@
 #-----------------------------------------------------------------------------
 
 # Get properties for FPGA Boards
-include $(SOCLABS_NANOSOC_FPGA_TECH_DIR)/fpga/makefile.targets
+include $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/fpga/fpga/makefile.targets
 
 # Vivado Options
 VIVIADO_VERSION  ?= 2021_1
@@ -42,7 +42,7 @@ TCL_OUTPUT_FILELIST  := $(TCL_FLIST_DIR)/gen_flist.tcl
 GENUS_OUTPUT_FILELIST := $(TCL_FLIST_DIR)/genus_flist.tcl
 
 # NanoSoC Tech Flow Dependencies
-NANOSOC_FPGA_FLOW_DIR := $(SOCLABS_NANOSOC_FPGA_TECH_DIR)/fpga
+NANOSOC_FPGA_FLOW_DIR := $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/fpga/fpga
 
 # Directory to look for FPGA specific implementation files
 TARGET_DIR            ?= $(NANOSOC_FPGA_FLOW_DIR)/targets/$(BOARD_NAME)
@@ -63,7 +63,7 @@ endif
 # - This duplicates the recipe within makefile.software
 # code:
 # 	@echo Compiling Firmware
-# 	@$(MAKE) -C $(SOCLABS_NANOSOC_TECH_DIR) bootrom
+# 	@$(MAKE) -C $(SOCLABS_NANOSOC_ARCH_TECH_DIR) bootrom
 
 # Generate TCL filelist from flists
 flist_tcl_nanosoc: gen_defs
@@ -135,4 +135,4 @@ clean_fpga_all:
 	@echo Cleaning FPGA Implementation Directory
 	@rm -rf $(IMPLEMENTATION_DIR)
 	@echo Cleaning Firmware
-	@$(MAKE) -C $(SOCLABS_NANOSOC_TECH_DIR) clean_all_code
+	@$(MAKE) -C $(SOCLABS_NANOSOC_ARCH_TECH_DIR) clean_all_code

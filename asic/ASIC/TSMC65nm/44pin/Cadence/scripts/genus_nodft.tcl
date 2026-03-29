@@ -32,7 +32,7 @@ read_power_intent -cpf -module nanosoc_chip_pads ../cpf/nanosoc.cpf
  
 ## -- Read in RTL and elaborate top level
 source $::env(SOCLABS_PROJECT_DIR)/imp/ASIC/nanosoc/flist/genus_flist.tcl
-read_hdl -define POWER_PINS $env(SOCLABS_NANOSOC_TECH_DIR)/ASIC/nanosoc_chip_pads/tsmc65lp/nanosoc_chip_pads_44pin.v
+read_hdl -define POWER_PINS $env(SOCLABS_NANOSOC_ARCH_TECH_DIR)/ASIC/nanosoc_chip_pads/tsmc65lp/nanosoc_chip_pads_44pin.v
 elaborate nanosoc_chip_pads
 
 # Preserve hierarchy for M0.
@@ -45,7 +45,7 @@ commit_power_intent
 check_power_structure -license lpgxl > syn_pow_check.log
 
 ## -- Read constraints -- ##
-read_sdc $::env(SOCLABS_NANOSOC_TECH_DIR)/ASIC/constraints.sdc 
+read_sdc $::env(SOCLABS_NANOSOC_ARCH_TECH_DIR)/ASIC/constraints.sdc 
 
 
 set_db syn_generic_effort high

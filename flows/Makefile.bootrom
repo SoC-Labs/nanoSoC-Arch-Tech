@@ -46,7 +46,7 @@ BOOTROM_SIM_HEX := $(BOOTROM_SIM_DIR)/$(BOOTLOADER).hex
 
 # Intermediate files
 BOOTLOADER_HEX := $(SOCLABS_PROJECT_DIR)/build/software/$(TOOL_CHAIN)/$(BOOTLOADER)/out/$(BOOTLOADER).hex
-BOOTROM_GEN_PY := $(SOCLABS_NANOSOC_FIRMWARE_TECH_DIR)/testcodes/bootloader/bootrom_gen.py
+BOOTROM_GEN_PY := $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/firmware/testcodes/bootloader/bootrom_gen.py
 
 bootrom: $(BOOTROM_SV) $(BOOTROM_BIN) $(BOOTROM_SIM_HEX)
 

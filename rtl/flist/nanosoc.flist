@@ -20,17 +20,17 @@
 
 // NanoSoC Chip Pads Level (in nanosoc_m0_soc)
 $(SOCLABS_NANOSOC_SOC_DIR)/chip/pads/glib/verilog/nanosoc_chip_pads.v
-$(SOCLABS_NANOSOC_RTL_TECH_DIR)/hostio4/soc_rtl/hostio4_controller.v
-$(SOCLABS_NANOSOC_RTL_TECH_DIR)/hostio4/soc_rtl/hostio4_controller_fsm.v
-$(SOCLABS_NANOSOC_RTL_TECH_DIR)/hostio4/soc_rtl/hostio4_controller_sync.v
-$(SOCLABS_NANOSOC_RTL_TECH_DIR)/hostio4/soc_rtl/hostio4_controller_axis_rxport.v
-$(SOCLABS_NANOSOC_RTL_TECH_DIR)/hostio4/soc_rtl/hostio4_controller_axis_txport.v
+$(SOCLABS_HOSTIO4_TECH_DIR)/soc_rtl/hostio4_controller.v
+$(SOCLABS_HOSTIO4_TECH_DIR)/soc_rtl/hostio4_controller_fsm.v
+$(SOCLABS_HOSTIO4_TECH_DIR)/soc_rtl/hostio4_controller_sync.v
+$(SOCLABS_HOSTIO4_TECH_DIR)/soc_rtl/hostio4_controller_axis_rxport.v
+$(SOCLABS_HOSTIO4_TECH_DIR)/soc_rtl/hostio4_controller_axis_txport.v
 
 // Include NanoSoC IP
--f $(SOCLABS_NANOSOC_RTL_TECH_DIR)/flist/nanosoc_ip.flist
+-f $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/rtl/flist/nanosoc_ip.flist
 
 // Include Corstone IP
--f $(SOCLABS_NANOSOC_RTL_TECH_DIR)/flist/corstone101_ip.flist
+-f $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/rtl/flist/corstone101_ip.flist
 
 // SLCore Files
 -f $(SOCLABS_SLCOREM0_TECH_DIR)/flist/slcorem0.flist

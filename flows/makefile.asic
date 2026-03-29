@@ -37,11 +37,11 @@ DC_OUTPUT_FILELIST := $(TCL_ASIC_FLIST_DIR)/dc_flist.tcl
 
 # Location of outputs from synthesis
 MEMORIES_DIR			:= $(SOCLABS_PROJECT_DIR)/memories
-RF_16K_65nm_SPEC_FILE	:= $(SOCLABS_NANOSOC_ASIC_TECH_DIR)/ASIC/TSMC65nm/rf_16k.spec
-RF_08K_65nm_SPEC_FILE	:= $(SOCLABS_NANOSOC_ASIC_TECH_DIR)/ASIC/TSMC65nm/rf_08k.spec
-ROM_65nm_SPEC_FILE		:= $(SOCLABS_NANOSOC_ASIC_TECH_DIR)/ASIC/TSMC65nm/rom_via.spec
-SRAM_16K_28nm_SPEC_FILE	:= $(SOCLABS_NANOSOC_ASIC_TECH_DIR)/ASIC/TSMC28nm/sram_16k.spec
-ROM_28nm_SPEC_FILE		:= $(SOCLABS_NANOSOC_ASIC_TECH_DIR)/ASIC/TSMC28nm/rom_via.spec
+RF_16K_65nm_SPEC_FILE	:= $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/asic/ASIC/TSMC65nm/rf_16k.spec
+RF_08K_65nm_SPEC_FILE	:= $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/asic/ASIC/TSMC65nm/rf_08k.spec
+ROM_65nm_SPEC_FILE		:= $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/asic/ASIC/TSMC65nm/rom_via.spec
+SRAM_16K_28nm_SPEC_FILE	:= $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/asic/ASIC/TSMC28nm/sram_16k.spec
+ROM_28nm_SPEC_FILE		:= $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/asic/ASIC/TSMC28nm/rom_via.spec
 BOOTROM_BIN_FILE_IN 	:= $(SOCLABS_PROJECT_DIR)/system/src/bootrom/bintxt/bootrom.bintxt
 BOOTROM_BIN_FILE		:= $(SOCLABS_PROJECT_DIR)/system/src/bootrom/bintxt/bootrom.rcf
 RF_16K_DIR				:= $(MEMORIES_DIR)/rf_16k
@@ -60,21 +60,21 @@ ASIC_LIBS_DIR 			:= $(IMP_NANOSOC_ASIC_DIR)/libs
 NODE ?= 65
 
 ifeq ($(NODE),65)
-	NANOSOC_SYNTH_DIR	:= $(SOCLABS_NANOSOC_ASIC_TECH_DIR)/ASIC/TSMC65nm
+	NANOSOC_SYNTH_DIR	:= $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/asic/ASIC/TSMC65nm
 	NANOSOC_CADENCE_SCRIPTS_DIR	:= $(NANOSOC_SYNTH_DIR)/44pin/Cadence/scripts
 	NANOSOC_CADENCE_INPUTS_DIR	:= $(NANOSOC_SYNTH_DIR)/44pin/Cadence/inputs
 	NANOSOC_SYN_SCRIPTS_DIR 	:= $(NANOSOC_SYNTH_DIR)/44pin/Synopsys/scripts
 	NANOSOC_SYN_FLOORPLAN_DIR 	:= $(NANOSOC_SYNTH_DIR)/44pin/Synopsys/floorplan
 	NANOSOC_SYN_INPUTS_DIR 		:= $(NANOSOC_SYNTH_DIR)/44pin/Synopsys/inputs
 else
-	NANOSOC_SYNTH_DIR 			:= $(SOCLABS_NANOSOC_ASIC_TECH_DIR)/ASIC/TSMC28nm
-	NANOSOC_FC_SCRIPTS_DIR 		:= $(SOCLABS_NANOSOC_ASIC_TECH_DIR)/ASIC/TSMC28nm/38pin/Synopsys_FC/scripts
-	NANOSOC_FC_FLOORPLAN_DIR 	:= $(SOCLABS_NANOSOC_ASIC_TECH_DIR)/ASIC/TSMC28nm/38pin/Synopsys_FC/floorplan
-	NANOSOC_FC_INPUTS_DIR 		:= $(SOCLABS_NANOSOC_ASIC_TECH_DIR)/ASIC/TSMC28nm/38pin/Synopsys_FC/inputs
+	NANOSOC_SYNTH_DIR 			:= $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/asic/ASIC/TSMC28nm
+	NANOSOC_FC_SCRIPTS_DIR 		:= $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/asic/ASIC/TSMC28nm/38pin/Synopsys_FC/scripts
+	NANOSOC_FC_FLOORPLAN_DIR 	:= $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/asic/ASIC/TSMC28nm/38pin/Synopsys_FC/floorplan
+	NANOSOC_FC_INPUTS_DIR 		:= $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/asic/ASIC/TSMC28nm/38pin/Synopsys_FC/inputs
 endif
 
 # NanoSoC Tech Flow Dependencies
-NANOSOC_FPGA_FLOW_DIR := $(SOCLABS_NANOSOC_FPGA_TECH_DIR)/fpga
+NANOSOC_FPGA_FLOW_DIR := $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/fpga/fpga
 
 # Directory to look for FPGA specific implementation files
 TARGET_DIR            ?= $(NANOSOC_FPGA_FLOW_DIR)/targets/$(BOARD_NAME)
@@ -209,8 +209,8 @@ fusion_setup_libs: fusion_setup_dirs
 	fi
 
 fusion_setup_saif:
-	cp $(SOCLABS_PROJECT_DIR)/simulate/sim/A_Cube_RR_out_Check/waves.vcd $(SOCLABS_NANOSOC_ASIC_TECH_DIR)/ASIC/TSMC28nm/38pin/Synopsys_FC/inputs/waves.vcd
-	cd $(SOCLABS_NANOSOC_ASIC_TECH_DIR)/ASIC/TSMC28nm/38pin/Synopsys_FC/inputs;  vcd2saif -verilog_instance u_nanosoc_chip_pads -input ./waves.vcd -output ./waves.saif 
+	cp $(SOCLABS_PROJECT_DIR)/simulate/sim/A_Cube_RR_out_Check/waves.vcd $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/asic/ASIC/TSMC28nm/38pin/Synopsys_FC/inputs/waves.vcd
+	cd $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/asic/ASIC/TSMC28nm/38pin/Synopsys_FC/inputs;  vcd2saif -verilog_instance u_nanosoc_chip_pads -input ./waves.vcd -output ./waves.saif 
 
 fusion_init: fusion_setup_saif
 	@mkdir -p $(ASIC_WORK_DIR) 
@@ -255,4 +255,4 @@ clean_synthesis_all:
 	@rm -rf $(IMP_NANOSOC_ASIC_DIR)
 	@rm -rf 
 	@echo Cleaning Firmware
-	@$(MAKE) -C $(SOCLABS_NANOSOC_TECH_DIR) clean_all_code
+	@$(MAKE) -C $(SOCLABS_NANOSOC_ARCH_TECH_DIR) clean_all_code

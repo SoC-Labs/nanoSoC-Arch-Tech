@@ -32,7 +32,7 @@ TARGET = arm-none-eabi
 TOOL_CHAIN     ?= ds5
 
 # Shared software directory
-SOFTWARE_DIR = $(SOCLABS_NANOSOC_FIRMWARE_TECH_DIR)/software
+SOFTWARE_DIR = $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/firmware/software
 CMSIS_DIR    = $(SOFTWARE_DIR)/cmsis
 CORE_DIR     = $(CMSIS_DIR)/CMSIS/Include
 

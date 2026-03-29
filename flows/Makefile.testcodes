@@ -19,7 +19,7 @@ TESTNAME ?= hello
 # Variable to determine whether this is an example NanoSoC test or not
 # - determines where to search for the testcode
 # Directory of Testcodes
-EXAMPLE_TESTCODES_DIR := $(SOCLABS_NANOSOC_FIRMWARE_TECH_DIR)/testcodes
+EXAMPLE_TESTCODES_DIR := $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/firmware/testcodes
 EXAMPLE_TEST          ?= YES
 
 ifeq ($(EXAMPLE_TEST),YES)

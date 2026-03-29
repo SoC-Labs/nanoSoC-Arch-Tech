@@ -4,4 +4,4 @@
 #-----------------------------------------------------------------------------
 TESTNAME := hello
 
-include $(SOCLABS_NANOSOC_FIRMWARE_TECH_DIR)/build/testcode.mk
+include $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/firmware/build/testcode.mk

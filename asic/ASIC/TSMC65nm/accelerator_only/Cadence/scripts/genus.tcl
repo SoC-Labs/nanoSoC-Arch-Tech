@@ -6,7 +6,7 @@ set_db [get_db library_domains domain1] .library "$BASE_LIB"
 source $::env(SOCLABS_PROJECT_DIR)/imp/ASIC/nanosoc/flist/genus_flist.tcl
 elaborate accelerator_subsystem
 
-read_sdc $::env(SOCLABS_NANOSOC_TECH_DIR)/ASIC/accelerator_only/accel_constraints.sdc 
+read_sdc $::env(SOCLABS_NANOSOC_ARCH_TECH_DIR)/ASIC/accelerator_only/accel_constraints.sdc 
 
 set_db delete_unloaded_insts false
 set_db optimize_constant_1_flops false

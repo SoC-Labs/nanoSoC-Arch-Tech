@@ -12,24 +12,20 @@
 include $(SOCLABS_PROJECT_DIR)/nanosoc.config
 
 #-------------------------------------
-# - Sub-Directory Paths
+# - IP Submodule Paths
 #-------------------------------------
-# Derived from SOCLABS_NANOSOC_TECH_DIR which points to nanosoc_arch_tech root.
-# Directories are flattened (no longer separate git submodules).
-# Override with absolute paths if using repos independently.
-SOCLABS_NANOSOC_RTL_TECH_DIR      ?= $(SOCLABS_NANOSOC_TECH_DIR)/rtl
-SOCLABS_NANOSOC_FIRMWARE_TECH_DIR ?= $(SOCLABS_NANOSOC_TECH_DIR)/firmware
-SOCLABS_NANOSOC_ASIC_TECH_DIR     ?= $(SOCLABS_NANOSOC_TECH_DIR)/asic
-SOCLABS_NANOSOC_FPGA_TECH_DIR     ?= $(SOCLABS_NANOSOC_TECH_DIR)/fpga
-SOCLABS_NANOSOC_VERIF_TECH_DIR    ?= $(SOCLABS_NANOSOC_TECH_DIR)/verification
-SOCLABS_NANOSOC_DOC_TECH_DIR      ?= $(SOCLABS_NANOSOC_TECH_DIR)/doc
+# IP submodules nested inside rtl/ directory of nanosoc_arch_tech.
+SOCLABS_HOSTIO4_TECH_DIR   ?= $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/rtl/hostio4
+SOCLABS_SOCDEBUG_TECH_DIR  ?= $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/rtl/socdebug_tech
+SOCLABS_SLCOREM0_TECH_DIR  ?= $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/rtl/slcorem0_tech
+SOCLABS_SLDMA230_TECH_DIR  ?= $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/rtl/sldma230_tech
+SOCLABS_SLDMA350_TECH_DIR  ?= $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/rtl/sldma350_tech
 
-export SOCLABS_NANOSOC_RTL_TECH_DIR
-export SOCLABS_NANOSOC_FIRMWARE_TECH_DIR
-export SOCLABS_NANOSOC_ASIC_TECH_DIR
-export SOCLABS_NANOSOC_FPGA_TECH_DIR
-export SOCLABS_NANOSOC_VERIF_TECH_DIR
-export SOCLABS_NANOSOC_DOC_TECH_DIR
+export SOCLABS_HOSTIO4_TECH_DIR
+export SOCLABS_SOCDEBUG_TECH_DIR
+export SOCLABS_SLCOREM0_TECH_DIR
+export SOCLABS_SLDMA230_TECH_DIR
+export SOCLABS_SLDMA350_TECH_DIR
 
 #-------------------------------------
 # - Commonly Overloaded Variables
@@ -64,7 +60,7 @@ export SIMULATOR
 # - Directory Setups
 #-------------------------------------
 # Directory of Testcodes
-TESTCODES_DIR    := $(SOCLABS_NANOSOC_FIRMWARE_TECH_DIR)/testcodes
+TESTCODES_DIR    := $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/firmware/testcodes
 
 # Project System Directory
 FPGA_IMP_DIR     := $(SOCLABS_PROJECT_DIR)/imp/fpga
@@ -145,25 +141,25 @@ export DMA_TYPE
 ifdef ADC_0_INCLUDE
 	AMS = yes
 	NANOSOC_DEFINES += AMS_PERIPHERALS ADC_0_INCLUDE
-	FLIST_INCLUDES += $(SOCLABS_NANOSOC_RTL_TECH_DIR)/sl_ams_tech/SL_ADC_8bits/flist/sl_adc_8bits_ip.flist
+	FLIST_INCLUDES += $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/rtl/sl_ams_tech/SL_ADC_8bits/flist/sl_adc_8bits_ip.flist
 endif
 
 ifdef ADC_1_INCLUDE
 	AMS = yes
 	NANOSOC_DEFINES += AMS_PERIPHERALS ADC_1_INCLUDE
-	FLIST_INCLUDES += $(SOCLABS_NANOSOC_RTL_TECH_DIR)/sl_ams_tech/SL_ADC_8bits/flist/sl_adc_8bits_ip.flist
+	FLIST_INCLUDES += $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/rtl/sl_ams_tech/SL_ADC_8bits/flist/sl_adc_8bits_ip.flist
 endif
 
 ifdef ADC_2_INCLUDE
 	AMS = yes
 	NANOSOC_DEFINES += AMS_PERIPHERALS ADC_2_INCLUDE
-	FLIST_INCLUDES += $(SOCLABS_NANOSOC_RTL_TECH_DIR)/sl_ams_tech/SL_ADC_8bits/flist/sl_adc_8bits_ip.flist
+	FLIST_INCLUDES += $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/rtl/sl_ams_tech/SL_ADC_8bits/flist/sl_adc_8bits_ip.flist
 endif
 
 ifdef ADC_3_INCLUDE
 	AMS = yes
 	NANOSOC_DEFINES += AMS_PERIPHERALS ADC_3_INCLUDE
-	FLIST_INCLUDES += $(SOCLABS_NANOSOC_RTL_TECH_DIR)/sl_ams_tech/SL_ADC_8bits/flist/sl_adc_8bits_ip.flist
+	FLIST_INCLUDES += $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/rtl/sl_ams_tech/SL_ADC_8bits/flist/sl_adc_8bits_ip.flist
 endif
 
 ifdef_any_of = $(filter-out yes,$(foreach v,$(1),$(origin $(v))))
@@ -171,9 +167,9 @@ ifdef_any_of = $(filter-out yes,$(foreach v,$(1),$(origin $(v))))
 ifeq ($(GATE),no)
 ifneq ($(call ifdef_any_of,$(SNPS_PVT_VM_0_INCLUDE) $(SNPS_PVT_PD_0_INCLUDE) $(SNPS_PVT_TS_0_INCLUDE) $(SNPS_PVT_TS_1_INCLUDE) $(SNPS_PVT_TS_2_INCLUDE) $(SNPS_PVT_TS_3_INCLUDE) $(SNPS_PVT_TS_4_INCLUDE) $(SNPS_PVT_TS_5_INCLUDE)),)
 	SNPS_PVT_INC:=yes
-	FLIST_INCLUDES  += $(SOCLABS_NANOSOC_RTL_TECH_DIR)/synopsys_28nm_slm_integration/flist/synopsys_pvt_ip.flist
+	FLIST_INCLUDES  += $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/rtl/synopsys_28nm_slm_integration/flist/synopsys_pvt_ip.flist
 	ifeq ($(ASIC),no)
-		FLIST_INCLUDES += $(SOCLABS_NANOSOC_RTL_TECH_DIR)/synopsys_28nm_slm_integration/flist/synopsys_pvt_VIP.flist
+		FLIST_INCLUDES += $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/rtl/synopsys_28nm_slm_integration/flist/synopsys_pvt_VIP.flist
 	endif
 endif
 ifdef SNPS_PVT_TS_0_INCLUDE
@@ -266,22 +262,22 @@ DEFINES_FILE  := $(DEFINES_DIR)/gen_defines.v
 # - Include Makefiles for Specific Flows
 #------------------------------------------
 # Include Software Compilation Makefile
-include $(SOCLABS_NANOSOC_TECH_DIR)/flows/makefile.software
+include $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/flows/makefile.software
 
 # Include Linting Makefile
-include $(SOCLABS_NANOSOC_TECH_DIR)/flows/makefile.lint
+include $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/flows/makefile.lint
 
 # Include Simulation Makefile
-include $(SOCLABS_NANOSOC_TECH_DIR)/flows/makefile.simulate
+include $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/flows/makefile.simulate
 
 # Include Regression Simulation Makefile
-include $(SOCLABS_NANOSOC_TECH_DIR)/flows/makefile.regression
+include $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/flows/makefile.regression
 
 # Include FPGA Makefile
-include $(SOCLABS_NANOSOC_TECH_DIR)/flows/makefile.fpga
+include $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/flows/makefile.fpga
 
 # Include Synthesis Makefile
-include $(SOCLABS_NANOSOC_TECH_DIR)/flows/makefile.asic
+include $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/flows/makefile.asic
 
 #------------------------------------------
 # - Common Targets Across Flows
@@ -292,12 +288,12 @@ gen_defs:
 	@$(SOCLABS_SOCTOOLS_FLOW_DIR)/bin/defines_compile.py -d $(NANOSOC_DEFINES) -o $(DEFINES_FILE)
 
 docs:
-	pdflatex --output-directory=$(SOCLABS_NANOSOC_DOC_TECH_DIR)/doc/tex/ $(SOCLABS_NANOSOC_DOC_TECH_DIR)/doc/tex/nanosoc_datasheet.tex
-	pdflatex --output-directory=$(SOCLABS_NANOSOC_DOC_TECH_DIR)/doc/tex/ $(SOCLABS_NANOSOC_DOC_TECH_DIR)/doc/tex/nanosoc_datasheet.tex
-	pdflatex --output-directory=$(SOCLABS_NANOSOC_DOC_TECH_DIR)/doc/tex/ $(SOCLABS_NANOSOC_DOC_TECH_DIR)/doc/tex/nanosoc_configuration_manual.tex
-	pdflatex --output-directory=$(SOCLABS_NANOSOC_DOC_TECH_DIR)/doc/tex/ $(SOCLABS_NANOSOC_DOC_TECH_DIR)/doc/tex/nanosoc_configuration_manual.tex
-	mv $(SOCLABS_NANOSOC_DOC_TECH_DIR)/doc/tex/nanosoc_datasheet.pdf $(SOCLABS_NANOSOC_DOC_TECH_DIR)/doc/nanosoc_datasheet.pdf
-	mv $(SOCLABS_NANOSOC_DOC_TECH_DIR)/doc/tex/nanosoc_configuration_manual.pdf $(SOCLABS_NANOSOC_DOC_TECH_DIR)/doc/nanosoc_configuration_manual.pdf
+	pdflatex --output-directory=$(SOCLABS_NANOSOC_ARCH_TECH_DIR)/doc/doc/tex/ $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/doc/doc/tex/nanosoc_datasheet.tex
+	pdflatex --output-directory=$(SOCLABS_NANOSOC_ARCH_TECH_DIR)/doc/doc/tex/ $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/doc/doc/tex/nanosoc_datasheet.tex
+	pdflatex --output-directory=$(SOCLABS_NANOSOC_ARCH_TECH_DIR)/doc/doc/tex/ $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/doc/doc/tex/nanosoc_configuration_manual.tex
+	pdflatex --output-directory=$(SOCLABS_NANOSOC_ARCH_TECH_DIR)/doc/doc/tex/ $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/doc/doc/tex/nanosoc_configuration_manual.tex
+	mv $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/doc/doc/tex/nanosoc_datasheet.pdf $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/doc/doc/nanosoc_datasheet.pdf
+	mv $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/doc/doc/tex/nanosoc_configuration_manual.pdf $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/doc/doc/nanosoc_configuration_manual.pdf
 
 TEST_AMS:
 	$(info AMS is $(AMS))

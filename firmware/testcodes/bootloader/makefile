@@ -17,7 +17,7 @@ OPT_LEVEL      := -O1
 USE_RETARGET   := 0
 GNU_CC_EXTRA_FLAGS := -Os -flto -mthumb-interwork
 
-include $(SOCLABS_NANOSOC_FIRMWARE_TECH_DIR)/build/testcode.mk
+include $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/firmware/build/testcode.mk
 
 # DS-6 requires --no_scatterload_enabled for bootloader linking
 ifeq ($(TOOL_CHAIN),ds6)

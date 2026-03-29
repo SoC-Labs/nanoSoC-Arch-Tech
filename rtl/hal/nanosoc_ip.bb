@@ -16,11 +16,11 @@ bb_list
 {
     // Exclude Bus Matrix as Generated from Arm IP
     designunit = nanosoc_busmatrix_lite;
-    file = $SOCLABS_NANOSOC_RTL_TECH_DIR/src/interconnect/busmatrix/verilog/nanosoc_busmatrix/nanosoc_busmatrix_lite.v;
+    file = $SOCLABS_NANOSOC_ARCH_TECH_DIR/rtl/src/interconnect/busmatrix/verilog/nanosoc_busmatrix/nanosoc_busmatrix_lite.v;
     
     // Temporarily Exclude SoCDebug
     designunit = socdebug_ahb;
-    file = $SOCLABS_NANOSOC_RTL_TECH_DIR/socdebug_tech/controller/verilog/socdebug_ahb.v;
+    file = $SOCLABS_NANOSOC_ARCH_TECH_DIR/rtl/socdebug_tech/controller/verilog/socdebug_ahb.v;
     
     // Temporarily Exclude Accelerator Subsystem (just linting NanoSoC)
     designunit = accelerator_subsystem;

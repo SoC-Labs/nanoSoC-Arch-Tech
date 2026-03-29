@@ -7,4 +7,4 @@ EXTRA_INCLUDES  += -I $(SOFTWARE_DIR)/drivers
 SOURCE_FILES    += $(TEST_DIR)/dataio_functions.c
 CC_EXTRA_FLAGS  := -Ospace
 
-include $(SOCLABS_NANOSOC_FIRMWARE_TECH_DIR)/build/testcode.mk
+include $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/firmware/build/testcode.mk

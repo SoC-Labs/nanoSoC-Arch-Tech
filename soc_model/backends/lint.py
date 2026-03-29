@@ -119,15 +119,13 @@ class SoCLintBackend:
         env = {
             'SOCLABS_PROJECT_DIR': project_dir,
             'SOCLABS_NANOSOC_SOC_DIR': soc_dir,
-            'SOCLABS_NANOSOC_TECH_DIR': tech_dir,
-            'SOCLABS_NANOSOC_RTL_TECH_DIR': rtl_dir,
-            'SOCLABS_NANOSOC_FIRMWARE_TECH_DIR': os.path.join(tech_dir, 'firmware'),
-            'SOCLABS_NANOSOC_VERIF_TECH_DIR': os.path.join(tech_dir, 'verification'),
+            'SOCLABS_NANOSOC_ARCH_TECH_DIR': tech_dir,
             # IP submodules
             'SOCLABS_SOCDEBUG_TECH_DIR': os.path.join(rtl_dir, 'socdebug_tech'),
             'SOCLABS_SLCOREM0_TECH_DIR': os.path.join(rtl_dir, 'slcorem0_tech'),
             'SOCLABS_SLDMA230_TECH_DIR': os.path.join(rtl_dir, 'sldma230_tech'),
             'SOCLABS_SLDMA350_TECH_DIR': os.path.join(rtl_dir, 'sldma350_tech'),
+            'SOCLABS_HOSTIO4_TECH_DIR': os.path.join(rtl_dir, 'hostio4'),
         }
         return env
 

@@ -8,4 +8,4 @@ SOURCE_FILES    += $(TEST_DIR)/dataio_functions.c
 DRIVER_FILES    += $(SOFTWARE_DIR)/drivers/dma_pl230_driver.c
 CC_EXTRA_FLAGS  := -Ospace
 
-include $(SOCLABS_NANOSOC_FIRMWARE_TECH_DIR)/build/testcode.mk
+include $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/firmware/build/testcode.mk

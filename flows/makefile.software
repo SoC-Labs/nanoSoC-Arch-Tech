@@ -10,7 +10,7 @@
 #-----------------------------------------------------------------------------
 
 # Software Directory
-NANOSOC_SW_DIR     ?= $(SOCLABS_NANOSOC_FIRMWARE_TECH_DIR)/software
+NANOSOC_SW_DIR     ?= $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/firmware/software
 
 # Software make options
 # - Pass onto the software makefile to define targetted CPU type
@@ -38,11 +38,11 @@ $(FIRMWARE_CONFIG_STAMP):
 # firmware_config must be generated first (provides linker memory fragments).
 code: firmware_config bootrom testcode debugtester
 
-NANOSOC_TESTCODES_DIR := $(SOCLABS_NANOSOC_FIRMWARE_TECH_DIR)/testcodes
+NANOSOC_TESTCODES_DIR := $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/firmware/testcodes
 
 # Run the bootrom flow from the other makefile
 bootrom:
-	@$(MAKE) -f $(SOCLABS_NANOSOC_TECH_DIR)/flows/Makefile.bootrom bootrom \
+	@$(MAKE) -f $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/flows/Makefile.bootrom bootrom \
 		BOOTROM_BUILD_DIR=$(BOOTROM_BUILD_DIR) \
 		SIM_TOP_DIR=$(SIM_TOP_DIR) \
 		TESTCODES_DIR=$(NANOSOC_TESTCODES_DIR)
@@ -240,7 +240,7 @@ compile_all_code: bootrom debugtester
 # Remove all software compilation results
 clean_all_code:
 	@rm -rf $(SOCLABS_PROJECT_DIR)/build/software
-	@$(MAKE) -f $(SOCLABS_NANOSOC_TECH_DIR)/flows/Makefile.bootrom clean \
+	@$(MAKE) -f $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/flows/Makefile.bootrom clean \
 		BOOTROM_BUILD_DIR=$(BOOTROM_BUILD_DIR)
 
 # Remove only bootloader and default selected test

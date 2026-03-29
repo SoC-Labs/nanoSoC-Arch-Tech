@@ -10,7 +10,7 @@ set_db [get_db library_domains domain1] .library "$BASE_LIB $RF_16K_LIB $RF_08K_
 read_power_intent -cpf -module nanosoc_chip_pads ../cpf/nanosoc.cpf
 
 source $::env(SOCLABS_PROJECT_DIR)/imp/ASIC/nanosoc/flist/genus_flist.tcl
-read_hdl -define POWER_PINS $env(SOCLABS_NANOSOC_TECH_DIR)/ASIC/nanosoc_chip_pads/tsmc65lp/nanosoc_chip_pads_28pin.v
+read_hdl -define POWER_PINS $env(SOCLABS_NANOSOC_ARCH_TECH_DIR)/ASIC/nanosoc_chip_pads/tsmc65lp/nanosoc_chip_pads_28pin.v
 elaborate nanosoc_chip_pads
 
 apply_power_intent
@@ -21,7 +21,7 @@ check_cpf
 commit_power_intent
 check_power_structure -license lpgxl
 
-read_sdc $::env(SOCLABS_NANOSOC_TECH_DIR)/ASIC/constraints.sdc 
+read_sdc $::env(SOCLABS_NANOSOC_ARCH_TECH_DIR)/ASIC/constraints.sdc 
 
 #set_db dft_scan_style muxed_scan
 #set_db design:nanosoc_chip_pads .dft_min_number_of_scan_chains 1

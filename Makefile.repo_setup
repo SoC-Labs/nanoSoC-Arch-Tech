@@ -23,8 +23,8 @@ THIS_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 ABS_DIR  := $(abspath $(THIS_DIR))
 
 # Sub-directory paths (flattened, no longer separate submodules)
-SOCLABS_NANOSOC_RTL_TECH_DIR      ?= $(ABS_DIR)/rtl
-SOCLABS_NANOSOC_FIRMWARE_TECH_DIR ?= $(ABS_DIR)/firmware
+SOCLABS_NANOSOC_ARCH_TECH_DIR/rtl      ?= $(ABS_DIR)/rtl
+SOCLABS_NANOSOC_ARCH_TECH_DIR/firmware ?= $(ABS_DIR)/firmware
 
 # Bootrom SystemVerilog File to be generated
 BOOTROM_BUILD_DIR ?= $(SOCLABS_PROJECT_DIR)/system/src/bootrom
@@ -38,7 +38,7 @@ BUSMATRIX_VERILOG   := $(BUSMATRIX_BUILD_DIR)/verilog/nanosoc_ahb_interconnect/n
 DMA350_CONFIG_FILE := $(ABS_DIR)/.dma350_configured
 
 # DMA350 Technology Repository (inside RTL sub-repo)
-DMA350_TECH_REPO := $(SOCLABS_NANOSOC_RTL_TECH_DIR)/sldma350_tech
+DMA350_TECH_REPO := $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/rtl/sldma350_tech
 
 #------------------------------------------------------------------------
 # Setup Dependencies
@@ -57,7 +57,7 @@ SIM_TOP_DIR     ?= $(SOCLABS_PROJECT_DIR)/simulate/sim
 BOOTROM_SIM_DIR := $(SIM_TOP_DIR)/bootloader
 
 # Testcodes Directory (in firmware sub-repo)
-TESTCODES_DIR := $(SOCLABS_NANOSOC_FIRMWARE_TECH_DIR)/testcodes
+TESTCODES_DIR := $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/firmware/testcodes
 
 # Generate the Bootrom SV file for NanoSoC
 $(BOOTROM_SV):
@@ -81,7 +81,7 @@ $(BUSMATRIX_VERILOG):
 	@echo "Generating AHB Bus Matrix Verilog for NanoSoC"
 	@echo -e "-----------------------------------------------\033[0m"
 	@$(MAKE) -f $(BUSMATRIX_MAKEFILE) build \
-		SOCLABS_NANOSOC_RTL_TECH_DIR=$(SOCLABS_NANOSOC_RTL_TECH_DIR) \
+		SOCLABS_NANOSOC_ARCH_TECH_DIR/rtl=$(SOCLABS_NANOSOC_ARCH_TECH_DIR)/rtl \
 		SOCLABS_PROJECT_DIR=$(SOCLABS_PROJECT_DIR) \
 		BUILD_DIR=$(BUSMATRIX_BUILD_DIR)
 

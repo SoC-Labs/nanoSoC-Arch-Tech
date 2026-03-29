@@ -9,4 +9,4 @@ EXTRA_INCLUDES  += -I $(SOFTWARE_DIR)/drivers
 DRIVER_FILES    += $(SOFTWARE_DIR)/drivers/dma_350_command_lib.c
 CC_EXTRA_FLAGS  := --c99
 
-include $(SOCLABS_NANOSOC_FIRMWARE_TECH_DIR)/build/testcode.mk
+include $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/firmware/build/testcode.mk

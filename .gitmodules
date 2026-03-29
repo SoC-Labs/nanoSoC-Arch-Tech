@@ -16,3 +16,6 @@
 [submodule "rtl/synopsys_28nm_slm_integration"]
 	path = rtl/synopsys_28nm_slm_integration
 	url = https://git.soton.ac.uk/soclabs/synopsys_28nm_slm_integration.git
+[submodule "rtl/hostio4"]
+	path = rtl/hostio4
+	url = https://git.soton.ac.uk/soclabs/hostio4.git

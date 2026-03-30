@@ -1,0 +1,231 @@
+#-----------------------------------------------------------------------------
+# NanoSoC Default Expansion Region
+# A joint work commissioned on behalf of SoC Labs, under Arm Academic Access license.
+#
+# Contributors
+#
+# David Mapstone (d.a.mapstone@soton.ac.uk)
+#
+# Copyright 2026, SoC Labs (www.soclabs.org)
+#-----------------------------------------------------------------------------
+# Default expansion region with a cmsdk_ahb_default_slave on the AHB port.
+# This module should be REPLACED with your own accelerator IP.
+#
+# The default slave returns AHB error responses for all transactions,
+# and all AXI-Stream/IRQ/DMA signals are tied to safe defaults.
+
+module:
+  name: nanosoc_region_exp_default
+  gen: True
+  desc: >
+    Default expansion region placeholder. Instantiates a cmsdk_ahb_default_slave
+    on the AHB port which returns error responses for all accesses.
+    All AXI-Stream outputs are tied inactive, interrupts and DMA requests
+    are tied low. REPLACE THIS MODULE with your own accelerator subsystem.
+
+  params:
+    SYS_ADDR_W:            { type: int, default: 32, desc: "System address width" }
+    SYS_DATA_W:            { type: int, default: 32, desc: "System data width" }
+    ACCELERATOR_SUBSYSTEM: { type: int, default: 0,  desc: "Enable accelerator in expansion region" }
+
+  interfaces:
+    # Clock and Reset
+    - { name: HCLK,    type: wire, direction: in, params: { WIDTH: 1 }, desc: AHB clock }
+    - { name: HRESETn, type: wire, direction: in, params: { WIDTH: 1 }, desc: AHB reset (active low) }
+
+    # AHB slave port
+    - { name: HSEL,      type: wire, direction: in,  params: { WIDTH: 1 },            desc: AHB select }
+    - { name: HADDR,     type: wire, direction: in,  params: { WIDTH: $SYS_ADDR_W },  desc: AHB address }
+    - { name: HTRANS,    type: wire, direction: in,  params: { WIDTH: 2 },             desc: AHB transfer type }
+    - { name: HSIZE,     type: wire, direction: in,  params: { WIDTH: 3 },             desc: AHB transfer size }
+    - { name: HPROT,     type: wire, direction: in,  params: { WIDTH: 4 },             desc: AHB protection }
+    - { name: HWRITE,    type: wire, direction: in,  params: { WIDTH: 1 },             desc: AHB write }
+    - { name: HREADY,    type: wire, direction: in,  params: { WIDTH: 1 },             desc: AHB ready }
+    - { name: HWDATA,    type: wire, direction: in,  params: { WIDTH: $SYS_DATA_W },   desc: AHB write data }
+    - { name: HREADYOUT, type: wire, direction: out, params: { WIDTH: 1 },             desc: AHB ready out }
+    - { name: HRESP,     type: wire, direction: out, params: { WIDTH: 1 },             desc: AHB response }
+    - { name: HRDATA,    type: wire, direction: out, params: { WIDTH: $SYS_DATA_W },   desc: AHB read data }
+
+    # AXI-Stream channels: DMAC -> Expansion (3 channels)
+    - { name: EXP_STR_IN_0_TVALID,  type: wire, direction: in,  params: { WIDTH: 1 },            desc: "Stream 0 in valid" }
+    - { name: EXP_STR_IN_0_TREADY,  type: wire, direction: out, params: { WIDTH: 1 },            desc: "Stream 0 in ready" }
+    - { name: EXP_STR_IN_0_TDATA,   type: wire, direction: in,  params: { WIDTH: $SYS_DATA_W },  desc: "Stream 0 in data" }
+    - { name: EXP_STR_IN_0_TSTRB,   type: wire, direction: in,  params: { WIDTH: 4 },            desc: "Stream 0 in strobe" }
+    - { name: EXP_STR_IN_0_TLAST,   type: wire, direction: in,  params: { WIDTH: 1 },            desc: "Stream 0 in last" }
+    - { name: EXP_STR_OUT_0_TVALID, type: wire, direction: out, params: { WIDTH: 1 },            desc: "Stream 0 out valid" }
+    - { name: EXP_STR_OUT_0_TREADY, type: wire, direction: in,  params: { WIDTH: 1 },            desc: "Stream 0 out ready" }
+    - { name: EXP_STR_OUT_0_TDATA,  type: wire, direction: out, params: { WIDTH: $SYS_DATA_W },  desc: "Stream 0 out data" }
+    - { name: EXP_STR_OUT_0_TSTRB,  type: wire, direction: out, params: { WIDTH: 4 },            desc: "Stream 0 out strobe" }
+    - { name: EXP_STR_OUT_0_TLAST,  type: wire, direction: out, params: { WIDTH: 1 },            desc: "Stream 0 out last" }
+    - { name: EXP_STR_OUT_0_FLUSH,  type: wire, direction: in,  params: { WIDTH: 1 },            desc: "Stream 0 out flush" }
+
+    - { name: EXP_STR_IN_1_TVALID,  type: wire, direction: in,  params: { WIDTH: 1 },            desc: "Stream 1 in valid" }
+    - { name: EXP_STR_IN_1_TREADY,  type: wire, direction: out, params: { WIDTH: 1 },            desc: "Stream 1 in ready" }
+    - { name: EXP_STR_IN_1_TDATA,   type: wire, direction: in,  params: { WIDTH: $SYS_DATA_W },  desc: "Stream 1 in data" }
+    - { name: EXP_STR_IN_1_TSTRB,   type: wire, direction: in,  params: { WIDTH: 4 },            desc: "Stream 1 in strobe" }
+    - { name: EXP_STR_IN_1_TLAST,   type: wire, direction: in,  params: { WIDTH: 1 },            desc: "Stream 1 in last" }
+    - { name: EXP_STR_OUT_1_TVALID, type: wire, direction: out, params: { WIDTH: 1 },            desc: "Stream 1 out valid" }
+    - { name: EXP_STR_OUT_1_TREADY, type: wire, direction: in,  params: { WIDTH: 1 },            desc: "Stream 1 out ready" }
+    - { name: EXP_STR_OUT_1_TDATA,  type: wire, direction: out, params: { WIDTH: $SYS_DATA_W },  desc: "Stream 1 out data" }
+    - { name: EXP_STR_OUT_1_TSTRB,  type: wire, direction: out, params: { WIDTH: 4 },            desc: "Stream 1 out strobe" }
+    - { name: EXP_STR_OUT_1_TLAST,  type: wire, direction: out, params: { WIDTH: 1 },            desc: "Stream 1 out last" }
+    - { name: EXP_STR_OUT_1_FLUSH,  type: wire, direction: in,  params: { WIDTH: 1 },            desc: "Stream 1 out flush" }
+
+    - { name: EXP_STR_IN_2_TVALID,  type: wire, direction: in,  params: { WIDTH: 1 },            desc: "Stream 2 in valid" }
+    - { name: EXP_STR_IN_2_TREADY,  type: wire, direction: out, params: { WIDTH: 1 },            desc: "Stream 2 in ready" }
+    - { name: EXP_STR_IN_2_TDATA,   type: wire, direction: in,  params: { WIDTH: $SYS_DATA_W },  desc: "Stream 2 in data" }
+    - { name: EXP_STR_IN_2_TSTRB,   type: wire, direction: in,  params: { WIDTH: 4 },            desc: "Stream 2 in strobe" }
+    - { name: EXP_STR_IN_2_TLAST,   type: wire, direction: in,  params: { WIDTH: 1 },            desc: "Stream 2 in last" }
+    - { name: EXP_STR_OUT_2_TVALID, type: wire, direction: out, params: { WIDTH: 1 },            desc: "Stream 2 out valid" }
+    - { name: EXP_STR_OUT_2_TREADY, type: wire, direction: in,  params: { WIDTH: 1 },            desc: "Stream 2 out ready" }
+    - { name: EXP_STR_OUT_2_TDATA,  type: wire, direction: out, params: { WIDTH: $SYS_DATA_W },  desc: "Stream 2 out data" }
+    - { name: EXP_STR_OUT_2_TSTRB,  type: wire, direction: out, params: { WIDTH: 4 },            desc: "Stream 2 out strobe" }
+    - { name: EXP_STR_OUT_2_TLAST,  type: wire, direction: out, params: { WIDTH: 1 },            desc: "Stream 2 out last" }
+    - { name: EXP_STR_OUT_2_FLUSH,  type: wire, direction: in,  params: { WIDTH: 1 },            desc: "Stream 2 out flush" }
+
+    # Sideband signals
+    - { name: EXP_IRQ,   type: wire, direction: out, params: { WIDTH: 4 }, desc: "Expansion interrupt requests" }
+    - { name: EXP_DRQ,   type: wire, direction: out, params: { WIDTH: 2 }, desc: "Expansion DMA requests" }
+    - { name: EXP_DLAST, type: wire, direction: in,  params: { WIDTH: 2 }, desc: "DMA last signals to expansion" }
+
+  instances:
+    # Default AHB slave — returns error response for all transactions
+    - instance_name: u_ahb_default_slave
+      rtl_module: cmsdk_ahb_default_slave
+      addressable: False
+      interfaces:
+        - { name: HCLK,      type: wire, direction: in,  params: { WIDTH: 1 },            desc: "AHB clock" }
+        - { name: HRESETn,   type: wire, direction: in,  params: { WIDTH: 1 },            desc: "AHB reset" }
+        - { name: HSEL,      type: wire, direction: in,  params: { WIDTH: 1 },            desc: "AHB select" }
+        - { name: HTRANS,    type: wire, direction: in,  params: { WIDTH: 2 },             desc: "AHB transfer type" }
+        - { name: HREADY,    type: wire, direction: in,  params: { WIDTH: 1 },             desc: "AHB ready" }
+        - { name: HREADYOUT, type: wire, direction: out, params: { WIDTH: 1 },             desc: "AHB ready out" }
+        - { name: HRESP,     type: wire, direction: out, params: { WIDTH: 1 },             desc: "AHB response" }
+      connections:
+        - { port: HCLK,      conn: HCLK }
+        - { port: HRESETn,   conn: HRESETn }
+        - { port: HSEL,      conn: HSEL }
+        - { port: HTRANS,    conn: HTRANS }
+        - { port: HREADY,    conn: HREADY }
+        - { port: HREADYOUT, conn: HREADYOUT }
+        - { port: HRESP,     conn: HRESP }
+
+  # Tie off unused outputs to safe defaults
+  glue_logic:
+    # AHB read data tied to zero
+    - name: exp_hrdata_tie
+      type: constant
+      value: 0
+      width: 32
+      output: HRDATA
+      desc: "Default slave returns zero read data"
+
+    # AXI-Stream outputs tied inactive
+    - name: exp_str_out_0_tvalid_tie
+      type: constant
+      value: 0
+      width: 1
+      output: EXP_STR_OUT_0_TVALID
+      desc: "Stream 0 output valid tied low"
+    - name: exp_str_out_0_tdata_tie
+      type: constant
+      value: 0
+      width: 32
+      output: EXP_STR_OUT_0_TDATA
+      desc: "Stream 0 output data tied zero"
+    - name: exp_str_out_0_tstrb_tie
+      type: constant
+      value: 0
+      width: 4
+      output: EXP_STR_OUT_0_TSTRB
+      desc: "Stream 0 output strobe tied zero"
+    - name: exp_str_out_0_tlast_tie
+      type: constant
+      value: 0
+      width: 1
+      output: EXP_STR_OUT_0_TLAST
+      desc: "Stream 0 output last tied low"
+
+    - name: exp_str_out_1_tvalid_tie
+      type: constant
+      value: 0
+      width: 1
+      output: EXP_STR_OUT_1_TVALID
+      desc: "Stream 1 output valid tied low"
+    - name: exp_str_out_1_tdata_tie
+      type: constant
+      value: 0
+      width: 32
+      output: EXP_STR_OUT_1_TDATA
+      desc: "Stream 1 output data tied zero"
+    - name: exp_str_out_1_tstrb_tie
+      type: constant
+      value: 0
+      width: 4
+      output: EXP_STR_OUT_1_TSTRB
+      desc: "Stream 1 output strobe tied zero"
+    - name: exp_str_out_1_tlast_tie
+      type: constant
+      value: 0
+      width: 1
+      output: EXP_STR_OUT_1_TLAST
+      desc: "Stream 1 output last tied low"
+
+    - name: exp_str_out_2_tvalid_tie
+      type: constant
+      value: 0
+      width: 1
+      output: EXP_STR_OUT_2_TVALID
+      desc: "Stream 2 output valid tied low"
+    - name: exp_str_out_2_tdata_tie
+      type: constant
+      value: 0
+      width: 32
+      output: EXP_STR_OUT_2_TDATA
+      desc: "Stream 2 output data tied zero"
+    - name: exp_str_out_2_tstrb_tie
+      type: constant
+      value: 0
+      width: 4
+      output: EXP_STR_OUT_2_TSTRB
+      desc: "Stream 2 output strobe tied zero"
+    - name: exp_str_out_2_tlast_tie
+      type: constant
+      value: 0
+      width: 1
+      output: EXP_STR_OUT_2_TLAST
+      desc: "Stream 2 output last tied low"
+
+    # Stream input ready tied high (accept and discard)
+    - name: exp_str_in_0_tready_tie
+      type: constant
+      value: 1
+      width: 1
+      output: EXP_STR_IN_0_TREADY
+      desc: "Stream 0 input ready tied high (discard)"
+    - name: exp_str_in_1_tready_tie
+      type: constant
+      value: 1
+      width: 1
+      output: EXP_STR_IN_1_TREADY
+      desc: "Stream 1 input ready tied high (discard)"
+    - name: exp_str_in_2_tready_tie
+      type: constant
+      value: 1
+      width: 1
+      output: EXP_STR_IN_2_TREADY
+      desc: "Stream 2 input ready tied high (discard)"
+
+    # IRQ and DMA requests tied low
+    - name: exp_irq_tie
+      type: constant
+      value: 0
+      width: 4
+      output: EXP_IRQ
+      desc: "Expansion interrupts tied low"
+    - name: exp_drq_tie
+      type: constant
+      value: 0
+      width: 2
+      output: EXP_DRQ
+      desc: "Expansion DMA requests tied low"

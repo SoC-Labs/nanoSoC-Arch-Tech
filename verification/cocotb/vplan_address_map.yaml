@@ -1,0 +1,162 @@
+#-----------------------------------------------------------------------------
+# NanoSoC Address Map Verification Plan
+#
+# Defines the test points, expected results, and coverage goals for
+# system-level address map verification via HOSTIO4 / ADP.
+#
+# Test module: test_address_map.py
+# Driver:      nanosoc_cocotb_driver.py (NanoSoC class)
+# Address map: build/rtl/nanosoc_combined_address_map/address_maps/nanosoc_address_map.py
+#
+# Copyright 2024-6, SoC Labs (www.soclabs.org)
+#-----------------------------------------------------------------------------
+
+vplan:
+  name: nanosoc_address_map
+  description: >
+    Verify the NanoSoC address map by exercising bus reads and writes
+    through the HOSTIO4 debug interface.  Tests confirm that the
+    interconnect decode, peripheral instantiation, and memory regions
+    are correctly wired.
+
+  interface:
+    name: HOSTIO4 channel 0 (ADP)
+    description: >
+      All bus accesses use the HOSTIO4 7-pin interface, channel 0,
+      which connects to the SoC's ADP (ASCII Debug Protocol) debug
+      initiator.  This is the same path used for FPGA/board-level
+      testing, ensuring the cocotb tests exercise the real I/O path.
+
+  # ---------------------------------------------------------------------------
+  tests:
+  # ---------------------------------------------------------------------------
+
+    - id: ADDR_MAP_001
+      name: test_peripheral_identity
+      description: >
+        Read the PID0 and CID0-CID3 identity registers at each
+        peripheral base address and compare against expected values
+        from the register-map model.
+      goal: >
+        Confirm that each peripheral is instantiated at the correct
+        address and is the correct IP type.
+      method: >
+        For each peripheral in the PERIPHERALS list, the test reads
+        five 32-bit registers (PID0 at offset 0xFE0, CID0-CID3 at
+        offsets 0xFF0-0xFFC) via soc.read32() and compares the low
+        byte against the expected constant.
+      coverage:
+        - Interconnect decode from debug initiator to soc_peripheral target
+        - APB sub-decode within the soc_peripheral region
+        - AHB target decode for GPIO peripherals
+        - Correct IP instantiation (PID0 value uniquely identifies IP type)
+      peripherals:
+        - name: timer_0
+          base: 0x40000000
+          expected_pid0: 0x22
+          expected_cid: [0x0D, 0xF0, 0x05, 0xB1]
+        - name: timer_1
+          base: 0x40001000
+          expected_pid0: 0x22
+          expected_cid: [0x0D, 0xF0, 0x05, 0xB1]
+        - name: dualtimer
+          base: 0x40002000
+          expected_pid0: 0x23
+          expected_cid: [0x0D, 0xF0, 0x05, 0xB1]
+        - name: uart_2
+          base: 0x40006000
+          expected_pid0: 0x21
+          expected_cid: [0x0D, 0xF0, 0x05, 0xB1]
+        - name: watchdog
+          base: 0x40008000
+          expected_pid0: 0x24
+          expected_cid: [0x0D, 0xF0, 0x05, 0xB1]
+        - name: gpio_0
+          base: 0x40010000
+          expected_pid0: 0x20
+          expected_cid: [0x0D, 0xF0, 0x05, 0xB1]
+        - name: gpio_1
+          base: 0x40011000
+          expected_pid0: 0x20
+          expected_cid: [0x0D, 0xF0, 0x05, 0xB1]
+        - name: sysctrl
+          base: 0x4001F000
+          expected_pid0: 0x26
+          expected_cid: [0x0D, 0xF0, 0x05, 0xB1]
+      pass_criteria: >
+        All PID0 and CID0-CID3 register values match the expected
+        constants for every peripheral in the list.
+
+    - id: ADDR_MAP_002
+      name: test_memory_write_read
+      description: >
+        Write random 32-bit values to boundary and random addresses
+        in each writable memory region, then read back and compare.
+      goal: >
+        Confirm that the debug initiator has read/write access to
+        all memory targets and that data is stored/retrieved correctly.
+      method: >
+        For each region, generate test addresses at the base, base+4,
+        top of physical extent, and NUM_RANDOM_PROBES random locations.
+        Write a random 32-bit word via soc.write32(), read it back
+        via soc.read32(), and assert equality.
+      coverage:
+        - Interconnect decode to each memory target
+        - Write data path through HOSTIO4 → ADP → interconnect → memory
+        - Read data path through memory → interconnect → ADP → HOSTIO4
+        - Boundary addresses (base, top) to test decode edges
+        - Random interior addresses for general coverage
+      memory_regions:
+        - name: dmem_0
+          base: 0x18000000
+          physical_size: 0x4000
+          access: rwx
+        - name: sram_0
+          base: 0x80000000
+          physical_size: 0x100000
+          access: rwx
+        - name: sram_1
+          base: 0x90000000
+          physical_size: 0x100000
+          access: rwx
+      pass_criteria: >
+        Every write-read-back comparison matches exactly.
+
+    - id: ADDR_MAP_003
+      name: test_address_map_regions
+      description: >
+        Use the auto-generated Python address map to enumerate all
+        regions visible to the debug initiator and perform a single
+        read at each region's base address.
+      goal: >
+        Fast smoke test to verify that the bus responds at every
+        decoded address region (no hangs or decode errors).
+      method: >
+        Load regions from ADDRESS_MAP.get_regions(initiator="debug"),
+        de-duplicate by target, and issue soc.read32(base) for each.
+        The test passes if all reads complete without timeout.
+      coverage:
+        - All top-level interconnect targets accessible from debug
+        - Bus does not hang on any decoded address
+      address_regions:
+        - target: bootrom_0
+          base: 0x00000000
+        - target: imem_0
+          base: 0x10000000
+        - target: dmem_0
+          base: 0x18000000
+        - target: soc_peripheral
+          base: 0x40000000
+        - target: dmac_ctrl
+          base: 0x50000000
+        - target: exp
+          base: 0x60000000
+        - target: sram_0
+          base: 0x80000000
+        - target: sram_1
+          base: 0x90000000
+        - target: systable
+          base: 0xF0000000
+      pass_criteria: >
+        All reads complete without HOSTIO4 timeout, confirming bus
+        connectivity to every target.

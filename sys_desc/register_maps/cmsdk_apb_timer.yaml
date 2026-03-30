@@ -1,0 +1,158 @@
+#-----------------------------------------------------------------------------
+# CMSDK APB Timer Register Map
+# Based on ARM Cortex-M System Design Kit r1p1
+#
+# A joint work commissioned on behalf of SoC Labs, under Arm Academic Access license.
+# Copyright 2026, SoC Labs (www.soclabs.org)
+#-----------------------------------------------------------------------------
+
+register_map:
+  name: cmsdk_apb_timer
+  module: cmsdk_apb_timer
+  description: >
+    Simple 32-bit down-counter timer with interrupt and external input.
+    Counts down from RELOAD value; generates interrupt when reaching zero.
+    External input can be used as clock source or enable.
+  address_width: 12
+  data_width: 32
+
+  identification:
+    pid4: 0x04
+    pid5: 0x00
+    pid6: 0x00
+    pid7: 0x00
+    pid0: 0x22
+    pid1: 0xB8
+    pid2: 0x1B
+    pid3: 0x00
+    cid0: 0x0D
+    cid1: 0xF0
+    cid2: 0x05
+    cid3: 0xB1
+
+  registers:
+    - name: CTRL
+      offset: 0x000
+      width: 32
+      access: RW
+      reset_value: 0x00000000
+      description: Timer control register
+      fields:
+        - name: ENABLE
+          bits: "0"
+          access: RW
+          reset_value: 0
+          description: Timer enable
+        - name: EXTERNAL_INPUT_ENABLE
+          bits: "1"
+          access: RW
+          reset_value: 0
+          description: Select external input as enable
+        - name: EXTERNAL_INPUT_CLOCK
+          bits: "2"
+          access: RW
+          reset_value: 0
+          description: Select external input as clock
+        - name: INTERRUPT_ENABLE
+          bits: "3"
+          access: RW
+          reset_value: 0
+          description: Interrupt enable
+
+    - name: VALUE
+      offset: 0x004
+      width: 32
+      access: RW
+      reset_value: 0x00000000
+      description: Current timer value (read returns current count, write sets value)
+
+    - name: RELOAD
+      offset: 0x008
+      width: 32
+      access: RW
+      reset_value: 0x00000000
+      description: Timer reload value (counter reloads from this when reaching zero)
+
+    - name: INTCLEAR
+      offset: 0x00C
+      width: 32
+      access: WO
+      reset_value: 0x00000000
+      description: Interrupt clear (write any value to clear timer interrupt)
+      fields:
+        - name: INTCLEAR
+          bits: "0"
+          access: WO
+          description: Write 1 to clear interrupt
+
+    - name: PID4
+      offset: 0xFD0
+      width: 32
+      access: RO
+      description: Peripheral ID 4
+
+    - name: PID5
+      offset: 0xFD4
+      width: 32
+      access: RO
+      description: Peripheral ID 5
+
+    - name: PID6
+      offset: 0xFD8
+      width: 32
+      access: RO
+      description: Peripheral ID 6
+
+    - name: PID7
+      offset: 0xFDC
+      width: 32
+      access: RO
+      description: Peripheral ID 7
+
+    - name: PID0
+      offset: 0xFE0
+      width: 32
+      access: RO
+      description: Peripheral ID 0
+
+    - name: PID1
+      offset: 0xFE4
+      width: 32
+      access: RO
+      description: Peripheral ID 1
+
+    - name: PID2
+      offset: 0xFE8
+      width: 32
+      access: RO
+      description: Peripheral ID 2
+
+    - name: PID3
+      offset: 0xFEC
+      width: 32
+      access: RO
+      description: Peripheral ID 3 (includes ECOREVNUM in bits [7:4])
+
+    - name: CID0
+      offset: 0xFF0
+      width: 32
+      access: RO
+      description: Component ID 0
+
+    - name: CID1
+      offset: 0xFF4
+      width: 32
+      access: RO
+      description: Component ID 1
+
+    - name: CID2
+      offset: 0xFF8
+      width: 32
+      access: RO
+      description: Component ID 2
+
+    - name: CID3
+      offset: 0xFFC
+      width: 32
+      access: RO
+      description: Component ID 3

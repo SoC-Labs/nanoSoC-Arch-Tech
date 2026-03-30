@@ -302,9 +302,10 @@ docs:
 # Run SoC model generation tool
 soc_model:
 	cd $(SOCLABS_NANOSOC_GEN_DIR) && python -m soc_model \
-		$(SOCLABS_NANOSOC_SOC_DIR)/sys_desc/nanosoc_m0_soc.yaml \
-		--lib-dir $(SOCLABS_NANOSOC_GEN_DIR)/lib \
-		--build-dir $(SOCLABS_NANOSOC_SOC_DIR)/build_soc
+		$(SOCLABS_NANOSOC_ARCH_TECH_DIR)/sys_desc/nanosoc_m0_soc.yaml \
+		--lib-dir $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/sys_desc \
+		--build-dir $(SOCLABS_NANOSOC_SOC_DIR)/build_soc \
+		--system-yaml $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/sys_desc/nanosoc_m0_system.yaml
 
 TEST_AMS:
 	$(info AMS is $(AMS))

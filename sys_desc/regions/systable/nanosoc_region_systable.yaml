@@ -1,0 +1,35 @@
+#-----------------------------------------------------------------------------
+# NanoSoC System ROM Table Region Module
+# A joint work commissioned on behalf of SoC Labs, under Arm Academic Access license.
+#
+# Contributors
+#
+# David Mapstone (d.a.mapstone@soton.ac.uk)
+#
+# Copyright 2026, SoC Labs (www.soclabs.org)
+#-----------------------------------------------------------------------------
+# Derived from RTL: nanosoc_arch_tech/rtl/src/regions/systable/nanosoc_region_systable.v
+
+module:
+  name: nanosoc_region_systable
+  gen: False
+  desc: >
+    CoreSight system ROM table region. Contains SoC architecture metadata
+    (JEDEC manufacturer ID, part number, revision). Instantiates
+    nanosoc_coresight_systable internally. Has HCLK only (no reset port).
+    Includes extended AHB signals (HBURST, HMASTLOCK).
+
+  params:
+    SYS_ADDR_W:         { type: int, default: 32,           desc: "System address width" }
+    SYS_DATA_W:         { type: int, default: 32,           desc: "System data width" }
+    SYSTABLE_BASE:      { type: int, default: 0xF0000000,   desc: "System ROM table base address" }
+    SOCLABS_JEPID:      { type: int, default: 0,            desc: "SoC Labs JEDEC manufacturer ID" }
+    NANOSOC_PARTNUMBER: { type: int, default: 0,            desc: "NanoSoC part number" }
+    NANOSOC_REVISION:   { type: int, default: 3,            desc: "NanoSoC revision" }
+
+  interfaces:
+    # Clock (no reset on ROM table)
+    - { name: HCLK, type: wire, direction: in, params: { WIDTH: 1 }, desc: AHB clock }
+
+    # AHB slave port (extended — includes HBURST and HMASTLOCK)
+    - { name: ahb_slave, type: ahb, direction: target, params: { ADDR_WIDTH: $SYS_ADDR_W, DATA_WIDTH: $SYS_DATA_W }, desc: AHB slave port for system ROM table access }

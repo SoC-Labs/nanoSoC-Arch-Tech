@@ -1,0 +1,239 @@
+#-----------------------------------------------------------------------------
+# CMSDK APB Dual Timers Register Map
+# Based on ARM Cortex-M System Design Kit r1p1
+#
+# A joint work commissioned on behalf of SoC Labs, under Arm Academic Access license.
+# Copyright 2026, SoC Labs (www.soclabs.org)
+#-----------------------------------------------------------------------------
+
+register_map:
+  name: cmsdk_apb_dualtimers
+  module: cmsdk_apb_dualtimers
+  description: >
+    Dual independent down-counter timers with prescale and free-running/periodic
+    modes. Each timer supports 16-bit or 32-bit operation, one-shot or wrapping,
+    and configurable prescale (1, 16, or 256).
+  address_width: 12
+  data_width: 32
+
+  registers:
+    # --- Timer 1 ---
+    - name: Timer1Load
+      offset: 0x000
+      width: 32
+      access: RW
+      description: Timer 1 load register (sets the count-down start value)
+
+    - name: Timer1Value
+      offset: 0x004
+      width: 32
+      access: RO
+      description: Timer 1 current value (read-only)
+
+    - name: Timer1Control
+      offset: 0x008
+      width: 32
+      access: RW
+      reset_value: 0x20
+      description: Timer 1 control register
+      fields:
+        - name: ONE_SHOT
+          bits: "0"
+          access: RW
+          description: "One-shot mode: 0=wrapping, 1=one-shot"
+        - name: TIMER_SIZE
+          bits: "1"
+          access: RW
+          description: "Timer size: 0=16-bit, 1=32-bit"
+        - name: TIMER_PRE
+          bits: "3:2"
+          access: RW
+          description: "Prescale: 00=1, 01=16, 10=256, 11=reserved"
+          enum:
+            - value: 0
+              name: DIV_1
+              description: No prescale (divide by 1)
+            - value: 1
+              name: DIV_16
+              description: Divide by 16
+            - value: 2
+              name: DIV_256
+              description: Divide by 256
+        - name: INTERRUPT_ENABLE
+          bits: "5"
+          access: RW
+          description: Interrupt enable
+        - name: TIMER_MODE
+          bits: "6"
+          access: RW
+          description: "Mode: 0=free-running, 1=periodic"
+        - name: TIMER_ENABLE
+          bits: "7"
+          access: RW
+          description: Timer enable
+
+    - name: Timer1IntClr
+      offset: 0x00C
+      width: 32
+      access: WO
+      description: Timer 1 interrupt clear (write any value to clear)
+
+    - name: Timer1RIS
+      offset: 0x010
+      width: 32
+      access: RO
+      description: Timer 1 raw interrupt status
+
+    - name: Timer1MIS
+      offset: 0x014
+      width: 32
+      access: RO
+      description: Timer 1 masked interrupt status
+
+    - name: Timer1BGLoad
+      offset: 0x018
+      width: 32
+      access: RW
+      description: Timer 1 background load (reload value without resetting counter)
+
+    # --- Timer 2 ---
+    - name: Timer2Load
+      offset: 0x020
+      width: 32
+      access: RW
+      description: Timer 2 load register
+
+    - name: Timer2Value
+      offset: 0x024
+      width: 32
+      access: RO
+      description: Timer 2 current value (read-only)
+
+    - name: Timer2Control
+      offset: 0x028
+      width: 32
+      access: RW
+      reset_value: 0x20
+      description: Timer 2 control register (same field layout as Timer1Control)
+      fields:
+        - name: ONE_SHOT
+          bits: "0"
+          access: RW
+          description: "One-shot mode: 0=wrapping, 1=one-shot"
+        - name: TIMER_SIZE
+          bits: "1"
+          access: RW
+          description: "Timer size: 0=16-bit, 1=32-bit"
+        - name: TIMER_PRE
+          bits: "3:2"
+          access: RW
+          description: "Prescale: 00=1, 01=16, 10=256, 11=reserved"
+        - name: INTERRUPT_ENABLE
+          bits: "5"
+          access: RW
+          description: Interrupt enable
+        - name: TIMER_MODE
+          bits: "6"
+          access: RW
+          description: "Mode: 0=free-running, 1=periodic"
+        - name: TIMER_ENABLE
+          bits: "7"
+          access: RW
+          description: Timer enable
+
+    - name: Timer2IntClr
+      offset: 0x02C
+      width: 32
+      access: WO
+      description: Timer 2 interrupt clear
+
+    - name: Timer2RIS
+      offset: 0x030
+      width: 32
+      access: RO
+      description: Timer 2 raw interrupt status
+
+    - name: Timer2MIS
+      offset: 0x034
+      width: 32
+      access: RO
+      description: Timer 2 masked interrupt status
+
+    - name: Timer2BGLoad
+      offset: 0x038
+      width: 32
+      access: RW
+      description: Timer 2 background load
+
+    # --- PID/CID ---
+    - name: PID4
+      offset: 0xFD0
+      width: 32
+      access: RO
+      description: Peripheral ID 4
+
+    - name: PID5
+      offset: 0xFD4
+      width: 32
+      access: RO
+      description: Peripheral ID 5
+
+    - name: PID6
+      offset: 0xFD8
+      width: 32
+      access: RO
+      description: Peripheral ID 6
+
+    - name: PID7
+      offset: 0xFDC
+      width: 32
+      access: RO
+      description: Peripheral ID 7
+
+    - name: PID0
+      offset: 0xFE0
+      width: 32
+      access: RO
+      description: Peripheral ID 0
+
+    - name: PID1
+      offset: 0xFE4
+      width: 32
+      access: RO
+      description: Peripheral ID 1
+
+    - name: PID2
+      offset: 0xFE8
+      width: 32
+      access: RO
+      description: Peripheral ID 2
+
+    - name: PID3
+      offset: 0xFEC
+      width: 32
+      access: RO
+      description: Peripheral ID 3
+
+    - name: CID0
+      offset: 0xFF0
+      width: 32
+      access: RO
+      description: Component ID 0
+
+    - name: CID1
+      offset: 0xFF4
+      width: 32
+      access: RO
+      description: Component ID 1
+
+    - name: CID2
+      offset: 0xFF8
+      width: 32
+      access: RO
+      description: Component ID 2
+
+    - name: CID3
+      offset: 0xFFC
+      width: 32
+      access: RO
+      description: Component ID 3

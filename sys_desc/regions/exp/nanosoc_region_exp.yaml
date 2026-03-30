@@ -1,0 +1,49 @@
+#-----------------------------------------------------------------------------
+# NanoSoC Expansion Region Module
+# A joint work commissioned on behalf of SoC Labs, under Arm Academic Access license.
+#
+# Contributors
+#
+# David Mapstone (d.a.mapstone@soton.ac.uk)
+#
+# Copyright 2026, SoC Labs (www.soclabs.org)
+#-----------------------------------------------------------------------------
+# Note: The expansion region is NOT instantiated in nanosoc.sv — its ports are
+# exposed directly as nanosoc module ports. The nanosoc_region_exp module is
+# instantiated in the outer wrapper nanosoc_system.v.
+
+module:
+  name: nanosoc_region_exp
+  gen: False
+  desc: >
+    Expansion region for custom accelerators. Provides an AHB slave port,
+    3 bidirectional AXI-Stream channels (32-bit data), 4 interrupt lines,
+    and 2 DMA request lines. The module boundary is at the nanosoc.sv port
+    list — the actual region wrapper is instantiated one level up in
+    nanosoc_system.v.
+
+  params:
+    ACCELERATOR_SUBSYSTEM: { type: int, default: 0, desc: "Enable accelerator in expansion region" }
+
+  interfaces:
+    # Clock and Reset
+    - { name: HCLK,    type: wire, direction: in, params: { WIDTH: 1 }, desc: AHB clock }
+    - { name: HRESETn, type: wire, direction: in, params: { WIDTH: 1 }, desc: AHB reset (active low) }
+
+    # AHB slave port (extended — includes HBURST, HMASTLOCK)
+    - { name: exp_ahb, type: ahb, direction: target, params: { ADDR_WIDTH: 32, DATA_WIDTH: 32 }, desc: AHB slave port for expansion region access }
+
+    # AXI-Stream channels: DMAC -> Expansion (3 channels)
+    - { name: EXP_STR_IN_0, type: axis, direction: in, params: { DATA_WIDTH: 32 }, desc: "AXI-Stream input channel 0 (from DMAC)" }
+    - { name: EXP_STR_IN_1, type: axis, direction: in, params: { DATA_WIDTH: 32 }, desc: "AXI-Stream input channel 1 (from DMAC)" }
+    - { name: EXP_STR_IN_2, type: axis, direction: in, params: { DATA_WIDTH: 32 }, desc: "AXI-Stream input channel 2 (from DMAC)" }
+
+    # AXI-Stream channels: Expansion -> DMAC (3 channels, with flush)
+    - { name: EXP_STR_OUT_0, type: axis, direction: out, params: { DATA_WIDTH: 32, HAS_FLUSH: 1 }, desc: "AXI-Stream output channel 0 (to DMAC)" }
+    - { name: EXP_STR_OUT_1, type: axis, direction: out, params: { DATA_WIDTH: 32, HAS_FLUSH: 1 }, desc: "AXI-Stream output channel 1 (to DMAC)" }
+    - { name: EXP_STR_OUT_2, type: axis, direction: out, params: { DATA_WIDTH: 32, HAS_FLUSH: 1 }, desc: "AXI-Stream output channel 2 (to DMAC)" }
+
+    # Sideband signals
+    - { name: EXP_IRQ,   type: wire, direction: out, params: { WIDTH: 4 }, desc: "Expansion interrupt requests (mapped to cpu_0_irq[14:11])" }
+    - { name: EXP_DRQ,   type: wire, direction: out, params: { WIDTH: 2 }, desc: "Expansion DMA requests (mapped to dmac_0_dma_req[1:0])" }
+    - { name: EXP_DLAST, type: wire, direction: in,  params: { WIDTH: 2 }, desc: "DMA last signals to expansion (tied to 0 in nanosoc.sv)" }

@@ -92,6 +92,25 @@ package_nanosoc: code flist_tcl_nanosoc
 	@cp $(RUN_DIR)/vivado.log $(IMP_NANOSOC_DIR)/logs
 	@echo NanoSoC Packaged
 
+# Vivado IP Wrapper Directory
+VIVADO_IP_DIR            := $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/fpga/fpga/vivado_ip
+IMP_NANOSOC_IP_DIR       := $(IMPLEMENTATION_DIR)/nanosoc_ip
+
+# Environment Variables for Packaging NanoSoC as Vivado IP (with bus interfaces)
+package_nanosoc_ip: export FPGA_COMPONENT_FILELIST = $(TCL_OUTPUT_FILELIST)
+package_nanosoc_ip: export FPGA_COMPONENT_LIB      = $(IMP_NANOSOC_IP_DIR)
+package_nanosoc_ip: export FPGA_VENDOR             = $(NANOSOC_VENDOR)
+package_nanosoc_ip: export FPGA_CORE_REV           = $(NANOSOC_CORE_REV)
+
+# Package NanoSoC as a Vivado drop-in IP with proper bus interfaces
+package_nanosoc_ip: code flist_tcl_nanosoc
+	@echo Packaging NanoSoC as Vivado IP
+	@mkdir -p $(RUN_DIR)
+	@cd $(RUN_DIR); vivado -mode batch -source $(VIVADO_IP_DIR)/package_nanosoc_ip.tcl
+	@mkdir -p $(IMP_NANOSOC_IP_DIR)/logs
+	@cp $(RUN_DIR)/vivado.log $(IMP_NANOSOC_IP_DIR)/logs
+	@echo NanoSoC Vivado IP Packaged at $(IMP_NANOSOC_IP_DIR)
+
 # Environment Variables for Build NanoSoC Design
 build_nanosoc_design: export FPGA_NAME               = $(BOARD_NAME)
 build_nanosoc_design: export FPGA_PART               = $(XILINX_PART)

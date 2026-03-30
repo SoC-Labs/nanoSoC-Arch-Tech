@@ -64,7 +64,7 @@ endif
 GUI ?= 0
 
 # Cocotb Test Location
-COCOTB_TEST_DIR := $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/verification/verif/cocotb
+COCOTB_TEST_DIR := $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/verification/cocotb
 
 # Cocotb Scratch Directory
 COCOTB_DIR := $(SIM_TOP_DIR)/cocotb
@@ -196,8 +196,8 @@ flist_makefile_nanosoc: gen_defs
 run_cocotb: DEFINES_VC += COCOTB_SIM
 run_cocotb: flist_makefile_nanosoc
 	@mkdir -p $(SIM_DIR)
-	@cd $(SIM_DIR); $(MAKE) -C $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/verification/verif/cocotb clean SIM_BUILD=$(COCOTB_SCRATCH_DIR)
-	@cd $(SIM_DIR); $(MAKE) -C $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/verification/verif/cocotb sim MODULE=$(MODULE) SIM=$(COCOTB_SIMULATOR) TESTCASE=$(TESTNAME) GUI=$(GUI) SIM_BUILD=$(COCOTB_SCRATCH_DIR) ACCELERATOR=$(ACCELERATOR)
+	@cd $(SIM_DIR); $(MAKE) -C $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/verification/cocotb clean SIM_BUILD=$(COCOTB_SCRATCH_DIR)
+	@cd $(SIM_DIR); $(MAKE) -C $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/verification/cocotb sim MODULE=$(MODULE) SIM=$(COCOTB_SIMULATOR) TESTCASE=$(TESTNAME) GUI=$(GUI) SIM_BUILD=$(COCOTB_SCRATCH_DIR) ACCELERATOR=$(ACCELERATOR)
 
 sim_cocotb: GUI=1
 sim_cocotb: run_cocotb

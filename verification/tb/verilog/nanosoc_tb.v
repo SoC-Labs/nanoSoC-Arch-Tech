@@ -55,7 +55,7 @@ module nanosoc_tb;
   wire        VDD;
   wire        VSS;
   wire        VDDACC;
-  
+
   //Debug tester signals
   wire        nTRST;
   wire        TDI;
@@ -64,9 +64,6 @@ module nanosoc_tb;
   wire        TDO;
 
   wire        PCLK;          // Clock for UART capture device
-  wire [5:0]  debug_command; // used to drive debug tester
-  wire        debug_running; // indicate debug test is running
-  wire        debug_err;     // indicate debug test has error
 
   wire        debug_test_en1; // UART2 output trace (CMSDK)
   wire        debug_test_en2; // FT1248 output trace (nanosoc V1)
@@ -94,20 +91,6 @@ localparam BE=0;
 
 localparam DATA_IN_FILENAME="data_in.csv";
 localparam DATA_OUT_FILENAME="logs/data_out.csv";
-
-/*
-SROM_Ax32
-  #(.ADDRWIDTH (8),
-    .filename ("bootrom/hex/bootloader.hex"),
-    .romgen (1)
-   )
-   u_BOOTROM (
-    .CLK(CLK),
-    .ADDR(8'h0),
-    .SEL(1'b0),
-    .RDATA( )
-  );
-*/
 
 `ifdef SDF_SIM
 initial
@@ -169,6 +152,7 @@ initial begin
   .SWDCK      (SWCLKTCK)
   );
 `endif
+
  // --------------------------------------------------------------------------------
  // Source for clock and reset
  // --------------------------------------------------------------------------------
@@ -183,42 +167,25 @@ initial begin
   `endif
 
   assign TEST = 1'b0;
-  
-  // Pullup to suppress X-inputs
-  pullup(P0[ 0]);
-  pullup(P0[ 1]);
-  pullup(P0[ 2]);
-  pullup(P0[ 3]);
-  pullup(P0[ 4]);
-  pullup(P0[ 5]);
-  pullup(P0[ 6]);
-  pullup(P0[ 7]);
-  pullup(P0[ 8]);
-  pullup(P0[ 9]);
-  pullup(P0[10]);
-  pullup(P0[11]);
-  pullup(P0[12]);
-  pullup(P0[13]);
-  pullup(P0[14]);
-  pullup(P0[15]);
 
-  pullup(P1[ 0]);
-  pullup(P1[ 1]);
-  pullup(P1[ 2]);
-  pullup(P1[ 3]);
-  pullup(P1[ 4]);
-  pullup(P1[ 5]);
-  pullup(P1[ 6]);
-//  pullup(P1[ 7]); // FT1248 mode
-  pulldown(P1[ 7]); // EXTIO mode
-  pullup(P1[ 8]);
-  pullup(P1[ 9]);
-  pullup(P1[10]);
-  pullup(P1[11]);
-  pullup(P1[12]);
-  pullup(P1[13]);
-  pullup(P1[14]);
-  pullup(P1[15]);
+ // --------------------------------------------------------------------------------
+ // GPIO pullups to suppress X-inputs
+ // --------------------------------------------------------------------------------
+  genvar gi;
+  generate
+    for (gi = 0; gi < 16; gi = gi + 1) begin : gen_p0_pullup
+      pullup(P0[gi]);
+    end
+    for (gi = 0; gi < 7; gi = gi + 1) begin : gen_p1_pullup_lo
+      pullup(P1[gi]);
+    end
+  endgenerate
+  pulldown(P1[ 7]); // EXTIO mode (pullup for FT1248 mode)
+  generate
+    for (gi = 8; gi < 16; gi = gi + 1) begin : gen_p1_pullup_hi
+      pullup(P1[gi]);
+    end
+  endgenerate
 
 `ifdef FAST_SIM
   parameter FAST_LOAD = 1;
@@ -227,391 +194,129 @@ initial begin
 `endif
 
  // --------------------------------------------------------------------------------
- // HOSTIO4 stream interface - enabled when P1[7] is low
- //   default in previous testbenches was pullup (for FT1248, UART2)
- //
- //          v1 mapping was:    v2 config
- //   P1[0] - ft_miso_in        ioreq1
- //   P1[1] - ft_clk_out        ioreq2
- //   P1[2] - ft_miosio_io      ioack
- //   P1[3] - ft_ssn_out        iodata[0]
- //   P1[4] - uart2_rxd         iodata[1]
- //   P1[5] - uart2_txd         iodata[2]
- //   P1[6] - reserved (1)      iodata[3]
- //   P1[7] - reserved (1)      zero
+ // HOSTIO4 stream interface
  // --------------------------------------------------------------------------------
 
-// 4-channel AXIS interface - Subordinate side
-  wire       axis_rx0_tready; 
+  wire       axis_rx0_tready;
   wire       axis_rx0_tvalid;
   wire [7:0] axis_rx0_tdata8;
-  wire       axis_rx1_tready; 
+  wire       axis_rx1_tready;
   wire       axis_rx1_tvalid;
   wire [7:0] axis_rx1_tdata8;
-  wire       axis_tx0_tready; 
+  wire       axis_tx0_tready;
   wire       axis_tx0_tvalid;
   wire [7:0] axis_tx0_tdata8;
-  wire       axis_tx1_tready; 
+  wire       axis_tx1_tready;
   wire       axis_tx1_tvalid;
   wire [7:0] axis_tx1_tdata8;
-// external io interface
-  tri  [3:0] iodata4;
-  wire [3:0] iodata4_i;
-  wire [3:0] iodata4_o;
-  wire [3:0] iodata4_e;
-  wire [3:0] iodata4_t;
   wire       ioreq1;
   wire       ioreq2;
   wire       ioack;
+  wire       FT1248MODE;
+  wire       test_done;
 
-wire test_done;
-
-wire FT1248MODE = P1[7];
-wire end_sim = test_done & !FT1248MODE & !ioreq1 & !ioreq2 & !ioack;
+  wire end_sim = test_done & !FT1248MODE & !ioreq1 & !ioreq2 & !ioack;
   always @(posedge PCLK)
     if (end_sim) begin
       $stop;
     end
 
-hostio4_target u_hostio4_target
-  (
-  .clk             ( CLK             ),
-  .resetn          ( NRST            ),
-  .testmode        ( TEST            ),
-// RX 4-channel AXIS interface
-  .axis_rx0_tready ( axis_rx0_tready ),
-  .axis_rx0_tvalid ( axis_rx0_tvalid ),
-  .axis_rx0_tdata8 ( axis_rx0_tdata8 ),
-  .axis_rx1_tready ( axis_rx1_tready ),
-  .axis_rx1_tvalid ( axis_rx1_tvalid ),
-  .axis_rx1_tdata8 ( axis_rx1_tdata8 ),
-  .axis_tx0_tready ( axis_tx0_tready ),
-  .axis_tx0_tvalid ( axis_tx0_tvalid ),
-  .axis_tx0_tdata8 ( axis_tx0_tdata8 ),
-  .axis_tx1_tready ( axis_tx1_tready ),
-  .axis_tx1_tvalid ( axis_tx1_tvalid ),
-  .axis_tx1_tdata8 ( axis_tx1_tdata8 ),
-// external io interface
-  .iodata4_i       ( iodata4_i       ),
-  .iodata4_o       ( iodata4_o       ),
-  .iodata4_e       ( iodata4_e       ),
-  .iodata4_t       ( iodata4_t       ),
-  .ioreq1_a        ( ioreq1          ),
-  .ioreq2_a        ( ioreq2          ),
-  .ioack_o         ( ioack           )
+  nanosoc_tb_hostio4 u_nanosoc_tb_hostio4 (
+    .CLK             (CLK),
+    .NRST            (NRST),
+    .TEST            (TEST),
+    .P1              (P1[7:0]),
+    .FT1248MODE      (FT1248MODE),
+    .axis_rx0_tready (axis_rx0_tready),
+    .axis_rx0_tvalid (axis_rx0_tvalid),
+    .axis_rx0_tdata8 (axis_rx0_tdata8),
+    .axis_rx1_tready (axis_rx1_tready),
+    .axis_rx1_tvalid (axis_rx1_tvalid),
+    .axis_rx1_tdata8 (axis_rx1_tdata8),
+    .axis_tx0_tready (axis_tx0_tready),
+    .axis_tx0_tvalid (axis_tx0_tvalid),
+    .axis_tx0_tdata8 (axis_tx0_tdata8),
+    .axis_tx1_tready (axis_tx1_tready),
+    .axis_tx1_tvalid (axis_tx1_tvalid),
+    .axis_tx1_tdata8 (axis_tx1_tdata8),
+    .ioreq1          (ioreq1),
+    .ioreq2          (ioreq2),
+    .ioack           (ioack)
   );
 
-// tristate buffer emulation
-   assign ioreq1    = FT1248MODE ? 1'b0 : P1[0];
-   assign ioreq2    = FT1248MODE ? 1'b0 : P1[1];
-   bufif0 #1 (P1[2], ioack,        FT1248MODE);
-   bufif0 #1 (P1[3], iodata4_o[0], (iodata4_t[0] | FT1248MODE));
-   bufif0 #1 (P1[4], iodata4_o[1], (iodata4_t[1] | FT1248MODE));
-   bufif0 #1 (P1[5], iodata4_o[2], (iodata4_t[2] | FT1248MODE));
-   bufif0 #1 (P1[6], iodata4_o[3], (iodata4_t[3] | FT1248MODE));
-   assign iodata4_i = {4{FT1248MODE}} | P1[6:3];
+ // --------------------------------------------------------------------------------
+ // ADP stimulus and data I/O
+ // --------------------------------------------------------------------------------
 
 `ifndef COCOTB_SIM
-
-  nanosoc_axi_stream_io_8_txd_from_file #(
-    .TXDFILENAME(ADP_FILENAME),
-//    .CODEFILENAME("null.hex"),
-    .FAST_LOAD(FAST_LOAD)
-  ) u_nanosoc_axi_stream_io_adp_txd_from_file (
-    .aclk       (CLK),
-    .aresetn    (NRST),
-    .txd8_ready (axis_rx0_tready),
-    .txd8_valid (axis_rx0_tvalid),
-    .txd8_data  (axis_rx0_tdata8)
+  nanosoc_tb_adp_stimulus #(
+    .ADP_FILENAME     (ADP_FILENAME),
+    .DATA_IN_FILENAME (DATA_IN_FILENAME),
+    .DATA_OUT_FILENAME(DATA_OUT_FILENAME),
+    .FAST_LOAD        (FAST_LOAD)
+  ) u_nanosoc_tb_adp_stimulus (
+    .CLK             (CLK),
+    .NRST            (NRST),
+    .axis_rx0_tready (axis_rx0_tready),
+    .axis_rx0_tvalid (axis_rx0_tvalid),
+    .axis_rx0_tdata8 (axis_rx0_tdata8),
+    .axis_tx0_tready (axis_tx0_tready),
+    .axis_tx0_tvalid (axis_tx0_tvalid),
+    .axis_tx0_tdata8 (axis_tx0_tdata8),
+    .axis_rx1_tready (axis_rx1_tready),
+    .axis_rx1_tvalid (axis_rx1_tvalid),
+    .axis_rx1_tdata8 (axis_rx1_tdata8),
+    .axis_tx1_tready (axis_tx1_tready),
+    .axis_tx1_tvalid (axis_tx1_tvalid),
+    .axis_tx1_tdata8 (axis_tx1_tdata8),
+    .test_done       (test_done),
+    .debug_test_en   (debug_test_en3)
   );
-
-`ifndef COCOTB_SIM
-  nanosoc_axi_stream_io_8_rxd_to_file#(
-    .RXDFILENAME("logs/extadp_in.log")
-  ) u_nanosoc_axi_stream_io_8_adprxd_to_file (
-    .aclk         (CLK),
-    .aresetn      (NRST),
-    .eof_received ( ),
-    .rxd8_ready   ( ), //axis_rx0_tready),
-    .rxd8_valid   (axis_rx0_tvalid & axis_rx0_tready),
-    .rxd8_data    (axis_rx0_tdata8)
-  );
-`endif
-
-  nanosoc_axi_stream_io_8_rxd_to_file#(
-    .RXDFILENAME("logs/extadp_out.log"),
-    .VERBOSE(0)
-  ) u_nanosoc_axi_stream_io_stream_adp_rxd_to_file (
-    .aclk         (CLK),
-    .aresetn      (NRST),
-    .eof_received (test_done),
-    .rxd8_ready   (axis_tx0_tready),
-    .rxd8_valid   (axis_tx0_tvalid),
-    .rxd8_data    (axis_tx0_tdata8)
-  );
-
-  soclabs_axis8_capture  #(.LOGFILENAME("logs/extio_adp_out.log"))
-    u_soclabs_axis8_capture1(
-    .RESETn               (NRST),
-    .CLK                  (CLK),
-    .RXD8_READY   (    ),
-    .RXD8_VALID   (axis_tx0_tvalid & axis_tx0_tready),
-    .RXD8_DATA    (axis_tx0_tdata8),
-    .DEBUG_TESTER_ENABLE  (debug_test_en3),
-    .SIMULATIONEND        (),      // This signal set to 1 at the end of simulation.
-    .AUXCTRL              ()
-  );
-
-  nanosoc_axi_stream_io_8_txd_from_datafile #(
-    .TXDFILENAME(DATA_IN_FILENAME)
-  ) u_nanosoc_axi_stream_io_8_txd_from_datafile (
-    .aclk       (CLK),
-    .aresetn    (NRST),
-    .txd8_ready (axis_rx1_tready),
-    .txd8_valid (axis_rx1_tvalid),
-    .txd8_data  (axis_rx1_tdata8)
-  );
-
-
-
-  nanosoc_axi_stream_io_8_rxd_to_file#(
-    .RXDFILENAME(DATA_OUT_FILENAME)
-  ) u_nanosoc_axi_stream_io_extdata_8_rxd_to_file (
-    .aclk         (CLK),
-    .aresetn      (NRST),
-    .eof_received ( ),
-    .rxd8_ready   (axis_tx1_tready),
-    .rxd8_valid   (axis_tx1_tvalid),
-    .rxd8_data    (axis_tx1_tdata8)
-  );
-
 `endif
 
  // --------------------------------------------------------------------------------
- // UART output capture
+ // UART output capture with baud rate recovery
  // --------------------------------------------------------------------------------
 `ifdef ARM_CMSDK_SLOWSPEED_PCLK
-  // If PCLK is running at slower speed, the UART output will also be slower
   assign PCLK = u_cmsdk_mcu.u_cmsdk_mcu.PCLK;
 `else
   assign PCLK = CLK;
 `endif
 
- // --------------------------------------------------------------------------------
- // external UART phase lock to (known) baud rate
-
-// seem unable to use the following (due to generate instance naming?)
-//  wire baudx16_clk = u_cmsdk_mcu.u_cmsdk_mcu.u_cmsdk_mcu_system.u_apb_subsystem.u_apb_uart_2.BAUDTICK;
-
-// 240000000/6250 = 38400 baud
-// 6250/16 = 390.625
-`define BAUDPROGDIV16 389
-
- reg [8:0] bauddiv;
- wire    baudclken = (bauddiv == 9'b0);
-
-  always @(negedge NRST or posedge PCLK)
-    if (!NRST)
-      bauddiv <=0;
-    else
-      bauddiv <= (baudclken) ? (`BAUDPROGDIV16-1) : (bauddiv -1) ;   // count down of BAUDPROG
-
-  wire baudx16_clk = bauddiv[8]; //prefer:// !baudclken;
-
-///  wire UARTXD =  P1[5];
-  wire UARTXD =  P1[5] | FT1248MODE; // high if in EXTIO mode
-  reg  UARTXD_del;
-  always @(negedge NRST or posedge baudx16_clk)
-    if (!NRST)
-      UARTXD_del <= 1'b0;
-    else
-      UARTXD_del <= UARTXD; // delay one BAUD_TICK-time
-
-  wire UARTXD_edge = UARTXD_del ^ UARTXD; // edge detect
-
-  reg [3:0] pllq;
-  always @(negedge NRST or posedge baudx16_clk)
-    if (!NRST)
-      pllq[3:0] <= 4'b0000; // phase lock ready for Q[3] to go high
-    else
-      if (UARTXD_edge)
-        pllq[3:0] <= 4'b0110; // sync to mid bit-time
-      else
-        pllq[3:0] <= pllq[3:0] - 1; // count down divide-by-16
-
-  wire baud_clk = pllq[3];
-
-reg baud_clk_del;
-  always @(negedge NRST or posedge PCLK)
-    if (!NRST)
-      baud_clk_del <= 1'b1;
-    else
-      baud_clk_del <= baud_clk;
+  nanosoc_tb_uart_baudpll #(
+    .BAUDPROGDIV16 (389),
+    .LOGFILENAME   ("logs/uart2.log")
+  ) u_nanosoc_tb_uart_baudpll (
+    .PCLK          (PCLK),
+    .NRST          (NRST),
+    .UARTXD_in     (P1[5]),
+    .FT1248MODE    (FT1248MODE),
+    .debug_test_en (debug_test_en1)
+  );
 
  // --------------------------------------------------------------------------------
- // set FASTMODE true if UART simulation mode is programmed
-  wire FASTMODE = 1'b0;
-  wire uart_clk = (FASTMODE) ? PCLK : baud_clk; //(baud_clk & !baud_clk_del);
-
-`ifndef COCOTB_SIM
-  nanosoc_uart_capture  #(.LOGFILENAME("logs/uart2.log"))
-    u_nanosoc_uart_capture(
-    .RESETn               (NRST),
-    .CLK                  (uart_clk), //PCLK),
-    .RXD                  (UARTXD), // UART 2 use for StdOut
-    .DEBUG_TESTER_ENABLE  (debug_test_en1),
-    .SIMULATIONEND        (),      // This signal set to 1 at the end of simulation.
-    .AUXCTRL              ()
-  );
-`endif
-
- // --------------------------------------------------------------------------------
- // FTDI IO capture
+ // FT1248 interface
  // --------------------------------------------------------------------------------
 
-  // UART connection
-///  assign P1[4] = P1[5]; // loopback UART2
-
-  bufif1 #1 (P1[4], P1[5], FT1248MODE);
-
-///  wire ft_clk_out = P1[1];
-///  wire ft_miso_in;
-///  assign P1[0] = ft_miso_in;
-///  wire ft_ssn_out = P1[3];
-
-  wire ft_clk_out;
-  wire ft_miso_in;
-  wire ft_ssn_out;
-
-  assign ft_clk_out = (FT1248MODE) ?  P1[1] : 1'b0;
-  bufif1 #1 (P1[0], ft_miso_in, FT1248MODE);
-  assign ft_ssn_out = (FT1248MODE) ?  P1[3] : 1'b1;
-
-  wire ft_miosio_o;
-  wire ft_miosio_z;
-  wire ft_miosio_i;
-///  assign ft_miosio_i  = P1[2]; // & ft_miosio_z;
-///  assign P1[2] = (ft_miosio_z) ? 1'bz : ft_miosio_o;
-  assign ft_miosio_i = (FT1248MODE) ? P1[2] : 1'b0; // & ft_miosio_z;
-  bufif1 #1 (P1[2], ft_miosio_o, (FT1248MODE & !ft_miosio_z));
-
-
-  //
-  // AXI stream io testing
-  //
-
-  wire txd8_tready;
-  wire txd8_tvalid;
-  wire [7:0] txd8_tdata ;
-
-  wire rxd8_tready;
-  wire rxd8_tvalid;
-  wire [7:0] rxd8_tdata ;
-
-`ifndef COCOTB_SIM
-  nanosoc_axi_stream_io_8_txd_from_file #(
-    .TXDFILENAME(ADP_FILENAME),
-//    .CODEFILENAME("null.hex"),
-    .FAST_LOAD(FAST_LOAD)
-  ) u_nanosoc_axi_stream_io_8_txd_from_file (
-    .aclk       (CLK),
-    .aresetn    (NRST),
-    .txd8_ready (txd8_tready),
-    .txd8_valid (txd8_tvalid),
-    .txd8_data  (txd8_tdata)
+  nanosoc_tb_ft1248 #(
+    .ADP_FILENAME (ADP_FILENAME),
+    .FAST_LOAD    (FAST_LOAD)
+  ) u_nanosoc_tb_ft1248 (
+    .CLK           (CLK),
+    .NRST          (NRST),
+    .FT1248MODE    (FT1248MODE),
+    .P1_0          (P1[0]),
+    .P1_1          (P1[1]),
+    .P1_2          (P1[2]),
+    .P1_3          (P1[3]),
+    .P1_4          (P1[4]),
+    .P1_5          (P1[5]),
+    .debug_test_en (debug_test_en2)
   );
-`endif
-
-  nanosoc_ft1248x1_to_axi_streamio_v1_0 u_nanosoc_ft1248x1_to_axi_streamio_v1_0
-  (
-  .ft_clk_i     (ft_clk_out),
-  .ft_ssn_i     (ft_ssn_out),
-  .ft_miso_o    (ft_miso_in),
-  .ft_miosio_i  (ft_miosio_i),
-  .ft_miosio_o  (ft_miosio_o),
-  .ft_miosio_z  (ft_miosio_z),
-  .aclk         (CLK),
-  .aresetn      (NRST),
-  .rxd_tready_o (txd8_tready),
-  .rxd_tvalid_i (txd8_tvalid),
-  .rxd_tdata8_i (txd8_tdata),
-  .txd_tready_i (rxd8_tready),
-  .txd_tvalid_o (rxd8_tvalid),
-  .txd_tdata8_o (rxd8_tdata)
-  );
-
-`ifndef COCOTB_SIM
-  nanosoc_axi_stream_io_8_rxd_to_file#(
-    .RXDFILENAME("logs/ft1248_out.log")
-  ) u_nanosoc_axi_stream_io_8_rxd_to_file (
-    .aclk         (CLK),
-    .aresetn      (NRST),
-    .eof_received ( ),
-    .rxd8_ready   (rxd8_tready),
-    .rxd8_valid   (rxd8_tvalid),
-    .rxd8_data    (rxd8_tdata)
-  );
-`endif
-
-nanosoc_track_tb_iostream
-  u_nanosoc_track_tb_iostream
-  (
-  .aclk         (CLK),
-  .aresetn      (NRST),
-  .rxd8_ready   (rxd8_tready),
-  .rxd8_valid   (rxd8_tvalid),
-  .rxd8_data    (rxd8_tdata),
-  .DEBUG_TESTER_ENABLE  (debug_test_en2),
-  .AUXCTRL      ( ),
-  .SIMULATIONEND( )
-  );
-
-wire ft_clk2uart;
-wire ft_rxd2uart;
-wire ft_txd2uart;
-
-nanosoc_ft1248x1_track
-  u_nanosoc_ft1248x1_track
-  (
-  .ft_clk_i     (ft_clk_out),
-  .ft_ssn_i     (ft_ssn_out),
-  .ft_miso_i    (ft_miso_in),
-  .ft_miosio_i  (ft_miosio_i),
-  .aclk         (CLK),
-  .aresetn      (NRST),
-  .FTDI_CLK2UART_o      (ft_clk2uart),  // Clock (baud rate)
-  .FTDI_OP2UART_o       (ft_rxd2uart),  // Received data to UART capture
-  .FTDI_IP2UART_o       (ft_txd2uart)   // Transmitted data to UART capture
-  );
-
-`ifndef COCOTB_SIM
-  nanosoc_uart_capture  #(.LOGFILENAME("logs/ft1248_op.log"))
-    u_nanosoc_uart_capture1(
-    .RESETn               (NRST),
-    .CLK                  (ft_clk2uart),
-    .RXD                  (ft_rxd2uart),
-    .DEBUG_TESTER_ENABLE  ( ), //debug_test_en2), //driven by u_nanosoc_track_tb_iostream
-    .SIMULATIONEND        (),      // This signal set to 1 at the end of simulation.
-    .AUXCTRL              ()
-  );
-`endif
-
-`ifndef COCOTB_SIM
-// nanosoc_uart_capture  #(.LOGFILENAME("logs/ft1248_ip.log"))
-//   u_nanosoc_uart_capture2(
-//   .RESETn               (NRST),
-//   .CLK                  (ft_clk2uart),
-//   .RXD                  (ft_txd2uart),
-//   .DEBUG_TESTER_ENABLE  ( ),
-//   .SIMULATIONEND        (),      // This signal set to 1 at the end of simulation.
-//   .AUXCTRL              ()
-// );
-`endif
 
  // --------------------------------------------------------------------------------
  // Tracking CPU with Tarmac trace support
  // --------------------------------------------------------------------------------
-
 
 `ifdef CORTEX_M0
 `ifdef USE_TARMAC
@@ -746,17 +451,13 @@ nanosoc_ft1248x1_track
 
  // --------------------------------------------------------------------------------
  // Tracking DMA logging support
- // - Track inputs to on-chip PL230 DMAC and replicate state and outputs in testbench
- // - log the RTL Inuts/outputs/internal-state of this traccking DMAC
  // --------------------------------------------------------------------------------
 `ifdef DMAC_0_PL230
 `define DMAC_PATH u_nanosoc_chip_pads.u_nanosoc_chip.u_system.u_nanosoc.u_ss_dma.gen_dmac_0.u_dmac.gen_pl230.u_dmac.u_pl230_udma
 
   pl230_udma u_track_pl230_udma (
-  // Clock and Reset
     .hclk          (`DMAC_PATH.hclk),
     .hresetn       (`DMAC_PATH.hresetn),
-  // DMA Control
     .dma_req       (`DMAC_PATH.dma_req),
     .dma_sreq      (`DMAC_PATH.dma_sreq),
     .dma_waitonreq (`DMAC_PATH.dma_waitonreq),
@@ -764,7 +465,6 @@ nanosoc_ft1248x1_track
     .dma_active    ( ),
     .dma_done      ( ),
     .dma_err       ( ),
-  // AHB-Lite Master Interface
     .hready        (`DMAC_PATH.hready),
     .hresp         (`DMAC_PATH.hresp),
     .hrdata        (`DMAC_PATH.hrdata),
@@ -776,7 +476,6 @@ nanosoc_ft1248x1_track
     .hmastlock     ( ),
     .hprot         ( ),
     .hwdata        ( ),
-  // APB Slave Interface
     .pclken        (`DMAC_PATH.pclken),
     .psel          (`DMAC_PATH.psel),
     .pen           (`DMAC_PATH.pen),
@@ -793,7 +492,6 @@ nanosoc_ft1248x1_track
     u_nanosoc_dma_log_to_file (
     .hclk          (`DMAC_TRACK_PATH.hclk),
     .hresetn       (`DMAC_TRACK_PATH.hresetn),
-  // AHB-Lite Master Interface
     .hready        (`DMAC_TRACK_PATH.hready),
     .hresp         (`DMAC_TRACK_PATH.hresp),
     .hrdata        (`DMAC_TRACK_PATH.hrdata),
@@ -804,7 +502,6 @@ nanosoc_ft1248x1_track
     .hburst        (`DMAC_TRACK_PATH.hburst),
     .hprot         (`DMAC_TRACK_PATH.hprot),
     .hwdata        (`DMAC_TRACK_PATH.hwdata),
-   // APB control interface
     .pclken        (`DMAC_TRACK_PATH.pclken),
     .psel          (`DMAC_TRACK_PATH.psel),
     .pen           (`DMAC_TRACK_PATH.pen),
@@ -812,11 +509,9 @@ nanosoc_ft1248x1_track
     .paddr         (`DMAC_TRACK_PATH.paddr),
     .pwdata        (`DMAC_TRACK_PATH.pwdata),
     .prdata        (`DMAC_TRACK_PATH.prdata),
-  // DMA Control
     .dma_req       (`DMAC_TRACK_PATH.dma_req),
     .dma_active    (`DMAC_TRACK_PATH.dma_active),
     .dma_done      (`DMAC_TRACK_PATH.dma_done),
-   // DMA state from tracking RTL model
     .dma_chnl      (`DMAC_TRACK_PATH.u_pl230_ahb_ctrl.current_chnl),
     .dma_ctrl_state(`DMAC_TRACK_PATH.u_pl230_ahb_ctrl.ctrl_state)
   );
@@ -856,65 +551,22 @@ nanosoc_ft1248x1_track
 `endif
 
  // --------------------------------------------------------------------------------
- // Debug tester connection -
+ // Debug tester connection
  // --------------------------------------------------------------------------------
   `ifdef ARM_CMSDK_INCLUDE_DEBUG_TESTER
 
-  // Add pullups and pulldowns on Debug Interface
-
-   pullup   (nTRST);
-   pullup   (TDI);
-   pullup   (TDO);
-   pullup   (SWDIOTMS);
-   pulldown (SWCLKTCK);
-
-
-   //connect to P0 for debug command and status pin
-   //add pulldown to debug command and debug status signals
-   // to give default value 0;
-   pulldown(debug_command[5]);
-   pulldown(debug_command[4]);
-   pulldown(debug_command[3]);
-   pulldown(debug_command[2]);
-   pulldown(debug_command[1]);
-   pulldown(debug_command[0]);
-
-   pulldown(debug_running);
-   pulldown(debug_err);
-
-   //Tristate logic for GPIO connection
-   bufif1 (P0[7], debug_running, debug_test_en);
-   bufif1 (P0[6], debug_err, debug_test_en);
-   bufif1 (debug_command[5], P0[5], debug_test_en);
-   bufif1 (debug_command[4], P0[4], debug_test_en);
-   bufif1 (debug_command[3], P0[3], debug_test_en);
-   bufif1 (debug_command[2], P0[2], debug_test_en);
-   bufif1 (debug_command[1], P0[1], debug_test_en);
-   bufif1 (debug_command[0], P0[0], debug_test_en);
-
-  cmsdk_debug_tester #(
-    .ROM_MEMFILE((BE==1) ? "debugtester_be.hex" : "debugtester_le.hex")
-  ) u_cmsdk_debug_tester (
-    // Clock and Reset
-    .CLK                                 (CLK),
-    .PORESETn                            (NRST_ext),
-
-    // Command Interface
-    .DBGCMD                              (debug_command[5:0]),
-    .DBGRUNNING                          (debug_running),
-    .DBGERROR                            (debug_err),
-
-    // Trace Interface
-    .TRACECLK                            (1'b0),
-    .TRACEDATA                           (4'h0),
-    .SWV                                 (1'b0),
-
-    // Debug Interface
-    .TDO                                 (TDO),
-    .nTRST                               (nTRST),
-    .SWCLKTCK                            (SWCLKTCK),
-    .TDI                                 (TDI),
-    .SWDIOTMS                            (SWDIOTMS)
+  nanosoc_tb_debug_tester #(
+    .BE(BE)
+  ) u_nanosoc_tb_debug_tester (
+    .CLK           (CLK),
+    .NRST_ext      (NRST_ext),
+    .debug_test_en (debug_test_en),
+    .P0            (P0[7:0]),
+    .nTRST         (nTRST),
+    .TDI           (TDI),
+    .TDO           (TDO),
+    .SWDIOTMS      (SWDIOTMS),
+    .SWCLKTCK      (SWCLKTCK)
   );
   `endif
 
@@ -934,15 +586,15 @@ nanosoc_ft1248x1_track
   integer i,j;
 
   initial begin
-    $readmemh("sram_0.hex", fileimage_l); 
-    for (i=0;i<awt_sram_0;i=i+1) begin 
+    $readmemh("sram_0.hex", fileimage_l);
+    for (i=0;i<awt_sram_0;i=i+1) begin
       u_nanosoc_chip_pads.u_nanosoc_chip.u_system.u_nanosoc.u_region_sram_0.u_sram.u_sram.BRAM0[i] = fileimage_l[ 4*i];
       u_nanosoc_chip_pads.u_nanosoc_chip.u_system.u_nanosoc.u_region_sram_0.u_sram.u_sram.BRAM1[i] = fileimage_l[(4*i)+1];
       u_nanosoc_chip_pads.u_nanosoc_chip.u_system.u_nanosoc.u_region_sram_0.u_sram.u_sram.BRAM2[i] = fileimage_l[(4*i)+2];
       u_nanosoc_chip_pads.u_nanosoc_chip.u_system.u_nanosoc.u_region_sram_0.u_sram.u_sram.BRAM3[i] = fileimage_l[(4*i)+3];
     end
-    $readmemh("sram_1.hex", fileimage_h); 
-    for (i=0;i<awt_sram_1;i=i+1) begin 
+    $readmemh("sram_1.hex", fileimage_h);
+    for (i=0;i<awt_sram_1;i=i+1) begin
       u_nanosoc_chip_pads.u_nanosoc_chip.u_system.u_nanosoc.u_region_sram_1.u_sram.u_sram.BRAM0[i] = fileimage_h[ 4*i];
       u_nanosoc_chip_pads.u_nanosoc_chip.u_system.u_nanosoc.u_region_sram_1.u_sram.u_sram.BRAM1[i] = fileimage_h[(4*i)+1];
       u_nanosoc_chip_pads.u_nanosoc_chip.u_system.u_nanosoc.u_region_sram_1.u_sram.u_sram.BRAM2[i] = fileimage_h[(4*i)+2];

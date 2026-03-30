@@ -20,6 +20,7 @@ from .backends.python import SoCPythonBackend
 from .backends.ahb import SoCAhbBackend
 from .backends.firmware import SoCFirmwareBackend
 from .backends.rdl import SoCRdlBackend
+from .backends.discovery import SoCDiscoveryBackend
 from .backends.toplevel import SoCTopLevelBackend
 from .backends.lint import SoCLintBackend
 
@@ -150,6 +151,22 @@ def main():
             print(f"    {rm_name}: {rdl_path}{status}")
     else:
         print("  No register maps found in the design hierarchy")
+
+    # --- Device Discovery Table ---
+    print("\n--- Device Discovery Table ---")
+    discovery_backend = SoCDiscoveryBackend(top_module)
+    discovery_results = discovery_backend.generate(build_dir)
+
+    if discovery_results:
+        print(f"\n  Generated {len(discovery_results)} discovery table(s):")
+        for ic_name, disc_rm, disc_yaml_path in discovery_results:
+            print(f"    {ic_name}: {disc_yaml_path}")
+            # Generate RDL (and optional RTL) for the discovery register map
+            rdl_path, rtl_gen = rdl_backend.generate_single(disc_rm, build_dir)
+            status = " (RTL generated)" if rtl_gen else ""
+            print(f"    RDL: {rdl_path}{status}")
+    else:
+        print("  No interconnects with gen: True found")
 
     # --- Top-level module generation ---
     print("\n--- Top-Level Module Generation ---")

@@ -122,6 +122,26 @@ class SoCRdlBackend:
 
         return generated
 
+    def generate_single(self, rm: RegisterMap,
+                        build_dir: Path) -> Tuple[Path, bool]:
+        """Generate RDL (and optionally RTL) for a single RegisterMap.
+
+        Returns (rdl_path, rtl_generated).
+        """
+        rdl_dir = build_dir / 'rdl'
+        rdl_dir.mkdir(parents=True, exist_ok=True)
+
+        rdl_path = rdl_dir / f"{rm.name}.rdl"
+        rdl_content = self._generate_rdl(rm)
+        rdl_path.write_text(rdl_content)
+
+        rtl_generated = False
+        if rm.gen:
+            rtl_dir = rdl_dir / 'rtl' / rm.name
+            rtl_generated = self._generate_rtl(rdl_path, rm, rtl_dir)
+
+        return rdl_path, rtl_generated
+
     # -------------------------------------------------------------------
     # Register map collection
     # -------------------------------------------------------------------

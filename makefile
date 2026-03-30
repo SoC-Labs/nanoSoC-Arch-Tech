@@ -21,11 +21,15 @@ SOCLABS_SLCOREM0_TECH_DIR  ?= $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/rtl/slcorem0_tech
 SOCLABS_SLDMA230_TECH_DIR  ?= $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/rtl/sldma230_tech
 SOCLABS_SLDMA350_TECH_DIR  ?= $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/rtl/sldma350_tech
 
+# NanoSoC Generation Tool (soc_model, glue logic RTL, component library)
+SOCLABS_NANOSOC_GEN_DIR    ?= $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/nanosoc_gen
+
 export SOCLABS_HOSTIO4_TECH_DIR
 export SOCLABS_SOCDEBUG_TECH_DIR
 export SOCLABS_SLCOREM0_TECH_DIR
 export SOCLABS_SLDMA230_TECH_DIR
 export SOCLABS_SLDMA350_TECH_DIR
+export SOCLABS_NANOSOC_GEN_DIR
 
 #-------------------------------------
 # - Commonly Overloaded Variables
@@ -294,6 +298,13 @@ docs:
 	pdflatex --output-directory=$(SOCLABS_NANOSOC_ARCH_TECH_DIR)/doc/doc/tex/ $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/doc/doc/tex/nanosoc_configuration_manual.tex
 	mv $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/doc/doc/tex/nanosoc_datasheet.pdf $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/doc/doc/nanosoc_datasheet.pdf
 	mv $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/doc/doc/tex/nanosoc_configuration_manual.pdf $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/doc/doc/nanosoc_configuration_manual.pdf
+
+# Run SoC model generation tool
+soc_model:
+	cd $(SOCLABS_NANOSOC_GEN_DIR) && python -m soc_model \
+		$(SOCLABS_NANOSOC_SOC_DIR)/sys_desc/nanosoc_m0_soc.yaml \
+		--lib-dir $(SOCLABS_NANOSOC_GEN_DIR)/lib \
+		--build-dir $(SOCLABS_NANOSOC_SOC_DIR)/build_soc
 
 TEST_AMS:
 	$(info AMS is $(AMS))

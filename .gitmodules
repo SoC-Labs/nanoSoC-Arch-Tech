@@ -19,3 +19,6 @@
 [submodule "rtl/hostio4"]
 	path = rtl/hostio4
 	url = https://git.soton.ac.uk/soclabs/hostio4.git
+[submodule "nanosoc_gen"]
+	path = nanosoc_gen
+	url = https://git.soton.ac.uk/soclabs/nanosoc_gen.git

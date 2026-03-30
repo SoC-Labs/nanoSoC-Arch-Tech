@@ -113,7 +113,7 @@ module:
             - { slot: 11, name: test_slave,   module: cmsdk_apb_slave,        offset: 0xB000, size: 0x1000, register_map: register_maps/cmsdk_apb_test_slave.yaml }
             # Slots 12-15: APB extension ports (directly wired to module ports)
             - { slot: 12, name: ext_port_12,  module: external, offset: 0xC000, size: 0x1000, desc: "APB extension port 12" }
-            - { slot: 13, name: ext_port_13,  module: external, offset: 0xD000, size: 0x1000, desc: "APB extension port 13" }
+            - { slot: 13, name: discovery,     module: nanosoc_ahb_interconnect_discovery_table, offset: 0xD000, size: 0x1000, register_map: ../../build_soc/discovery/nanosoc_ahb_interconnect_discovery.yaml, desc: "Auto-generated bus topology discovery table" }
             - { slot: 14, name: ext_port_14,  module: external, offset: 0xE000, size: 0x1000, desc: "APB extension port 14 (USRT debug)" }
             - { slot: 15, name: ext_port_15,  module: external, offset: 0xF000, size: 0x1000, desc: "APB extension port 15" }
 

@@ -1,0 +1,173 @@
+#-----------------------------------------------------------------------------
+# NanoSoC Discovery Table Verification Plan
+#
+# Defines test points and expected results for verifying the auto-generated
+# bus topology discovery registers at APB slot 13 (0x4000_D000).
+#
+# Test module: test_discovery.py
+# Driver:      nanosoc_cocotb_driver.py (NanoSoC class)
+# RTL:         build_soc/rtl/nanosoc_ahb_interconnect_discovery/
+# Register map: build_soc/discovery/nanosoc_ahb_interconnect_discovery.yaml
+#
+# Copyright 2024-6, SoC Labs (www.soclabs.org)
+#-----------------------------------------------------------------------------
+
+vplan:
+  name: nanosoc_discovery_table
+  description: >
+    Verify the auto-generated bus topology discovery table registers.
+    The discovery table is generated from the SoC YAML description by
+    the soc_model discovery backend, compiled to RDL, and synthesised
+    to RTL via peakrdl-regblock.  It is mapped at APB slot 13
+    (0x4000_D000) in the soc_peripheral region.
+
+  interface:
+    name: HOSTIO4 channel 0 (ADP)
+    description: >
+      Bus accesses use HOSTIO4 channel 0 through the debug initiator,
+      which has full visibility to the soc_peripheral target including
+      the discovery table at APB slot 13.
+
+  base_address: 0x4000D000
+
+  tests:
+
+    - id: DISC_001
+      name: test_discovery_header
+      description: >
+        Read the four header registers (TABLE_ID, TABLE_VERSION,
+        TABLE_SIZE, INTERCONNECT_NAME) and verify against expected
+        constants.
+      goal: >
+        Confirm the discovery table is present, accessible, and
+        correctly identifies itself.
+      method: >
+        Read 32-bit words at offsets 0x000, 0x004, 0x008, 0x00C
+        from the discovery base address and compare each against
+        the expected hardcoded value.
+      registers:
+        - name: TABLE_ID
+          offset: 0x000
+          expected: 0x534F4344
+          description: 'Magic number "SOCD" — identifies a discovery table'
+        - name: TABLE_VERSION
+          offset: 0x004
+          expected: 0x00000001
+          description: Format version 1
+        - name: TABLE_SIZE
+          offset: 0x008
+          expected: 0x00200407
+          description: "7 targets, 4 initiators, 32-bit address width"
+        - name: INTERCONNECT_NAME
+          offset: 0x00C
+          expected: 0x6F6E616E
+          description: '"nano" in packed little-endian ASCII'
+      pass_criteria: All four registers match expected values exactly.
+
+    - id: DISC_002
+      name: test_discovery_targets
+      description: >
+        Read all 7 target descriptors (BASE, SIZE, ATTR, NAME for
+        each) and verify against the generated discovery YAML.
+      goal: >
+        Confirm the discovery table accurately describes the
+        interconnect's target address map.
+      method: >
+        For each target index 0-6, read the four descriptor
+        registers at offsets 0x010 + (i * 16) and compare
+        against expected values.
+      targets:
+        - index: 0
+          name: cpu_ss
+          base: 0x00000000
+          size: 0x20000000
+          attr: 0x00000041
+          name_packed: 0x5F757063
+        - index: 1
+          name: soc_peripheral
+          base: 0x40000000
+          size: 0x10000000
+          attr: 0x00010032
+          name_packed: 0x5F636F73
+        - index: 2
+          name: dmac_ctrl
+          base: 0x50000000
+          size: 0x10000000
+          attr: 0x00020032
+          name_packed: 0x63616D64
+        - index: 3
+          name: exp
+          base: 0x60000000
+          size: 0x20000000
+          attr: 0x00030032
+          name_packed: 0x00707865
+        - index: 4
+          name: sram_0
+          base: 0x80000000
+          size: 0x00010000
+          attr: 0x00040041
+          name_packed: 0x6D617273
+        - index: 5
+          name: sram_1
+          base: 0x90000000
+          size: 0x00010000
+          attr: 0x00050041
+          name_packed: 0x6D617273
+        - index: 6
+          name: systable
+          base: 0xF0000000
+          size: 0x00040000
+          attr: 0x00060012
+          name_packed: 0x74737973
+      pass_criteria: All 28 register values (4 per target x 7 targets) match.
+
+    - id: DISC_003
+      name: test_discovery_initiators
+      description: >
+        Read all 4 initiator descriptors (NAME, VISIBILITY for each)
+        and verify name and target visibility bitmasks.
+      goal: >
+        Confirm the discovery table correctly encodes which bus
+        masters can access which targets.
+      method: >
+        For each initiator index 0-3, read the two descriptor
+        registers and compare against expected values.
+      initiators:
+        - index: 0
+          name: cpu_0
+          name_packed: 0x5F757063
+          visibility: 0x0000007E
+          description: "Can see targets 1-6 (all except cpu_ss)"
+        - index: 1
+          name: debug
+          name_packed: 0x75626564
+          visibility: 0x0000007F
+          description: "Can see all 7 targets"
+        - index: 2
+          name: dmac_0
+          name_packed: 0x63616D64
+          visibility: 0x0000003B
+          description: "Can see targets 0,1,3,4,5 (not dmac_ctrl or systable)"
+        - index: 3
+          name: dmac_1
+          name_packed: 0x63616D64
+          visibility: 0x0000003B
+          description: "Same visibility as dmac_0"
+      pass_criteria: All 8 register values (2 per initiator x 4) match.
+
+    - id: DISC_004
+      name: test_discovery_cross_check_address_map
+      description: >
+        Cross-check discovery table target base addresses against the
+        generated Python address map to verify consistency between the
+        two generated artifacts.
+      goal: >
+        Confirm the discovery backend and address-map backend agree
+        on the system topology.
+      method: >
+        For each target in the discovery table, resolve its base
+        address through ADDRESS_MAP.resolve() and verify the
+        address map returns a valid region.
+      pass_criteria: >
+        Every discovery target base address resolves to a valid
+        region in the Python address map.

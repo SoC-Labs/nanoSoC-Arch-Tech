@@ -359,10 +359,31 @@ module nanosoc_region_soc_peripheral #(
     .COMBINT      ( )
   );
 
+  // -----------------------------------------------------------------
+  // Discovery table — auto-generated bus topology registers at 0x4000_D000
+  // -----------------------------------------------------------------
+  wire        discovery_psel;
+  wire [31:0] discovery_prdata;
+  wire        discovery_pready;
+  wire        discovery_pslverr;
+
+  nanosoc_ahb_interconnect_discovery_apb_wrapper u_discovery (
+    .PCLK    (PCLK),
+    .PRESETn (PRESETn),
+    .PSEL    (discovery_psel),
+    .PENABLE (exp_penable),
+    .PWRITE  (exp_pwrite),
+    .PADDR   (exp_paddr),
+    .PWDATA  (exp_pwdata),
+    .PRDATA  (discovery_prdata),
+    .PREADY  (discovery_pready),
+    .PSLVERR (discovery_pslverr)
+  );
+
   // APB subsystem for timers, UARTs
   nanosoc_soc_peripheral_apb_ss #(
     .APB_EXT_PORT12_ENABLE   (0), // No longer used (DMA config in dmac_ctrl region)
-    .APB_EXT_PORT13_ENABLE   (0), // No longer used (DMA config in dmac_ctrl region)
+    .APB_EXT_PORT13_ENABLE   (1), // Discovery table (auto-generated bus topology registers)
     .APB_EXT_PORT14_ENABLE   (1), // USRT
     .APB_EXT_PORT15_ENABLE   (0)  // No longer used (DMA config in dmac_ctrl region)
   ) u_soc_peripheral_apb_ss (
@@ -396,7 +417,7 @@ module nanosoc_region_soc_peripheral #(
     .PENABLE       (exp_penable),
 
     .ext12_psel    (exp12_psel),
-    .ext13_psel    (exp13_psel),
+    .ext13_psel    (discovery_psel),
     .ext14_psel    (exp14_psel),
     .ext15_psel    (exp15_psel),
 
@@ -404,9 +425,9 @@ module nanosoc_region_soc_peripheral #(
     .ext12_prdata  (exp12_prdata),
     .ext12_pready  (exp12_pready),
     .ext12_pslverr (exp12_pslverr),
-    .ext13_prdata  (exp13_prdata),
-    .ext13_pready  (exp13_pready),
-    .ext13_pslverr (exp13_pslverr),
+    .ext13_prdata  (discovery_prdata),
+    .ext13_pready  (discovery_pready),
+    .ext13_pslverr (discovery_pslverr),
     .ext14_prdata  (exp14_prdata),
     .ext14_pready  (exp14_pready),
     .ext14_pslverr (exp14_pslverr),

@@ -106,6 +106,7 @@ module:
             - { slot: 0,  name: timer_0,      module: cmsdk_apb_timer,        offset: 0x0000, size: 0x1000, register_map: register_maps/cmsdk_apb_timer.yaml }
             - { slot: 1,  name: timer_1,      module: cmsdk_apb_timer,        offset: 0x1000, size: 0x1000, register_map: register_maps/cmsdk_apb_timer.yaml }
             - { slot: 2,  name: dualtimer_2,  module: cmsdk_apb_dualtimers,   offset: 0x2000, size: 0x1000, register_map: register_maps/cmsdk_apb_dualtimers.yaml }
+            - { slot: 3,  name: build_info,   module: nanosoc_build_info,     offset: 0x3000, size: 0x1000, register_map: ../../build_soc/build_info/nanosoc_build_info.yaml, desc: "Auto-generated build info registers" }
             - { slot: 4,  name: uart_0,       module: socdebug_usrt_control,  offset: 0x4000, size: 0x1000, register_map: register_maps/socdebug_usrt.yaml }
             - { slot: 5,  name: uart_1,       module: socdebug_usrt_control,  offset: 0x5000, size: 0x1000, register_map: register_maps/socdebug_usrt.yaml }
             - { slot: 6,  name: uart_2,       module: cmsdk_apb_uart,         offset: 0x6000, size: 0x1000, register_map: register_maps/cmsdk_apb_uart.yaml }

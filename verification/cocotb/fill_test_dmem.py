@@ -1,86 +1,56 @@
+#-----------------------------------------------------------------------------
+# SoCLabs Cocotb DMEM Fill Test
+#
+# Writes a fill pattern to a range of DMEM addresses and reads them
+# all back to verify data integrity.
+#
+# Contributors
+#   David Mapstone (d.a.mapstone@soton.ac.uk)
+#
+# Copyright 2021-6, SoC Labs (www.soclabs.org)
+#-----------------------------------------------------------------------------
 import random
-from collections.abc import Iterable
-import os
-import logging
 import cocotb
-from cocotb.clock import Clock
-from cocotb.regression import TestFactory
-from cocotb.result import TestFailure
-from cocotb.triggers import ClockCycles, Combine, Join, RisingEdge
 
-from cocotbext.axi import AxiStreamBus, AxiStreamSource, AxiStreamSink, AxiStreamMonitor
-from adp_cocotb_driver import ADP
+from nanosoc_cocotb_driver import NanoSoC
 
-CLK_PERIOD = (10, "ns")
+DMEM_BASE = 0x30000000
+FILL_WORDS = 16
 
-# Control ADP AXI Stream bus and create ADP Driver Object
-def setup_adp(dut):
-    logging.getLogger("cocotb.nanosoc_tb.rxd8").setLevel(logging.WARNING)
-    logging.getLogger("cocotb.nanosoc_tb.txd8").setLevel(logging.WARNING)
-    adp_sender = AxiStreamSource(AxiStreamBus.from_prefix(dut, "txd8"), dut.CLK, dut.NRST, reset_active_level=False)
-    adp_reciever = AxiStreamSink(AxiStreamBus.from_prefix(dut, "rxd8"), dut.CLK, dut.NRST, reset_active_level=False)
-    driver = ADP(dut, adp_sender, adp_reciever)
-    driver.write8(0x00)
-    return driver
-
-# Start Clocks and Reset System
-@cocotb.coroutine
-async def setup_dut(dut):
-    adp = setup_adp(dut)
-    cocotb.start_soon(Clock(dut.CLK, *CLK_PERIOD).start())
-    dut.NRST.value = 0
-    await ClockCycles(dut.CLK, 2)
-    dut.NRST.value = 1
-    await ClockCycles(dut.CLK, 2)
-    return adp
-
-# Wait for bootcode to finish
-@cocotb.coroutine
-async def wait_bootcode(dut, driver):
-    bootcode_last = "** Remap->IMEM0"
-    received_str = ""
-    while True:
-        read_char = await driver.read8()
-        received_str += read_char
-        if bootcode_last in received_str:
-            break
-    dut.log.info(received_str)
 
 @cocotb.test()
 async def test_fill(dut):
-    adp = await setup_dut(dut)
-    dut.log.info("Setup Complete")
-    dut.log.info("Starting Test")
-    await wait_bootcode(dut, adp)
-    dut.log.info("Bootcode Finished")
-    await adp.monitorModeEnter()
+    """Fill a range of DMEM with a random value and verify all words match."""
+    soc = NanoSoC(dut)
+    await soc.start()
 
-    #setup complete, can interface with the design
-    
-    def count_substring_occurrences(full_string, substring):
-        return full_string.count(substring)
+    fill_value = random.getrandbits(32)
+    dut._log.info(
+        f"Filling {FILL_WORDS} words at 0x{DMEM_BASE:08X} "
+        f"with 0x{fill_value:08X}"
+    )
 
-    address = 0x30000000
-    address_increment = 0x4
-    iteration = 1
-    fill_value = random.randint(0, 0xFFFFFFFF)
-    
-    while address <= (0x30000000 + 4*address_increment):
-        fill_value = hex(random.randint(0, 0xFFFFFFFF))
-        fill_value = fill_value[:2] + fill_value[2:].rjust(8, '0')
+    # Write fill pattern
+    for i in range(FILL_WORDS):
+        addr = DMEM_BASE + (i * 4)
+        await soc.write32(addr, fill_value)
 
-        v = await adp.command('V' + fill_value + '\n', debug = True)
+    # Read back and verify
+    failures = []
+    for i in range(FILL_WORDS):
+        addr = DMEM_BASE + (i * 4)
+        val = await soc.read32(addr)
+        if val != fill_value:
+            msg = (
+                f"@ 0x{addr:08X}: expected 0x{fill_value:08X}, "
+                f"got 0x{val:08X}"
+            )
+            dut._log.error(f"  FAIL  {msg}")
+            failures.append(msg)
+        else:
+            dut._log.info(f"  PASS  0x{addr:08X}: 0x{val:08X}")
 
-        a = await adp.command('A'+ hex(address) + '\n', debug = True)
-
-        f = await adp.command('F' + repr(address_increment) + '\n', debug = True)
-
-        a = await adp.command('A'+ hex(address) + '\n', debug = True)
-
-        r = await adp.command('R'+ '0x00000000'+ repr(address_increment) +'\n', debug = True)
-
-        c = count_substring_occurrences(r, f"R {fill_value}")
-
-        assert hex(c) == hex(address_increment), f'range {hex(address + address_increment)} to {hex(address)} failed the test, count = {c} '
-        address += address_increment
-        iteration += 1
+    assert not failures, (
+        f"{len(failures)} fill check(s) failed:\n" + "\n".join(failures)
+    )
+    dut._log.info("DMEM fill test PASSED")

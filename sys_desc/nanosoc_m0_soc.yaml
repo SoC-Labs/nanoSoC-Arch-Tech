@@ -760,3 +760,20 @@ module:
       bootloader:
         target: bootrom_0
         address_select: alias
+
+  # =============================================================================
+  # Build Info Registers
+  # =============================================================================
+  # Auto-generated read-only APB peripheral exposing build metadata.
+  # Fields with type 'timestamp' and 'git_hash' are captured at generation time.
+  build_info:
+    apb_slot: 3
+    gen: True
+    fields:
+      - { name: GEN_TIMESTAMP,  type: timestamp,  desc: "Generation timestamp (Unix epoch)" }
+      - { name: REPO_GIT_HASH,  type: git_hash,   desc: "Repo git hash (truncated 32-bit)" }
+      - { name: TOOL_GIT_HASH,  type: git_hash,   source: tool, desc: "Tool git hash (truncated 32-bit)" }
+      - { name: SOC_VERSION,    type: int32,       value: 0x00010000, desc: "SoC version (major.minor packed)" }
+      - { name: DEVELOPER,      type: string,      value: "DaveM",    max_length: 16, desc: "Developer name" }
+      - { name: COMPANY,        type: string,      value: "SoCLabs",  max_length: 16, desc: "Developer company" }
+      - { name: DESIGN_NAME,    type: string,      value: "NanoSoC-M0", max_length: 12, desc: "Design name" }

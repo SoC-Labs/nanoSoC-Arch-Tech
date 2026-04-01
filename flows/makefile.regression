@@ -65,7 +65,7 @@ regression_test_xm:
 	@timeout $(TIMEOUT) $(MAKE) run_xm TESTNAME=$(TESTNAME) > $(REGRESSION)/$(TESTNAME).log || true
 	
 regression_test_vcs:
-	@timeout $(TIMEOUT) $(MAKE) run_vxs TESTNAME=$(TESTNAME) > $(REGRESSION)/$(TESTNAME).log || true
+	@timeout $(TIMEOUT) $(MAKE) run_vcs TESTNAME=$(TESTNAME) > $(REGRESSION)/$(TESTNAME).log || true
 
 # Target to Display Regression Results on Command Line
 regression_results:

@@ -1,5 +1,5 @@
 #-----------------------------------------------------------------------------
-# NanoSoC Software Compilation Makefile 
+# NanoSoC Software Compilation Makefile
 # A joint work commissioned on behalf of SoC Labs, under Arm Academic Access license.
 #
 # Contributors
@@ -20,8 +20,8 @@ SW_MAKE_OPTIONS = CPU_PRODUCT=CORTEX_M0 TOOL_CHAIN=$(TOOL_CHAIN)
 # Debug Tester image
 DEBUGTESTER  = debugtester
 
-# Location where bootrom should be built
-BOOTROM_BUILD_DIR ?= $(SOCLABS_PROJECT_DIR)/system/src/bootrom
+# Stage 0 bootloader name
+BOOTLOADER  ?= stage0
 
 # Firmware config generation — generates linker script fragments and address variables
 # from the interconnect YAML.  Must run before any software compilation.
@@ -40,16 +40,24 @@ code: firmware_config bootrom testcode debugtester
 
 NANOSOC_TESTCODES_DIR := $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/firmware/testcodes
 
+# Bootloader source directory — use SoC-level firmware if it exists (QSPI-aware),
+# otherwise fall back to arch_tech-level bootloader.
+NANOSOC_SOC_STAGE0_DIR := $(SOCLABS_NANOSOC_SOC_DIR)/firmware/stage0
+ifneq ($(wildcard $(NANOSOC_SOC_STAGE0_DIR)/makefile),)
+    BOOTLOADER_TESTCODES_DIR := $(SOCLABS_NANOSOC_SOC_DIR)/firmware
+else
+    BOOTLOADER_TESTCODES_DIR := $(NANOSOC_TESTCODES_DIR)
+endif
+
 # Run the bootrom flow from the other makefile
 bootrom:
 	@$(MAKE) -f $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/flows/Makefile.bootrom bootrom \
-		BOOTROM_BUILD_DIR=$(BOOTROM_BUILD_DIR) \
 		SIM_TOP_DIR=$(SIM_TOP_DIR) \
-		TESTCODES_DIR=$(NANOSOC_TESTCODES_DIR)
+		TESTCODES_DIR=$(BOOTLOADER_TESTCODES_DIR)
 
 # Compile test code
 # Note : The use of ls after compile allows the computing server to sync up
-TEST_BUILD_DIR := $(SOCLABS_PROJECT_DIR)/build/software/$(TOOL_CHAIN)
+TEST_BUILD_DIR := $(SOCLABS_PROJECT_DIR)/build/firmware
 OUTPUT_DIR := $(TEST_BUILD_DIR)/$(TESTNAME)/out
 
 # Check if the there is a directory in the nanosoc testcodes directory for a test
@@ -121,86 +129,10 @@ endif
 
 testcode: $(IMAGE_HEX) $(ADP_FILE) $(OPTIONAL_TESTCODE_DEPS) $(SIM_DIR)
 
-# testcode:
-# ifeq ($(TESTNAME),)
-# 	$(error Please specify TESTNAME on the make command line)
-# endif
-# 	@(if [ -d "$(TESTCODES_DIR)/$(TESTNAME)" ] ; then \
-# 	  cd $(TESTCODES_DIR)/$(TESTNAME) ;\
-# 	  $(MAKE) all $(SW_MAKE_OPTIONS) ; \
-# 	  echo Compile done ;\
-# 	  ls > /dev/null ;\
-# 	  echo Copy $(TESTNAME).hex ;\
-# 	  if [ -e  $(TESTNAME).hex ] ; then \
-# 	    mkdir -p $(SIM_DIR) ; \
-# 	    cp $(TESTNAME).hex $(SIM_DIR)/image.hex ; \
-# 	    cp adp.cmd $(SIM_DIR)/adp.cmd ; \
-# 	    if [ -e data_in.csv ] ; then \
-# 	  	cp data_in.csv $(SIM_DIR)/data_in.csv ; \
-# 	    fi ;\
-# 	  else \
-# 	    while [ ! -e $(TESTNAME).hex ] ; do \
-# 	      echo Wait for $(TESTNAME).hex file ...; \
-# 	      ls > /dev/null ; \
-# 	      sleep 5 ; \
-# 	    done; \
-# 	    if [ -e  $(TESTNAME).hex ] ; then \
-# 		  mkdir -p $(SIM_DIR) ; \
-# 	      cp $(TESTNAME).hex $(SIM_DIR)/image.hex ; \
-# 	      cp $(TESTNAME).hex ../../image.hex ; \
-# 	    else \
-# 	      echo Problem reading hex file ;\
-# 	      exit 1; \
-# 	    fi ;\
-# 	  fi ;\
-# 	  if [ -e sram_0.hex ] ; then \
-# 	  	cp sram_0.hex $(SIM_DIR)/sram_0.hex ; \
-# 	  fi ;\
-# 	  if [ -e sram_1.hex ] ; then \
-# 	  	cp sram_1.hex $(SIM_DIR)/sram_1.hex ; \
-# 	  fi ;\
-# 	  if [ -e data_in.csv ] ; then \
-# 	  	cp data_in.csv $(SIM_DIR)/data_in.csv ; \
-# 	  fi ;\
-# 	  cd $(SIM_DIR) ;\
-# 	elif [ -d "$(PROJ_SW_DIR)/$(TESTNAME)" ] ; then \
-# 	  cd $(PROJ_SW_DIR)/$(TESTNAME) ;\
-# 	  $(MAKE) all $(SW_MAKE_OPTIONS) ; \
-# 	  echo Compile done ;\
-# 	  ls > /dev/null ;\
-# 	  echo Copy $(TESTNAME).hex ;\
-# 	  if [ -e  $(TESTNAME).hex ] ; then \
-# 	    mkdir -p $(SIM_DIR) ; \
-# 	    cp $(TESTNAME).hex $(SIM_DIR)/image.hex ; \
-# 	    cp adp.cmd $(SIM_DIR)/adp.cmd ; \
-# 	    if [ -e data_in.csv ] ; then \
-# 	  	cp data_in.csv $(SIM_DIR)/data_in.csv ; \
-# 	    fi ;\
-# 	  else \
-# 	    while [ ! -e $(TESTNAME).hex ] ; do \
-# 	      echo Wait for $(TESTNAME).hex file ...; \
-# 	      ls > /dev/null ; \
-# 	      sleep 5 ; \
-# 	    done; \
-# 	    if [ -e  $(TESTNAME).hex ] ; then \
-# 		  mkdir -p $(SIM_DIR) ; \
-# 	      cp $(TESTNAME).hex $(SIM_DIR)/image.hex ; \
-# 	    else \
-# 	      echo Problem reading hex file ;\
-# 	      exit 1; \
-# 	    fi ;\
-# 	  fi ;\
-# 	  cd $(SIM_DIR) ;\
-# 	else \
-# 	  echo "ERROR: invalid TESTNAME value ( $(TESTNAME) )" ;\
-# 	  exit 1 ;\
-# 	fi ;\
-# 	)
-
 
 # Compile debugtester
 # Note : The use of ls after compile allows the computing server to sync up
-DEBUGTESTER_BUILD_DIR := $(SOCLABS_PROJECT_DIR)/build/software/$(TOOL_CHAIN)
+DEBUGTESTER_BUILD_DIR := $(SOCLABS_PROJECT_DIR)/build/firmware
 DEBUGTESTER_OUTPUT_DIR := $(DEBUGTESTER_BUILD_DIR)/$(DEBUGTESTER)/out
 
 # Location of the Hex files that are built for debugtester
@@ -237,13 +169,12 @@ compile_all_code: bootrom debugtester
 	  fi ; \
 	done
 
-# Remove all software compilation results
+# Remove all firmware compilation results
 clean_all_code:
-	@rm -rf $(SOCLABS_PROJECT_DIR)/build/software
-	@$(MAKE) -f $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/flows/Makefile.bootrom clean \
-		BOOTROM_BUILD_DIR=$(BOOTROM_BUILD_DIR)
+	@rm -rf $(SOCLABS_PROJECT_DIR)/build/firmware
+	@$(MAKE) -f $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/flows/Makefile.bootrom clean
 
-# Remove only bootloader and default selected test
+# Remove only stage0 bootloader and default selected test
 clean_code:
-	@rm -rf $(SOCLABS_PROJECT_DIR)/build/software/$(TOOL_CHAIN)/$(BOOTLOADER)
-	@rm -rf $(SOCLABS_PROJECT_DIR)/build/software/$(TOOL_CHAIN)/$(TESTNAME)
+	@rm -rf $(SOCLABS_PROJECT_DIR)/build/firmware/bootloader
+	@rm -rf $(SOCLABS_PROJECT_DIR)/build/firmware/$(TESTNAME)

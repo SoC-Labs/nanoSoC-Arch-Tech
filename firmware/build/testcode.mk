@@ -93,13 +93,14 @@ DEPS_LIST := makefile
 #=============================================================================
 # Build Output Directory Setup
 #=============================================================================
-SOFTWARE_BUILD_DIR ?= $(SOCLABS_PROJECT_DIR)/build/software
-TEST_BUILD_DIR    := $(SOFTWARE_BUILD_DIR)/$(TOOL_CHAIN)/$(TESTNAME)
+SOFTWARE_BUILD_DIR ?= $(SOCLABS_PROJECT_DIR)/build/firmware
+TEST_BUILD_DIR    := $(SOFTWARE_BUILD_DIR)/$(TESTNAME)
 COMPILE_DIR       := $(TEST_BUILD_DIR)/compile
 OUTPUT_DIR        := $(TEST_BUILD_DIR)/out
 
 $(COMPILE_DIR) $(OUTPUT_DIR):
 	@mkdir -p $@
+	@echo "$(TOOL_CHAIN)" > $(TEST_BUILD_DIR)/toolchain.txt
 
 #=============================================================================
 # Linker Base Addresses

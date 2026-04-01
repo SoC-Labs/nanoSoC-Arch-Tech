@@ -165,8 +165,8 @@ GNU_CC_FLAGS = -g -O1 -mthumb $(GCC_CPU_TYPE)
 # ---------------------------------------------------------------------------------------
 all: all_$(TOOL_CHAIN)
 
-SOFTWARE_BUILD_DIR := $(SOCLABS_PROJECT_DIR)/build/software
-TEST_BUILD_DIR := $(SOFTWARE_BUILD_DIR)/$(TOOL_CHAIN)
+SOFTWARE_BUILD_DIR := $(SOCLABS_PROJECT_DIR)/build/firmware
+TEST_BUILD_DIR := $(SOFTWARE_BUILD_DIR)
 COMPILE_DIR := $(TEST_BUILD_DIR)/$(DEBUGTESTER)/compile
 OUTPUT_DIR := $(TEST_BUILD_DIR)/$(DEBUGTESTER)/out
 

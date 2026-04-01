@@ -1,5 +1,5 @@
 #-----------------------------------------------------------------------------
-# NanoSoC Software Compilation Makefile 
+# NanoSoC Boot ROM Generation Makefile
 # A joint work commissioned on behalf of SoC Labs, under Arm Academic Access license.
 #
 # Contributors
@@ -11,6 +11,11 @@
 # Description:
 # This Makefile generates the bootrom files for NanoSoC. This has been separated out
 # of the software compilation makefile for simplicity.
+#
+# Outputs (all in build/firmware/gcc/stage0/out/):
+#   stage0.hex       — Verilog hex file from GCC compilation
+#   bootrom.sv       — Synthesizable Verilog ROM module
+#   bootrom.bintxt   — Binary text representation
 #-----------------------------------------------------------------------------
 
 #------------------------------------------------------------------------
@@ -25,53 +30,48 @@ export TOOL_CHAIN
 SW_MAKE_OPTIONS = CPU_PRODUCT=CORTEX_M0 TOOL_CHAIN=$(TOOL_CHAIN)
 
 # Bootrom Parameters:
-# Boot Loader image
-BOOTLOADER        ?= bootloader
+# Stage 0 bootloader image
+BOOTLOADER        ?= stage0
 BOOTROM_ADDRW     ?= 8
-BOOTROM_HEX       ?= $(SOCLABS_PROJECT_DIR)/build/software/$(TOOL_CHAIN)/$(BOOTLOADER)/out/$(BOOTLOADER).hex
-BOOTROM_BUILD_DIR ?= $(SOCLABS_PROJECT_DIR)/system/src/bootrom
+BOOTROM_OUT_DIR   ?= $(SOCLABS_PROJECT_DIR)/build/firmware/bootloader/$(BOOTLOADER)/out
+BOOTROM_HEX       ?= $(BOOTROM_OUT_DIR)/$(BOOTLOADER).hex
 
 # Boot ROM generation
 #--------------------------------------------------------------------------------
-# Output files and directories
-BOOTROM_SV_DIR  := $(BOOTROM_BUILD_DIR)/verilog
-BOOTROM_BIN_DIR := $(BOOTROM_BUILD_DIR)/bintxt
-
-# Output files
-BOOTROM_SV      := $(BOOTROM_SV_DIR)/bootrom.sv
-BOOTROM_BIN     := $(BOOTROM_BIN_DIR)/bootrom.bintxt
+# All outputs go next to the hex file in the firmware build directory
+BOOTROM_SV      := $(BOOTROM_OUT_DIR)/bootrom.sv
+BOOTROM_BIN     := $(BOOTROM_OUT_DIR)/bootrom.bintxt
 
 BOOTROM_SIM_DIR := $(SIM_TOP_DIR)/bootloader
 BOOTROM_SIM_HEX := $(BOOTROM_SIM_DIR)/$(BOOTLOADER).hex
 
-# Intermediate files
-BOOTLOADER_HEX := $(SOCLABS_PROJECT_DIR)/build/software/$(TOOL_CHAIN)/$(BOOTLOADER)/out/$(BOOTLOADER).hex
+# Tools
 BOOTROM_GEN_PY := $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/firmware/testcodes/bootloader/bootrom_gen.py
 
 bootrom: $(BOOTROM_SV) $(BOOTROM_BIN) $(BOOTROM_SIM_HEX)
 
 # Generate the Boot ROM Verilog and Binary Text files from the bootloader hex file
-$(BOOTROM_SV) $(BOOTROM_BIN): $(BOOTROM_HEX) $(BOOTROM_GEN_PY) | $(BOOTROM_SV_DIR) $(BOOTROM_BIN_DIR)
+$(BOOTROM_SV) $(BOOTROM_BIN): $(BOOTROM_HEX) $(BOOTROM_GEN_PY) | $(BOOTROM_OUT_DIR)
 	@echo "Generating Boot ROM Verilog and Binary Text files"
 	@echo "Toolchain: $(TOOL_CHAIN)"
 	@python3 $(BOOTROM_GEN_PY) -a $(BOOTROM_ADDRW) -i $(BOOTROM_HEX) -t $(TOOL_CHAIN) -v $(BOOTROM_SV) -b $(BOOTROM_BIN)
 
 # Copy the bootloader hex file to the simulation directory
-$(BOOTROM_SIM_HEX): $(BOOTLOADER_HEX) | $(SIM_TOP_DIR)/bootloader
+$(BOOTROM_SIM_HEX): $(BOOTROM_HEX) | $(BOOTROM_SIM_DIR)
 	@echo "Copying Boot ROM hex file to simulation directory"
-	@cp $(BOOTLOADER_HEX)  $(BOOTROM_SIM_HEX)
+	@cp $(BOOTROM_HEX) $(BOOTROM_SIM_HEX)
 
 # Create output directories if they do not exist
-$(BOOTROM_SV_DIR) $(BOOTROM_BIN_DIR) $(BOOTROM_SIM_DIR):
+$(BOOTROM_OUT_DIR) $(BOOTROM_SIM_DIR):
 	@mkdir -p $@
 
-# Compile bootloader in the testcodes/bootloader directory
+# Compile stage0 bootloader
 $(BOOTROM_HEX):
 	$(MAKE) -C $(TESTCODES_DIR)/$(BOOTLOADER) all_$(TOOL_CHAIN) $(SW_MAKE_OPTIONS)
 
-# Target to remove bootrom build directory
+# Target to remove bootrom build outputs
 clean:
-	@echo "Removing Bootrom Build Directory"
-	@rm -rf $(BOOTROM_BUILD_DIR)
+	@echo "Removing Bootrom Build Outputs"
+	@rm -rf $(BOOTROM_OUT_DIR)
 	@echo "Removing Bootrom Simulation Directory"
 	@rm -rf $(BOOTROM_SIM_DIR)

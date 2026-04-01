@@ -39,7 +39,6 @@ $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/rtl/src/subsystems/hostio4/nanosoc_ss_hostio4.v
 -f $(SOCLABS_PROJECT_DIR)/nanosoc_m0_soc/build_soc/flist/nanosoc_interconnect.flist
 
 // AHB Interconnect Discovery APB Wrapper (hand-written, bridges to peakrdl-regblock)
-$(SOCLABS_NANOSOC_SOC_DIR)/build_soc/rtl/nanosoc_ahb_interconnect_discovery/apb4_intf.sv
 $(SOCLABS_NANOSOC_SOC_DIR)/build_soc/rtl/nanosoc_ahb_interconnect_discovery/nanosoc_ahb_interconnect_discovery_apb_wrapper.sv
 
 // CPU Subsystem Interconnect

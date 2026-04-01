@@ -14,7 +14,7 @@
 #//-----------------------------------------------------------------------------
 
 # Generated firmware config (address variables, linker bases)
-FIRMWARE_CONFIG_DIR ?= $(SOCLABS_PROJECT_DIR)/build/firmware_config
+FIRMWARE_CONFIG_DIR ?= $(SOCLABS_NANOSOC_SOC_DIR)/build_soc/firmware
 -include $(FIRMWARE_CONFIG_DIR)/nanosoc_memmap.mk
 
 # Program file

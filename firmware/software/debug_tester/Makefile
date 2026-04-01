@@ -44,7 +44,7 @@ CMSIS_DIR    = $(SOFTWARE_DIR)/cmsis
 CORE_DIR     = $(CMSIS_DIR)/CMSIS/Include
 
 # Generated firmware config (address variables, linker bases)
-FIRMWARE_CONFIG_DIR ?= $(SOCLABS_PROJECT_DIR)/build/firmware_config
+FIRMWARE_CONFIG_DIR ?= $(SOCLABS_NANOSOC_SOC_DIR)/build_soc/firmware
 -include $(FIRMWARE_CONFIG_DIR)/nanosoc_memmap.mk
 
 GCC_LINKER_SCRIPT_PATH = $(SOFTWARE_DIR)/common/scripts
@@ -234,7 +234,7 @@ $(DS5_OUTPUT_DIR)/$(DEBUGTESTER)_be.lst $(DS6_OUTPUT_DIR)/$(DEBUGTESTER)_be.lst 
 # GCC
 all_gcc : $(OUTPUT_DIR)/$(DEBUGTESTER)_le.hex $(OUTPUT_DIR)/$(DEBUGTESTER)_be.hex
 
-$(GCC_COMPILE_DIR)/$(DEBUGTESTER)_le.o : $(OUTPUT_DIR) $(COMPILE_DIR)
+$(COMPILE_DIR)/$(DEBUGTESTER)_le.o : | $(OUTPUT_DIR) $(COMPILE_DIR)
 	$(GNG_CC) $(GNU_CC_FLAGS) $(DEVICE_DIR)/Source/GCC/$(STARTUP_FILE).s \
 		$(DEBUGTESTER).c \
 		system_cmsdk_debugtester.c \
@@ -245,16 +245,16 @@ $(GCC_COMPILE_DIR)/$(DEBUGTESTER)_le.o : $(OUTPUT_DIR) $(COMPILE_DIR)
 		-D__HEAP_SIZE=0x1000 \
 		$(USER_DEFINE) -T $(GCC_LINKER_SCRIPT) -o $@
 
-$(GCC_OUTPUT_DIR)/$(DEBUGTESTER)_le.lst : $(COMPILE_DIR)/$(DEBUGTESTER)_le.o
+$(OUTPUT_DIR)/$(DEBUGTESTER)_le.lst : $(COMPILE_DIR)/$(DEBUGTESTER)_le.o
 	$(GNU_OBJDUMP) -S $< > $@
 
-$(GCC_OUTPUT_DIR)/$(DEBUGTESTER)_le.bin : $(COMPILE_DIR)/$(DEBUGTESTER)_le.o
+$(OUTPUT_DIR)/$(DEBUGTESTER)_le.bin : $(COMPILE_DIR)/$(DEBUGTESTER)_le.o
 	$(GNU_OBJCOPY) -S $< -O binary $@
 
-$(GCC_OUTPUT_DIR)/$(DEBUGTESTER)_le.hex : $(OUTPUT_DIR)/$(DEBUGTESTER)_le.bin
-	$(GNU_OBJCOPY) -S $(GCC_COMPILE_DIR)/$(DEBUGTESTER)_le.o -O verilog $@
+$(OUTPUT_DIR)/$(DEBUGTESTER)_le.hex : $(OUTPUT_DIR)/$(DEBUGTESTER)_le.bin
+	$(GNU_OBJCOPY) -S $(COMPILE_DIR)/$(DEBUGTESTER)_le.o -O verilog $@
 
-$(GCC_COMPILE_DIR)/$(DEBUGTESTER)_be.o : $(COMPILE_DIR)
+$(COMPILE_DIR)/$(DEBUGTESTER)_be.o : | $(OUTPUT_DIR) $(COMPILE_DIR)
 	$(GNG_CC) $(GNU_CC_FLAGS) $(DEVICE_DIR)/Source/GCC/$(STARTUP_FILE).s \
 		$(DEBUGTESTER).c \
 		system_cmsdk_debugtester.c \
@@ -265,13 +265,13 @@ $(GCC_COMPILE_DIR)/$(DEBUGTESTER)_be.o : $(COMPILE_DIR)
 		-D__HEAP_SIZE=0x1000 \
 		$(USER_DEFINE) -DDEBUGTESTER_BE -T $(GCC_LINKER_SCRIPT) -o $@
 
-$(GCC_OUTPUT_DIR)/$(DEBUGTESTER)_be.lst : $(COMPILE_DIR)/$(DEBUGTESTER)_be.o $(OUTPUT_DIR)
+$(OUTPUT_DIR)/$(DEBUGTESTER)_be.lst : $(COMPILE_DIR)/$(DEBUGTESTER)_be.o | $(OUTPUT_DIR)
 	$(GNU_OBJDUMP) -S $< > $@
 
-$(GCC_OUTPUT_DIR)/$(DEBUGTESTER)_be.bin : $(COMPILE_DIR)/$(DEBUGTESTER)_be.o $(OUTPUT_DIR)
+$(OUTPUT_DIR)/$(DEBUGTESTER)_be.bin : $(COMPILE_DIR)/$(DEBUGTESTER)_be.o | $(OUTPUT_DIR)
 	$(GNU_OBJCOPY) -S $< -O binary $@
 
-$(GCC_OUTPUT_DIR)/$(DEBUGTESTER)_be.hex : $(OUTPUT_DIR)/$(DEBUGTESTER)_be.bin $(OUTPUT_DIR)
+$(OUTPUT_DIR)/$(DEBUGTESTER)_be.hex : $(OUTPUT_DIR)/$(DEBUGTESTER)_be.bin | $(OUTPUT_DIR)
 	$(GNU_OBJCOPY) -S $(COMPILE_DIR)/$(DEBUGTESTER)_be.o -O verilog $@
 # Note:
 # If the version of object copy you are using does not support verilog hex file output,

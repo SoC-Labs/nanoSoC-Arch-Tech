@@ -59,7 +59,7 @@ ARM_LINK_EXTRA   ?=
 SOFTWARE_DIR        := $(SOCLABS_NANOSOC_FIRMWARE_TECH_DIR)/software
 CMSIS_DIR           := $(SOFTWARE_DIR)/cmsis
 CORE_DIR            := $(CMSIS_DIR)/CMSIS/Include
-FIRMWARE_CONFIG_DIR ?= $(SOCLABS_PROJECT_DIR)/build/firmware_config
+FIRMWARE_CONFIG_DIR ?= $(SOCLABS_NANOSOC_SOC_DIR)/build_soc/firmware
 -include $(FIRMWARE_CONFIG_DIR)/nanosoc_memmap.mk
 
 #=============================================================================

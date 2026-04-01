@@ -1,9 +1,0 @@
-
-
-$(SOCLABS_NANOSOC_ARCH_TECH_DIR)/synopsys_28nm_slm_integration/subsystem_wrappers/nanosoc_soc_peripheral_snps_pvt_ss.v
-$(SOCLABS_NANOSOC_ARCH_TECH_DIR)/synopsys_28nm_slm_integration/IP_wrappers/synopsys_TS_sensor_integration.v
-$(SOCLABS_NANOSOC_ARCH_TECH_DIR)/synopsys_28nm_slm_integration/IP_wrappers/synopsys_PD_sensor_integration.v
-
-$(SOCLABS_NANOSOC_ARCH_TECH_DIR)/synopsys_28nm_slm_integration/IP_wrappers/pvt_clk_div.v
-
-$(ARM_IP_LIBRARY_PATH)/latest/Corstone-101/logical/cmsdk_apb4_eg_slave/verilog/cmsdk_apb4_eg_slave_interface.v

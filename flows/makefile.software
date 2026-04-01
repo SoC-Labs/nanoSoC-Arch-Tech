@@ -42,9 +42,9 @@ NANOSOC_TESTCODES_DIR := $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/firmware/testcodes
 
 # Bootloader source directory — use SoC-level firmware if it exists (QSPI-aware),
 # otherwise fall back to arch_tech-level bootloader.
-NANOSOC_SOC_STAGE0_DIR := $(SOCLABS_NANOSOC_SOC_DIR)/firmware/stage0
+NANOSOC_SOC_STAGE0_DIR := $(SOCLABS_NANOSOC_SOC_DIR)/firmware/bootloader/stage0
 ifneq ($(wildcard $(NANOSOC_SOC_STAGE0_DIR)/makefile),)
-    BOOTLOADER_TESTCODES_DIR := $(SOCLABS_NANOSOC_SOC_DIR)/firmware
+    BOOTLOADER_TESTCODES_DIR := $(SOCLABS_NANOSOC_SOC_DIR)/firmware/bootloader
 else
     BOOTLOADER_TESTCODES_DIR := $(NANOSOC_TESTCODES_DIR)
 endif

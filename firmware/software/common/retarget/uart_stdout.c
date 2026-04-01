@@ -44,7 +44,9 @@
 #endif
 
 
-#define CLKFREQ    240000000
+#include "nanosoc_memmap.h"
+
+#define CLKFREQ    NANOSOC_SYS_CLK_FREQ_HZ
 #define BAUDRATE   38400
 #define BAUDCLKDIV (CLKFREQ / BAUDRATE)
 

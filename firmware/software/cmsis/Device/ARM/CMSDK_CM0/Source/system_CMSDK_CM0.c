@@ -25,6 +25,7 @@
 
 #include <stdint.h>
 #include "CMSDK_CM0.h"
+#include "nanosoc_memmap.h"
 
 
 /*----------------------------------------------------------------------------
@@ -35,7 +36,7 @@
   Define clocks
  *----------------------------------------------------------------------------*/
 
-#define XTAL    (240000000UL)            /* Oscillator frequency 240MHz       */
+#define XTAL    (NANOSOC_SYS_CLK_FREQ_HZ)  /* From generated nanosoc_memmap.h */
 
 
 /*----------------------------------------------------------------------------

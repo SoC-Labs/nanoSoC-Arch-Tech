@@ -30,10 +30,6 @@ SOCLABS_NANOSOC_ARCH_TECH_DIR/firmware ?= $(ABS_DIR)/firmware
 BOOTROM_BUILD_DIR ?= $(SOCLABS_PROJECT_DIR)/system/src/bootrom
 BOOTROM_SV        := $(BOOTROM_BUILD_DIR)/verilog/bootrom.sv
 
-# Busmatrix build output (sentinel: generated top-level Verilog file)
-BUSMATRIX_BUILD_DIR ?= $(SOCLABS_PROJECT_DIR)/build/rtl/nanosoc_ahb_interconnect
-BUSMATRIX_VERILOG   := $(BUSMATRIX_BUILD_DIR)/verilog/nanosoc_ahb_interconnect/nanosoc_ahb_interconnect_lite.v
-
 # Configuration flag file for DMA-350
 DMA350_CONFIG_FILE := $(ABS_DIR)/.dma350_configured
 
@@ -44,7 +40,7 @@ DMA350_TECH_REPO := $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/rtl/sldma350_tech
 # Setup Dependencies
 #------------------------------------------------------------------------
 # List of targets to setup the NanoSoC Repository
-SETUP_DEPENDENCIES := $(BOOTROM_SV) $(BUSMATRIX_VERILOG)
+SETUP_DEPENDENCIES := $(BOOTROM_SV)
 
 # Target to setup the repository
 setup_repo: $(SETUP_DEPENDENCIES)
@@ -79,22 +75,6 @@ $(BOOTROM_SV):
 		SIM_TOP_DIR=$(SIM_TOP_DIR) \
 		FIRMWARE_CONFIG_DIR=$(FIRMWARE_CONFIG_DIR) \
 		TESTCODES_DIR=$(TESTCODES_DIR)
-
-#------------------------------------------------------------------------
-# Generate the AHB Bus Matrix for NanoSoC
-#------------------------------------------------------------------------
-# Busmatrix source makefile (now in nanosoc_m0_soc)
-BUSMATRIX_MAKEFILE := $(SOCLABS_NANOSOC_SOC_DIR)/src/interconnect/makefile
-
-# Generate the Busmatrix Verilog RTL
-$(BUSMATRIX_VERILOG):
-	@echo -e "\n\033[1;36m-----------------------------------------------"
-	@echo "Generating AHB Bus Matrix Verilog for NanoSoC"
-	@echo -e "-----------------------------------------------\033[0m"
-	@$(MAKE) -f $(BUSMATRIX_MAKEFILE) build \
-		SOCLABS_NANOSOC_ARCH_TECH_DIR/rtl=$(SOCLABS_NANOSOC_ARCH_TECH_DIR)/rtl \
-		SOCLABS_PROJECT_DIR=$(SOCLABS_PROJECT_DIR) \
-		BUILD_DIR=$(BUSMATRIX_BUILD_DIR)
 
 #------------------------------------------------------------------------
 # Configure the DMA-350 for NanoSoC

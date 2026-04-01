@@ -73,6 +73,34 @@ register_map:
           reset_value: 0
           description: Enable automatic system reset when CPU enters lockup state
 
+    - name: BOOT_CFG
+      offset: 0x014
+      width: 32
+      access: RO
+      reset_value: 0x00000000
+      description: >
+        Boot configuration register (read-only, reflects hardware parameters).
+        Used by bootloader to detect QSPI presence and determine core identity.
+      fields:
+        - name: QSPI_PRESENT
+          bits: "0"
+          access: RO
+          description: >
+            QSPI flash controller present in hardware. Tied to
+            QSPI_FLASH_PRESENT RTL parameter. 0=No QSPI, 1=QSPI present.
+        - name: BOOT_MODE
+          bits: "3:1"
+          access: RO
+          description: >
+            Boot mode: 0=ADP (external load), 1=QSPI 2-stage flash boot.
+            Future: 2=QSPI XIP.
+        - name: CORE_ID
+          bits: "7:4"
+          access: RO
+          description: >
+            Hardwired core identifier. Each CPU subsystem instance gets a
+            unique CORE_ID, used to index the boot table in QSPI flash.
+
     - name: RESET_INFO
       offset: 0x010
       width: 32

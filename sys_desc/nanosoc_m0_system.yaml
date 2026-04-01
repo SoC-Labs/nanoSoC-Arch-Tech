@@ -91,6 +91,10 @@ module:
     NANOSOC_PARTNUMBER: { type: int, default: 0x001,        desc: "NanoSoC part number" }
     NANOSOC_REVISION:   { type: int, default: 0x1,          desc: "NanoSoC revision" }
 
+    # QSPI Flash
+    QSPI_FLASH_PRESENT: { type: int, default: 0,            desc: "QSPI flash present: 0=No (1-stage ADP boot), 1=Yes (2-stage flash boot)" }
+    QSPI_ADDR_W:        { type: int, default: 22,           desc: "QSPI flash address width (phys = 2^N bytes, default 4 MB)" }
+
   # =============================================================================
   # Interfaces (external ports of nanosoc_system)
   # =============================================================================
@@ -112,6 +116,13 @@ module:
     # GPIO ports
     - { name: P0, type: gpio, direction: inout, params: { WIDTH: 16 }, desc: "GPIO port 0 (16 pins)" }
     - { name: P1, type: gpio, direction: inout, params: { WIDTH: 16 }, desc: "GPIO port 1 (16 pins)" }
+
+    # QSPI Flash pads (active when QSPI_FLASH_PRESENT > 0)
+    - { name: QSPI_SCLK,  type: wire, direction: out,   params: { WIDTH: 1 }, condition: "$QSPI_FLASH_PRESENT > 0", desc: "QSPI serial clock" }
+    - { name: QSPI_CSN,   type: wire, direction: out,   params: { WIDTH: 1 }, condition: "$QSPI_FLASH_PRESENT > 0", desc: "QSPI chip select (active low)" }
+    - { name: QSPI_IO_O,  type: wire, direction: out,   params: { WIDTH: 4 }, condition: "$QSPI_FLASH_PRESENT > 0", desc: "QSPI data output (IO[3:0])" }
+    - { name: QSPI_IO_I,  type: wire, direction: in,    params: { WIDTH: 4 }, condition: "$QSPI_FLASH_PRESENT > 0", desc: "QSPI data input (IO[3:0])" }
+    - { name: QSPI_IO_OE, type: wire, direction: out,   params: { WIDTH: 4 }, condition: "$QSPI_FLASH_PRESENT > 0", desc: "QSPI data output enable (IO[3:0])" }
 
   # =============================================================================
   # Internal Wires
@@ -227,6 +238,8 @@ module:
         SOCLABS_JEPID: $SOCLABS_JEPID
         NANOSOC_PARTNUMBER: $NANOSOC_PARTNUMBER
         NANOSOC_REVISION: $NANOSOC_REVISION
+        QSPI_FLASH_PRESENT: $QSPI_FLASH_PRESENT
+        QSPI_ADDR_W: $QSPI_ADDR_W
       connections:
         # Clocks and Resets
         - { port: sys_clk,         conn: SYS_CLK }
@@ -306,6 +319,12 @@ module:
         - { port: exp_irq,         conn: EXP_IRQ }
         - { port: exp_drq,         conn: EXP_DRQ }
         - { port: exp_dlast,       conn: EXP_DLAST }
+        # QSPI Flash pads (active when QSPI_FLASH_PRESENT > 0)
+        - { port: qspi_sclk,      conn: QSPI_SCLK,  condition: "$QSPI_FLASH_PRESENT > 0" }
+        - { port: qspi_csn,       conn: QSPI_CSN,   condition: "$QSPI_FLASH_PRESENT > 0" }
+        - { port: qspi_io_o,      conn: QSPI_IO_O,  condition: "$QSPI_FLASH_PRESENT > 0" }
+        - { port: qspi_io_i,      conn: QSPI_IO_I,  condition: "$QSPI_FLASH_PRESENT > 0" }
+        - { port: qspi_io_oe,     conn: QSPI_IO_OE, condition: "$QSPI_FLASH_PRESENT > 0" }
 
     # --- Expansion Region ---
     # USER: Replace this default expansion region with your own accelerator IP.

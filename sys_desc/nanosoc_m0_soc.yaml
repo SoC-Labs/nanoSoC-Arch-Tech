@@ -89,6 +89,10 @@ module:
     NANOSOC_PARTNUMBER: { type: int, default: 0x001,        desc: "NanoSoC part number" }
     NANOSOC_REVISION:   { type: int, default: 0x1,          desc: "NanoSoC revision" }
 
+    # QSPI Flash
+    QSPI_FLASH_PRESENT:    { type: int, default: 0,         desc: "QSPI flash present: 0=No (1-stage ADP boot), 1=Yes (2-stage flash boot)" }
+    QSPI_ADDR_W:           { type: int, default: 22,        desc: "QSPI flash address width (phys = 2^N bytes, default 4 MB)" }
+
     # Feature enables (replacing gen_defines.v)
     IMEM_0_RAM_PRELOAD:    { type: int, default: 0,         desc: "IMEM preload: 0=SRAM (ADP load), 1=ROM (preloaded image)" }
     ACCELERATOR_SUBSYSTEM: { type: int, default: 0,         desc: "Enable accelerator expansion subsystem" }
@@ -154,6 +158,13 @@ module:
     - { name: exp_irq,   type: wire, direction: in,  params: { WIDTH: 4 }, desc: "Expansion interrupt requests" }
     - { name: exp_drq,   type: wire, direction: in,  params: { WIDTH: 2 }, desc: "Expansion DMA requests" }
     - { name: exp_dlast, type: wire, direction: out, params: { WIDTH: 2 }, desc: "DMA last signals to expansion" }
+
+    # QSPI Flash pads (active when QSPI_FLASH_PRESENT > 0)
+    - { name: qspi_sclk,     type: wire, direction: out,   params: { WIDTH: 1 }, condition: "$QSPI_FLASH_PRESENT > 0", desc: "QSPI serial clock" }
+    - { name: qspi_csn,      type: wire, direction: out,   params: { WIDTH: 1 }, condition: "$QSPI_FLASH_PRESENT > 0", desc: "QSPI chip select (active low)" }
+    - { name: qspi_io_o,     type: wire, direction: out,   params: { WIDTH: 4 }, condition: "$QSPI_FLASH_PRESENT > 0", desc: "QSPI data output (IO[3:0])" }
+    - { name: qspi_io_i,     type: wire, direction: in,    params: { WIDTH: 4 }, condition: "$QSPI_FLASH_PRESENT > 0", desc: "QSPI data input (IO[3:0])" }
+    - { name: qspi_io_oe,    type: wire, direction: out,   params: { WIDTH: 4 }, condition: "$QSPI_FLASH_PRESENT > 0", desc: "QSPI data output enable (IO[3:0])" }
 
   # =============================================================================
   # Module Instances
@@ -425,6 +436,39 @@ module:
         - { port: HCLK,      conn: u_ss_cpu.sys_hclk }
         - { port: ahb_slave, conn: nanosoc_ahb_interconnect.systable }
 
+    # --- QSPI Flash Subsystem ---
+    - instance_name: u_ss_qspi
+      module: nanosoc_ss_qspi
+      condition: "$QSPI_FLASH_PRESENT > 0"
+      addressable: True
+      params:
+        SYS_ADDR_W: $SYS_ADDR_W
+        SYS_DATA_W: $SYS_DATA_W
+        APB_ADDR_W: $APB_ADDR_W
+        APB_DATA_W: $APB_DATA_W
+        QSPI_ADDR_W: $QSPI_ADDR_W
+      connections:
+        # Clocks and resets
+        - { port: HCLK,           conn: u_ss_cpu.sys_hclk }
+        - { port: HRESETn,        conn: u_ss_cpu.sys_hresetn }
+        # AHB slave for memory-mapped flash access
+        - { port: ahb_slave,      conn: nanosoc_ahb_interconnect.qspi_mem }
+        # APB slave for control registers (via soc_peripheral extension slot 12)
+        - { port: QSPI_PSEL,      conn: u_ss_systemctrl.EXT_PORT_12_PSEL }
+        - { port: QSPI_PADDR,     conn: "u_ss_systemctrl.SOC_PERIPHERAL_PADDR[11:2]" }
+        - { port: QSPI_PENABLE,   conn: u_ss_systemctrl.SOC_PERIPHERAL_PENABLE }
+        - { port: QSPI_PWRITE,    conn: u_ss_systemctrl.SOC_PERIPHERAL_PWRITE }
+        - { port: QSPI_PWDATA,    conn: u_ss_systemctrl.SOC_PERIPHERAL_PWDATA }
+        # QSPI pad signals (top-level ports)
+        - { port: qspi_sclk,      conn: qspi_sclk }
+        - { port: qspi_csn,       conn: qspi_csn }
+        - { port: qspi_io_o,      conn: qspi_io_o }
+        - { port: qspi_io_i,      conn: qspi_io_i }
+        - { port: qspi_io_oe,     conn: qspi_io_oe }
+      boot:
+        stage1_partition: cpu_0_stage1
+        app_partition:    cpu_0_app
+
   # =============================================================================
   # Combinational Assigns — Glue Logic
   # =============================================================================
@@ -691,7 +735,8 @@ module:
         - { name: cpu_ss,          instance: u_ss_cpu,          base: 0x00000000, size: 0x20000000, sw_access: rwx, region_type: memory, role: None, subordinate_bus: True, desc: "CPU subsystem slave (internal busmatrix: bootrom, imem, dmem)" }
         - { name: soc_peripheral,  instance: u_ss_systemctrl,   base: 0x40000000, size: 0x10000000, sw_access: rw,  region_type: periph, role: None, desc: "SoC peripherals (timers, UARTs, watchdog, GPIO, sysctrl)" }
         - { name: dmac_ctrl,       instance: u_ss_dma,          base: 0x50000000, size: 0x10000000, sw_access: rw,  region_type: periph, role: None, desc: "DMA controller config registers (APB-bridged)" }
-        - { name: exp,                                          base: 0x60000000, size: 0x20000000, sw_access: rw,  region_type: periph, role: None, desc: "Expansion region for custom accelerators (external port)" }
+        - { name: exp,                                          base: 0x60000000, size: 0x10000000, sw_access: rw,  region_type: periph, role: None, desc: "Expansion region for custom accelerators (external port)" }
+        - { name: qspi_mem,        instance: u_ss_qspi,        base: 0x70000000, size: 0x10000000, phys_size: "2 ** $QSPI_ADDR_W", sw_access: rx, region_type: memory, role: None, condition: "$QSPI_FLASH_PRESENT > 0", desc: "QSPI flash memory-mapped region (read-only)" }
         - { name: sram_0,          instance: u_region_sram_0,   base: 0x80000000, size: 0x10000000, phys_size: "4 * (2 ** $SRAM_0_RAM_ADDR_W)", sw_access: rwx, region_type: memory, role: None, desc: "Expansion SRAM bank 0" }
         - { name: sram_1,          instance: u_region_sram_1,   base: 0x90000000, size: 0x10000000, phys_size: "4 * (2 ** $SRAM_1_RAM_ADDR_W)", sw_access: rwx, region_type: memory, role: None, desc: "Expansion SRAM bank 1" }
         - { name: systable,        instance: u_region_systable, base: 0xF0000000, size: 0x00040000, sw_access: ro,  region_type: periph, role: None, desc: "CoreSight system ROM table" }
@@ -703,6 +748,7 @@ module:
             - name: soc_peripheral
             - name: dmac_ctrl
             - name: exp
+            - { name: qspi_mem, condition: "$QSPI_FLASH_PRESENT > 0" }
             - name: sram_0
             - name: sram_1
             - name: systable
@@ -714,6 +760,7 @@ module:
             - name: soc_peripheral
             - name: dmac_ctrl
             - name: exp
+            - { name: qspi_mem, condition: "$QSPI_FLASH_PRESENT > 0" }
             - name: sram_0
             - name: sram_1
             - name: systable
@@ -724,6 +771,7 @@ module:
             - name: cpu_ss
             - name: soc_peripheral
             - name: exp
+            - { name: qspi_mem, condition: "$QSPI_FLASH_PRESENT > 0" }
             - name: sram_0
             - name: sram_1
 
@@ -733,6 +781,7 @@ module:
             - name: cpu_ss
             - name: soc_peripheral
             - name: exp
+            - { name: qspi_mem, condition: "$QSPI_FLASH_PRESENT > 0" }
             - name: sram_0
             - name: sram_1
 
@@ -758,6 +807,19 @@ module:
           - { target: imem_0, address_select: remapped, phys_size: 0x20000 }
           - { target: imem_0, linker_name: IMEM_0_RAM, software_access: rwx, address_select: default, phys_size: 0x4000 }
 
+      # Stage 1 bootloader — linked for DMEM execution, stored in QSPI flash partition
+      - name: cmsdk_stage1_bootloader
+        condition: "$QSPI_FLASH_PRESENT > 0"
+        regions:
+          - { target: dmem_0, address_select: default, size_adjust: -0x400 }
+
+      # Application firmware — linked for IMEM (same layout as cmsdk_cm0), stored in QSPI partition
+      - name: cmsdk_qspi_app
+        condition: "$QSPI_FLASH_PRESENT > 0"
+        regions:
+          - { target: imem_0, address_select: remapped }
+          - { target: dmem_0, address_select: default, size_adjust: -0x400 }
+
     adp:
       upload_target: imem_0
       address_select: default
@@ -766,6 +828,60 @@ module:
       bootloader:
         target: bootrom_0
         address_select: alias
+
+  # =============================================================================
+  # QSPI Flash Layout (Hybrid Partition Model)
+  # =============================================================================
+  # Centralized partition definitions — per-core boot: blocks on CPU instances
+  # reference partitions by name. The flash_pack.py tool cross-references both
+  # to generate the boot table binary and assemble the complete flash image.
+  flash_layout:
+    device: qspi_mem
+    condition: "$QSPI_FLASH_PRESENT > 0"
+    partitions:
+      - name: boot_table
+        offset: 0x00000000
+        size:   0x00001000
+        type:   boot_table
+        desc:   "Boot table header + per-core entries (auto-generated)"
+
+      - name: cpu_0_stage1
+        offset: 0x00001000
+        size:   0x00001000
+        type:   stage1_bootloader
+        desc:   "Core 0 Stage 1 bootloader (~2-4KB)"
+
+      - name: cpu_0_app
+        offset: 0x00010000
+        size:   0x00010000
+        type:   application
+        desc:   "Core 0 application image (up to 64KB, matches IMEM size)"
+
+  # =============================================================================
+  # Boot Mode Configuration
+  # =============================================================================
+  boot:
+    - condition: "$QSPI_FLASH_PRESENT == 0"
+      mode: adp_load
+      stages: 1
+      desc: "ADP loads code to IMEM externally, bootrom remaps and jumps"
+
+    - condition: "$QSPI_FLASH_PRESENT > 0"
+      mode: flash_boot
+      stages: 2
+      flash_layout: flash_layout
+      index_by: core_id
+      stage_0:
+        source: bootrom_0
+        desc: "Per-core BOOTROM reads CORE_ID, indexes boot table, copies Stage 1 to DMEM"
+      stage_1:
+        runs_from: dmem_0
+        copy_engine: dmac_0
+        dest: imem_0
+        desc: "Stage 1 uses DMAC to copy this core's app from flash to IMEM"
+      stage_2:
+        runs_from: imem_0
+        desc: "Application runs from IMEM at full speed"
 
   # =============================================================================
   # Build Info Registers

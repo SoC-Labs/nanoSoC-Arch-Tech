@@ -1,0 +1,60 @@
+#-----------------------------------------------------------------------------
+# NanoSoC QSPI Flash Subsystem Module
+# A joint work commissioned on behalf of SoC Labs, under Arm Academic Access license.
+#
+# Contributors
+#
+# David Mapstone (d.a.mapstone@soton.ac.uk)
+#
+# Copyright 2026, SoC Labs (www.soclabs.org)
+#-----------------------------------------------------------------------------
+# QSPI flash subsystem providing:
+#   - AHB slave port for memory-mapped flash reads (XIP-capable)
+#   - APB slave port for QSPI controller configuration registers
+#   - SPI/Dual-SPI/Quad-SPI pad interface
+#
+# The memory-mapped AHB port translates read accesses into QSPI read
+# commands. Write accesses to flash are performed via the APB control
+# registers (command-based programming).
+
+module:
+  name: nanosoc_ss_qspi
+  gen: False
+  desc: >
+    QSPI flash subsystem with AHB memory-mapped read interface and APB
+    control register interface. Supports Standard SPI, Dual-SPI, and
+    Quad-SPI modes. The AHB port provides memory-mapped read-only access
+    for boot image loading and XIP. Flash programming and erase operations
+    are performed via APB register commands.
+
+  params:
+    SYS_ADDR_W:  { type: int, default: 32, desc: "System address width" }
+    SYS_DATA_W:  { type: int, default: 32, desc: "System data width" }
+    APB_ADDR_W:  { type: int, default: 12, desc: "APB address width" }
+    APB_DATA_W:  { type: int, default: 32, desc: "APB data width" }
+    QSPI_ADDR_W: { type: int, default: 22, desc: "Flash address width (phys = 2^N bytes, default 4 MB)" }
+
+  interfaces:
+    # Clocks and Resets
+    - { name: HCLK,    type: wire, direction: in, params: { WIDTH: 1 }, desc: "AHB clock" }
+    - { name: HRESETn, type: wire, direction: in, params: { WIDTH: 1 }, desc: "AHB reset (active low)" }
+
+    # AHB slave port — memory-mapped flash reads
+    - { name: ahb_slave, type: ahb, direction: target, params: { ADDR_WIDTH: $SYS_ADDR_W, DATA_WIDTH: $SYS_DATA_W }, desc: "AHB slave port for memory-mapped flash access (read-only)" }
+
+    # APB slave port — QSPI controller configuration registers
+    - { name: QSPI_PSEL,    type: wire, direction: in,  params: { WIDTH: 1 },          desc: "APB peripheral select" }
+    - { name: QSPI_PADDR,   type: wire, direction: in,  params: { WIDTH: 10 },         desc: "APB address (word-aligned, bits [11:2])" }
+    - { name: QSPI_PENABLE, type: wire, direction: in,  params: { WIDTH: 1 },          desc: "APB enable" }
+    - { name: QSPI_PWRITE,  type: wire, direction: in,  params: { WIDTH: 1 },          desc: "APB write" }
+    - { name: QSPI_PWDATA,  type: wire, direction: in,  params: { WIDTH: $APB_DATA_W }, desc: "APB write data" }
+    - { name: QSPI_PRDATA,  type: wire, direction: out, params: { WIDTH: $APB_DATA_W }, desc: "APB read data" }
+    - { name: QSPI_PREADY,  type: wire, direction: out, params: { WIDTH: 1 },          desc: "APB ready" }
+    - { name: QSPI_PSLVERR, type: wire, direction: out, params: { WIDTH: 1 },          desc: "APB slave error" }
+
+    # QSPI pad signals
+    - { name: qspi_sclk,  type: wire, direction: out,   params: { WIDTH: 1 }, desc: "QSPI serial clock" }
+    - { name: qspi_csn,   type: wire, direction: out,   params: { WIDTH: 1 }, desc: "QSPI chip select (active low)" }
+    - { name: qspi_io_o,  type: wire, direction: out,   params: { WIDTH: 4 }, desc: "QSPI data output (IO[3:0])" }
+    - { name: qspi_io_i,  type: wire, direction: in,    params: { WIDTH: 4 }, desc: "QSPI data input (IO[3:0])" }
+    - { name: qspi_io_oe, type: wire, direction: out,   params: { WIDTH: 4 }, desc: "QSPI data output enable (IO[3:0])" }

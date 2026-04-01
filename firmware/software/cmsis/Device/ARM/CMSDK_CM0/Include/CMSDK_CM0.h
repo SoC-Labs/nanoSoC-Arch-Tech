@@ -545,6 +545,42 @@ typedef struct
 /*@}*/ /* end of group CMSDK_GPIO */
 
 
+/*------------- QSPI Flash Controller ----------------------------------------*/
+/** @addtogroup CMSDK_QSPI CMSDK QSPI Controller
+  @{
+*/
+typedef struct
+{
+  __IO   uint32_t  CTRL;           /*!< Offset: 0x000 Control Register (R/W) */
+  __I    uint32_t  STATUS;         /*!< Offset: 0x004 Status Register (RO) */
+  __IO   uint32_t  CLK_DIV;       /*!< Offset: 0x008 Clock Divider Register (R/W) */
+  __IO   uint32_t  CMD;           /*!< Offset: 0x00C Command Register (R/W) */
+  __IO   uint32_t  ADDR;          /*!< Offset: 0x010 Address Register (R/W) */
+  __O    uint32_t  TX_DATA;       /*!< Offset: 0x014 Transmit Data Register (WO) */
+  __I    uint32_t  RX_DATA;       /*!< Offset: 0x018 Receive Data Register (RO) */
+  __I    uint32_t  JEDEC_ID;      /*!< Offset: 0x01C JEDEC ID Register (RO) */
+} CMSDK_QSPI_TypeDef;
+
+#define CMSDK_QSPI_CTRL_ENABLE_Pos       0
+#define CMSDK_QSPI_CTRL_ENABLE_Msk       (0x01ul << CMSDK_QSPI_CTRL_ENABLE_Pos)
+#define CMSDK_QSPI_CTRL_SPI_MODE_Pos     1
+#define CMSDK_QSPI_CTRL_SPI_MODE_Msk     (0x03ul << CMSDK_QSPI_CTRL_SPI_MODE_Pos)
+#define CMSDK_QSPI_CTRL_MEM_MAP_EN_Pos   8
+#define CMSDK_QSPI_CTRL_MEM_MAP_EN_Msk   (0x01ul << CMSDK_QSPI_CTRL_MEM_MAP_EN_Pos)
+
+#define CMSDK_QSPI_STATUS_BUSY_Pos       0
+#define CMSDK_QSPI_STATUS_BUSY_Msk       (0x01ul << CMSDK_QSPI_STATUS_BUSY_Pos)
+
+#define CMSDK_QSPI_CMD_OPCODE_Pos        0
+#define CMSDK_QSPI_CMD_OPCODE_Msk        (0xFFul << CMSDK_QSPI_CMD_OPCODE_Pos)
+#define CMSDK_QSPI_CMD_ADDR_BYTES_Pos    8
+#define CMSDK_QSPI_CMD_DATA_BYTES_Pos    16
+#define CMSDK_QSPI_CMD_DIR_Pos           28
+#define CMSDK_QSPI_CMD_START_Pos         31
+#define CMSDK_QSPI_CMD_START_Msk         (0x01ul << CMSDK_QSPI_CMD_START_Pos)
+/*@}*/ /* end of group CMSDK_QSPI */
+
+
 /*------------- System Control (SYSCON) --------------------------------------*/
 /** @addtogroup CMSDK_SYSCON CMSDK System Control
   @{
@@ -556,10 +592,18 @@ typedef struct
   __IO   uint32_t  RESETOP;        /*!< Offset: 0x008 Reset Option Register  (R/W) */
   __IO   uint32_t  EMICTRL;        /*!< Offset: 0x00C EMI Control Register  (R/W) */
   __IO   uint32_t  RSTINFO;        /*!< Offset: 0x010 Reset Information Register (R/W) */
+  __I    uint32_t  BOOT_CFG;       /*!< Offset: 0x014 Boot Configuration Register (RO) */
 } CMSDK_SYSCON_TypeDef;
 
 #define CMSDK_SYSCON_REMAP_Pos                 0
 #define CMSDK_SYSCON_REMAP_Msk                 (0x01ul << CMSDK_SYSCON_REMAP_Pos)               /*!< CMSDK_SYSCON MEME_CTRL: REMAP Mask */
+
+#define CMSDK_SYSCON_BOOTCFG_QSPI_PRESENT_Pos  0
+#define CMSDK_SYSCON_BOOTCFG_QSPI_PRESENT_Msk  (0x01ul << CMSDK_SYSCON_BOOTCFG_QSPI_PRESENT_Pos) /*!< CMSDK_SYSCON BOOT_CFG: QSPI_PRESENT Mask */
+#define CMSDK_SYSCON_BOOTCFG_BOOT_MODE_Pos      1
+#define CMSDK_SYSCON_BOOTCFG_BOOT_MODE_Msk      (0x07ul << CMSDK_SYSCON_BOOTCFG_BOOT_MODE_Pos)    /*!< CMSDK_SYSCON BOOT_CFG: BOOT_MODE Mask */
+#define CMSDK_SYSCON_BOOTCFG_CORE_ID_Pos        4
+#define CMSDK_SYSCON_BOOTCFG_CORE_ID_Msk        (0x0Ful << CMSDK_SYSCON_BOOTCFG_CORE_ID_Pos)      /*!< CMSDK_SYSCON BOOT_CFG: CORE_ID Mask */
 
 #define CMSDK_SYSCON_PMUCTRL_EN_Pos            0
 #define CMSDK_SYSCON_PMUCTRL_EN_Msk            (0x01ul << CMSDK_SYSCON_PMUCTRL_EN_Pos)          /*!< CMSDK_SYSCON PMUCTRL: PMUCTRL ENABLE Mask */
@@ -1271,6 +1315,12 @@ __IO    uint32_t  MODECTRL;
 #ifndef NANOSOC_DMEM_0_BASE
 #define NANOSOC_DMEM_0_BASE         (0x18000000UL)
 #endif
+#ifndef NANOSOC_IMEM_0_BASE
+#define NANOSOC_IMEM_0_BASE         (0x10000000UL)
+#endif
+#ifndef NANOSOC_QSPI_MEM_BASE
+#define NANOSOC_QSPI_MEM_BASE      (0x70000000UL)
+#endif
 
 #define CMSDK_FLASH_BASE        (0x00000000UL)  /*!< (FLASH     ) Base Address */
 #define CMSDK_SRAM_BASE         (NANOSOC_DMEM_0_BASE)  /*!< (SRAM      ) Base Address */
@@ -1291,6 +1341,7 @@ __IO    uint32_t  MODECTRL;
 #define CMSDK_UART2_BASE        (CMSDK_APB_BASE + 0x6000UL)
 #define CMSDK_USRT2_BASE        (CMSDK_APB_BASE + 0xE000UL) //0x6000UL)
 #define CMSDK_WATCHDOG_BASE     (CMSDK_APB_BASE + 0x8000UL)
+#define CMSDK_QSPI_BASE         (CMSDK_APB_BASE + 0xC000UL)
 #define CMSDK_PL230_BASE        (NANOSOC_DMAC_CTRL_BASE + 0x0000UL)
 
 /* AHB peripherals                                                           */
@@ -1322,6 +1373,7 @@ __IO    uint32_t  MODECTRL;
 #define CMSDK_GPIO0             ((CMSDK_GPIO_TypeDef   *) CMSDK_GPIO0_BASE   )
 #define CMSDK_GPIO1             ((CMSDK_GPIO_TypeDef   *) CMSDK_GPIO1_BASE   )
 #define CMSDK_SYSCON            ((CMSDK_SYSCON_TypeDef *) CMSDK_SYSCTRL_BASE )
+#define CMSDK_QSPI              ((CMSDK_QSPI_TypeDef   *) CMSDK_QSPI_BASE   )
 /*@}*/ /* end of group CMSDK_PeripheralDecl */
 
 /*@}*/ /* end of group CMSDK_Definitions */

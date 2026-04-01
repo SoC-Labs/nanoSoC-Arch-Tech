@@ -1,0 +1,178 @@
+#-----------------------------------------------------------------------------
+# NanoSoC QSPI Controller Register Map
+# A joint work commissioned on behalf of SoC Labs, under Arm Academic Access license.
+#
+# Contributors
+#
+# David Mapstone (d.a.mapstone@soton.ac.uk)
+#
+# Copyright 2026, SoC Labs (www.soclabs.org)
+#-----------------------------------------------------------------------------
+# APB register interface for the QSPI flash controller.
+# Mapped to APB extension slot 12 at 0x4000C000.
+
+register_map:
+  name: nanosoc_qspi_ctrl
+  module: nanosoc_qspi_ctrl
+  gen: False
+  description: >
+    QSPI flash controller registers. Provides command-based access for flash
+    programming/erase, JEDEC ID reading, status polling, and configuration
+    of SPI mode and clock divider. Memory-mapped reads are handled by the
+    AHB port and do not require register interaction.
+  address_width: 12
+  data_width: 32
+
+  registers:
+    - name: QSPI_CTRL
+      offset: 0x000
+      width: 32
+      access: RW
+      reset_value: 0x00000000
+      description: QSPI controller control register
+      fields:
+        - name: ENABLE
+          bits: "0"
+          access: RW
+          reset_value: 0
+          description: Controller enable (1=enabled, 0=disabled/reset)
+        - name: SPI_MODE
+          bits: "2:1"
+          access: RW
+          reset_value: 0
+          description: >
+            SPI mode select: 0=Standard SPI (1-bit), 1=Dual SPI (2-bit),
+            2=Quad SPI (4-bit)
+        - name: CPOL
+          bits: "3"
+          access: RW
+          reset_value: 0
+          description: Clock polarity (0=idle low, 1=idle high)
+        - name: CPHA
+          bits: "4"
+          access: RW
+          reset_value: 0
+          description: Clock phase (0=sample on leading edge, 1=trailing)
+        - name: MEM_MAP_EN
+          bits: "8"
+          access: RW
+          reset_value: 0
+          description: >
+            Memory-mapped mode enable. When set, AHB read accesses to the
+            memory-mapped region are automatically translated into QSPI
+            read commands.
+
+    - name: QSPI_STATUS
+      offset: 0x004
+      width: 32
+      access: RO
+      reset_value: 0x00000000
+      description: QSPI controller status register
+      fields:
+        - name: BUSY
+          bits: "0"
+          access: RO
+          description: Transfer in progress
+        - name: TX_FIFO_EMPTY
+          bits: "1"
+          access: RO
+          description: TX FIFO empty
+        - name: RX_FIFO_EMPTY
+          bits: "2"
+          access: RO
+          description: RX FIFO empty
+        - name: RX_FIFO_FULL
+          bits: "3"
+          access: RO
+          description: RX FIFO full
+
+    - name: QSPI_CLK_DIV
+      offset: 0x008
+      width: 32
+      access: RW
+      reset_value: 0x00000004
+      description: Clock divider register (SCLK = HCLK / (2 * (CLK_DIV + 1)))
+      fields:
+        - name: CLK_DIV
+          bits: "7:0"
+          access: RW
+          reset_value: 4
+          description: Clock divider value (default gives HCLK/10)
+
+    - name: QSPI_CMD
+      offset: 0x00C
+      width: 32
+      access: RW
+      reset_value: 0x00000000
+      description: Command register — write to initiate a SPI transaction
+      fields:
+        - name: OPCODE
+          bits: "7:0"
+          access: RW
+          description: SPI command opcode (e.g. 0x9F=JEDEC ID, 0x03=Read, 0x02=Page Program)
+        - name: ADDR_BYTES
+          bits: "9:8"
+          access: RW
+          description: Number of address bytes to send (0=none, 1-3)
+        - name: DUMMY_CYCLES
+          bits: "13:10"
+          access: RW
+          description: Number of dummy clock cycles after address
+        - name: DATA_BYTES
+          bits: "25:16"
+          access: RW
+          description: Number of data bytes to transfer (0-1023)
+        - name: DIR
+          bits: "28"
+          access: RW
+          description: Transfer direction (0=read from flash, 1=write to flash)
+        - name: START
+          bits: "31"
+          access: W1S
+          description: Write 1 to start command execution (self-clearing)
+
+    - name: QSPI_ADDR
+      offset: 0x010
+      width: 32
+      access: RW
+      reset_value: 0x00000000
+      description: Flash address register for command-based transfers
+      fields:
+        - name: ADDR
+          bits: "23:0"
+          access: RW
+          description: Flash byte address
+
+    - name: QSPI_TX_DATA
+      offset: 0x014
+      width: 32
+      access: WO
+      description: Transmit data register (write to push data into TX FIFO)
+
+    - name: QSPI_RX_DATA
+      offset: 0x018
+      width: 32
+      access: RO
+      description: Receive data register (read to pop data from RX FIFO)
+
+    - name: QSPI_JEDEC_ID
+      offset: 0x01C
+      width: 32
+      access: RO
+      reset_value: 0x00000000
+      description: >
+        Cached JEDEC ID from last JEDEC ID read command. Updated automatically
+        when a 0x9F command completes.
+      fields:
+        - name: MANUFACTURER
+          bits: "7:0"
+          access: RO
+          description: Manufacturer ID (e.g. 0xEF=Winbond, 0x20=Micron)
+        - name: MEMORY_TYPE
+          bits: "15:8"
+          access: RO
+          description: Memory type
+        - name: MEMORY_CAPACITY
+          bits: "23:16"
+          access: RO
+          description: Memory capacity code

@@ -53,7 +53,8 @@
 
 module nanosoc_uart_capture
   #(parameter LOGFILENAME = "uart.log",
-    parameter VERBOSE = 0)
+    parameter VERBOSE = 0,
+    parameter TAG = "")
   (
   input  wire       RESETn,              // Power on reset
   input  wire       CLK,                 // Clock (baud rate)
@@ -186,6 +187,8 @@ module nanosoc_uart_capture
           // New line
           begin
           tube_string[string_length] = 8'h00;
+          if (TAG != "")
+            $fwrite(mcd,"%0s", TAG);
           if (VERBOSE != 0)
             $fwrite(mcd,"%t UART<%m>: ",$time);
 
@@ -205,6 +208,8 @@ module nanosoc_uart_capture
           if (string_length >79) // line too long, display and clear buffer
             begin
             tube_string[string_length] = 8'h00;
+            if (TAG != "")
+              $fwrite(mcd,"%0s", TAG);
             if (VERBOSE != 0)
               $fwrite(mcd,"%t UART<%m>: ",$time);
 
@@ -237,6 +242,8 @@ module nanosoc_uart_capture
     reg_end_simulation  <= nxt_end_simulation;
     if (reg_end_simulation==1'b1)
       begin
+        if (TAG != "")
+          $fwrite(mcd,"%0s", TAG);
         if (VERBOSE != 0)
           $fwrite(mcd,"%t UART<%m>: Test Ended\n",$time);
         else

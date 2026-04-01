@@ -17,6 +17,9 @@
 
 // =============    NanoSoC Testbench search path    =============
 
+// - SoC Configuration Package (must precede testbench that imports it)
+$(SOCLABS_NANOSOC_SOC_DIR)/build_soc/rtl/nanosoc_soc_config_pkg.sv
+
 // - Top-level testbench
 $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/verification/tb/verilog/nanosoc_tb.v
 $(SOCLABS_HOSTIO4_TECH_DIR)/target_rtl/hostio4_target.v

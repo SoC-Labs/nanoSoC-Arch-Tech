@@ -5,8 +5,9 @@
 // Contributors
 //
 // David Flynn (d.w.flynn@soton.ac.uk)
+// David Mapstone (d.a.mapstone@soton.ac.uk)
 //
-// Copyright (C) 2021-3, SoC Labs (www.soclabs.org)
+// Copyright (C) 2021-6, SoC Labs (www.soclabs.org)
 //-----------------------------------------------------------------------------
 
 //-----------------------------------------------------------------------------
@@ -37,6 +38,7 @@
 //
 `timescale 1ns/1ps
 `include "gen_defines.v"
+import nanosoc_soc_config_pkg::*;
 
 module nanosoc_tb;
 
@@ -253,7 +255,8 @@ initial begin
     .ADP_FILENAME     (ADP_FILENAME),
     .DATA_IN_FILENAME (DATA_IN_FILENAME),
     .DATA_OUT_FILENAME(DATA_OUT_FILENAME),
-    .FAST_LOAD        (FAST_LOAD)
+    .FAST_LOAD        (FAST_LOAD),
+    .TAG              ("[ADP]  ")
   ) u_nanosoc_tb_adp_stimulus (
     .CLK             (CLK),
     .NRST            (NRST),
@@ -285,7 +288,8 @@ initial begin
 
   nanosoc_tb_uart_baudpll #(
     .BAUDPROGDIV16 (389),
-    .LOGFILENAME   ("logs/uart2.log")
+    .LOGFILENAME   ("logs/uart2.log"),
+    .TAG           ("[UART] ")
   ) u_nanosoc_tb_uart_baudpll (
     .PCLK          (PCLK),
     .NRST          (NRST),
@@ -323,127 +327,137 @@ initial begin
 
 `define ARM_CM0IK_PATH u_nanosoc_chip_pads.u_nanosoc_chip.u_system.u_nanosoc.u_ss_cpu.u_cpu_0.u_slcorem0_integration.u_cortexm0
 
-  CORTEXM0
-     #(.ACG(1), .AHBSLV(0), .BE(0), .BKPT(4),
-       .DBG(1), .NUMIRQ(32), .RAR(1), .SMUL(0),
-       .SYST(1), .WIC(1), .WICLINES(34), .WPT(2))
-       u_cortexm0_track
-         (
-          // Outputs
-          .HADDR                          ( ),
-          .HBURST                         ( ),
-          .HMASTLOCK                      ( ),
-          .HPROT                          ( ),
-          .HSIZE                          ( ),
-          .HTRANS                         ( ),
-          .HWDATA                         ( ),
-          .HWRITE                         ( ),
-          .HMASTER                        ( ),
-          .SLVRDATA                       ( ),
-          .SLVREADY                       ( ),
-          .SLVRESP                        ( ),
-          .DBGRESTARTED                   ( ),
-          .HALTED                         ( ),
-          .TXEV                           ( ),
-          .LOCKUP                         ( ),
-          .SYSRESETREQ                    ( ),
-          .CODENSEQ                       ( ),
-          .CODEHINTDE                     ( ),
-          .SPECHTRANS                     ( ),
-          .SLEEPING                       ( ),
-          .SLEEPDEEP                      ( ),
-          .SLEEPHOLDACKn                  ( ),
-          .WICDSACKn                      ( ),
-          .WICMASKISR                     ( ),
-          .WICMASKNMI                     ( ),
-          .WICMASKRXEV                    ( ),
-          .WICLOAD                        ( ),
-          .WICCLEAR                       ( ),
-          // Inputs
-          .SCLK                           (`ARM_CM0IK_PATH.SCLK),
-          .HCLK                           (`ARM_CM0IK_PATH.HCLK),
-          .DCLK                           (`ARM_CM0IK_PATH.DCLK),
-          .DBGRESETn                      (`ARM_CM0IK_PATH.DBGRESETn),
-          .HRESETn                        (`ARM_CM0IK_PATH.HRESETn),
-          .HRDATA                         (`ARM_CM0IK_PATH.HRDATA[31:0]),
-          .HREADY                         (`ARM_CM0IK_PATH.HREADY),
-          .HRESP                          (`ARM_CM0IK_PATH.HRESP),
-          .SLVADDR                        (`ARM_CM0IK_PATH.SLVADDR[31:0]),
-          .SLVSIZE                        (`ARM_CM0IK_PATH.SLVSIZE[1:0]),
-          .SLVTRANS                       (`ARM_CM0IK_PATH.SLVTRANS[1:0]),
-          .SLVWDATA                       (`ARM_CM0IK_PATH.SLVWDATA[31:0]),
-          .SLVWRITE                       (`ARM_CM0IK_PATH.SLVWRITE),
-          .DBGRESTART                     (`ARM_CM0IK_PATH.DBGRESTART),
-          .EDBGRQ                         (`ARM_CM0IK_PATH.EDBGRQ),
-          .NMI                            (`ARM_CM0IK_PATH.NMI),
-          .IRQ                            (`ARM_CM0IK_PATH.IRQ[31:0]),
-          .RXEV                           (`ARM_CM0IK_PATH.RXEV),
-          .STCALIB                        (`ARM_CM0IK_PATH.STCALIB[25:0]),
-          .STCLKEN                        (`ARM_CM0IK_PATH.STCLKEN),
-          .IRQLATENCY                     (`ARM_CM0IK_PATH.IRQLATENCY[7:0]),
-          .ECOREVNUM                      (`ARM_CM0IK_PATH.ECOREVNUM[19:0]),
-          .SLEEPHOLDREQn                  (`ARM_CM0IK_PATH.SLEEPHOLDREQn),
-          .WICDSREQn                      (`ARM_CM0IK_PATH.WICDSREQn),
-          .SE                             (`ARM_CM0IK_PATH.SE));
+  CORTEXM0 #(
+    .ACG(1),
+    .AHBSLV(0),
+    .BE(0),
+    .BKPT(4),
+    .DBG(1),
+    .NUMIRQ(32),
+    .RAR(1),
+    .SMUL(0),
+    .SYST(1),
+    .WIC(1),
+    .WICLINES(34),
+    .WPT(2)
+  ) u_cortexm0_track (
+    // Outputs
+    .HADDR                          ( ),
+    .HBURST                         ( ),
+    .HMASTLOCK                      ( ),
+    .HPROT                          ( ),
+    .HSIZE                          ( ),
+    .HTRANS                         ( ),
+    .HWDATA                         ( ),
+    .HWRITE                         ( ),
+    .HMASTER                        ( ),
+    .SLVRDATA                       ( ),
+    .SLVREADY                       ( ),
+    .SLVRESP                        ( ),
+    .DBGRESTARTED                   ( ),
+    .HALTED                         ( ),
+    .TXEV                           ( ),
+    .LOCKUP                         ( ),
+    .SYSRESETREQ                    ( ),
+    .CODENSEQ                       ( ),
+    .CODEHINTDE                     ( ),
+    .SPECHTRANS                     ( ),
+    .SLEEPING                       ( ),
+    .SLEEPDEEP                      ( ),
+    .SLEEPHOLDACKn                  ( ),
+    .WICDSACKn                      ( ),
+    .WICMASKISR                     ( ),
+    .WICMASKNMI                     ( ),
+    .WICMASKRXEV                    ( ),
+    .WICLOAD                        ( ),
+    .WICCLEAR                       ( ),
+    // Inputs
+    .SCLK                           (`ARM_CM0IK_PATH.SCLK),
+    .HCLK                           (`ARM_CM0IK_PATH.HCLK),
+    .DCLK                           (`ARM_CM0IK_PATH.DCLK),
+    .DBGRESETn                      (`ARM_CM0IK_PATH.DBGRESETn),
+    .HRESETn                        (`ARM_CM0IK_PATH.HRESETn),
+    .HRDATA                         (`ARM_CM0IK_PATH.HRDATA[31:0]),
+    .HREADY                         (`ARM_CM0IK_PATH.HREADY),
+    .HRESP                          (`ARM_CM0IK_PATH.HRESP),
+    .SLVADDR                        (`ARM_CM0IK_PATH.SLVADDR[31:0]),
+    .SLVSIZE                        (`ARM_CM0IK_PATH.SLVSIZE[1:0]),
+    .SLVTRANS                       (`ARM_CM0IK_PATH.SLVTRANS[1:0]),
+    .SLVWDATA                       (`ARM_CM0IK_PATH.SLVWDATA[31:0]),
+    .SLVWRITE                       (`ARM_CM0IK_PATH.SLVWRITE),
+    .DBGRESTART                     (`ARM_CM0IK_PATH.DBGRESTART),
+    .EDBGRQ                         (`ARM_CM0IK_PATH.EDBGRQ),
+    .NMI                            (`ARM_CM0IK_PATH.NMI),
+    .IRQ                            (`ARM_CM0IK_PATH.IRQ[31:0]),
+    .RXEV                           (`ARM_CM0IK_PATH.RXEV),
+    .STCALIB                        (`ARM_CM0IK_PATH.STCALIB[25:0]),
+    .STCLKEN                        (`ARM_CM0IK_PATH.STCLKEN),
+    .IRQLATENCY                     (`ARM_CM0IK_PATH.IRQLATENCY[7:0]),
+    .ECOREVNUM                      (`ARM_CM0IK_PATH.ECOREVNUM[19:0]),
+    .SLEEPHOLDREQn                  (`ARM_CM0IK_PATH.SLEEPHOLDREQn),
+    .WICDSREQn                      (`ARM_CM0IK_PATH.WICDSREQn),
+    .SE                             (`ARM_CM0IK_PATH.SE)
+  );
 
 `define ARM_CM0IK_TRACK u_cortexm0_track
-  cm0_tarmac #(.LOGFILENAME("logs/tarmac0.log"))
-    u_tarmac_track
-      (.enable_i      (1'b1),
+  cm0_tarmac #(
+    .LOGFILENAME("logs/tarmac0.log")
+  ) u_tarmac_track (
+    .enable_i      (1'b1),
 
-       .hclk_i        (`ARM_CM0IK_TRACK.HCLK),
-       .hready_i      (`ARM_CM0IK_TRACK.HREADY),
-       .haddr_i       (`ARM_CM0IK_TRACK.HADDR[31:0]),
-       .hprot_i       (`ARM_CM0IK_TRACK.HPROT[3:0]),
-       .hsize_i       (`ARM_CM0IK_TRACK.HSIZE[2:0]),
-       .hwrite_i      (`ARM_CM0IK_TRACK.HWRITE),
-       .htrans_i      (`ARM_CM0IK_TRACK.HTRANS[1:0]),
-       .hresetn_i     (`ARM_CM0IK_TRACK.HRESETn),
-       .hresp_i       (`ARM_CM0IK_TRACK.HRESP),
-       .hrdata_i      (`ARM_CM0IK_TRACK.HRDATA[31:0]),
-       .hwdata_i      (`ARM_CM0IK_TRACK.HWDATA[31:0]),
-       .lockup_i      (`ARM_CM0IK_TRACK.LOCKUP),
-       .halted_i      (`ARM_CM0IK_TRACK.HALTED),
-       .codehintde_i  (`ARM_CM0IK_TRACK.CODEHINTDE[2:0]),
-       .codenseq_i    (`ARM_CM0IK_TRACK.CODENSEQ),
+    .hclk_i        (`ARM_CM0IK_TRACK.HCLK),
+    .hready_i      (`ARM_CM0IK_TRACK.HREADY),
+    .haddr_i       (`ARM_CM0IK_TRACK.HADDR[31:0]),
+    .hprot_i       (`ARM_CM0IK_TRACK.HPROT[3:0]),
+    .hsize_i       (`ARM_CM0IK_TRACK.HSIZE[2:0]),
+    .hwrite_i      (`ARM_CM0IK_TRACK.HWRITE),
+    .htrans_i      (`ARM_CM0IK_TRACK.HTRANS[1:0]),
+    .hresetn_i     (`ARM_CM0IK_TRACK.HRESETn),
+    .hresp_i       (`ARM_CM0IK_TRACK.HRESP),
+    .hrdata_i      (`ARM_CM0IK_TRACK.HRDATA[31:0]),
+    .hwdata_i      (`ARM_CM0IK_TRACK.HWDATA[31:0]),
+    .lockup_i      (`ARM_CM0IK_TRACK.LOCKUP),
+    .halted_i      (`ARM_CM0IK_TRACK.HALTED),
+    .codehintde_i  (`ARM_CM0IK_TRACK.CODEHINTDE[2:0]),
+    .codenseq_i    (`ARM_CM0IK_TRACK.CODENSEQ),
 
-       .hdf_req_i     (`ARM_CM0IK_TRACK.u_top.u_sys.ctl_hdf_request),
-       .int_taken_i   (`ARM_CM0IK_TRACK.u_top.u_sys.dec_int_taken_o),
-       .int_return_i  (`ARM_CM0IK_TRACK.u_top.u_sys.dec_int_return_o),
-       .int_pend_i    (`ARM_CM0IK_TRACK.u_top.u_sys.nvm_int_pend),
-       .pend_num_i    (`ARM_CM0IK_TRACK.u_top.u_sys.nvm_int_pend_num[5:0]),
-       .ipsr_i        (`ARM_CM0IK_TRACK.u_top.u_sys.psr_ipsr[5:0]),
+    .hdf_req_i     (`ARM_CM0IK_TRACK.u_top.u_sys.ctl_hdf_request),
+    .int_taken_i   (`ARM_CM0IK_TRACK.u_top.u_sys.dec_int_taken_o),
+    .int_return_i  (`ARM_CM0IK_TRACK.u_top.u_sys.dec_int_return_o),
+    .int_pend_i    (`ARM_CM0IK_TRACK.u_top.u_sys.nvm_int_pend),
+    .pend_num_i    (`ARM_CM0IK_TRACK.u_top.u_sys.nvm_int_pend_num[5:0]),
+    .ipsr_i        (`ARM_CM0IK_TRACK.u_top.u_sys.psr_ipsr[5:0]),
 
-       .ex_last_i     (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.ctl_ex_last),
-       .iaex_en_i     (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.ctl_iaex_en),
-       .reg_waddr_i   (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.ctl_wr_addr[3:0]),
-       .reg_write_i   (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.ctl_wr_en),
-       .xpsr_en_i     (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.ctl_xpsr_en),
-       .fe_addr_i     (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.pfu_fe_addr[30:0]),
-       .int_delay_i   (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.pfu_int_delay),
-       .special_i     (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.pfu_op_special),
-       .opcode_i      (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.pfu_opcode[15:0]),
-       .reg_wdata_i   (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.psr_gpr_wdata[31:0]),
+    .ex_last_i     (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.ctl_ex_last),
+    .iaex_en_i     (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.ctl_iaex_en),
+    .reg_waddr_i   (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.ctl_wr_addr[3:0]),
+    .reg_write_i   (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.ctl_wr_en),
+    .xpsr_en_i     (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.ctl_xpsr_en),
+    .fe_addr_i     (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.pfu_fe_addr[30:0]),
+    .int_delay_i   (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.pfu_int_delay),
+    .special_i     (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.pfu_op_special),
+    .opcode_i      (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.pfu_opcode[15:0]),
+    .reg_wdata_i   (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.psr_gpr_wdata[31:0]),
 
-       .atomic_i      (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.u_ctl.atomic),
-       .atomic_nxt_i  (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.u_ctl.atomic_nxt),
-       .dabort_i      (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.u_ctl.data_abort),
-       .ex_last_nxt_i (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.u_ctl.ex_last_nxt),
-       .int_preempt_i (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.u_ctl.int_preempt),
+    .atomic_i      (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.u_ctl.atomic),
+    .atomic_nxt_i  (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.u_ctl.atomic_nxt),
+    .dabort_i      (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.u_ctl.data_abort),
+    .ex_last_nxt_i (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.u_ctl.ex_last_nxt),
+    .int_preempt_i (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.u_ctl.int_preempt),
 
-       .psp_sel_i     (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.u_gpr.psp_sel),
-       .xpsr_i        (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.u_gpr.xpsr[31:0]),
+    .psp_sel_i     (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.u_gpr.psp_sel),
+    .xpsr_i        (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.u_gpr.xpsr[31:0]),
 
-       .iaex_i        (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.u_pfu.iaex[30:0]),
-       .iaex_nxt_i    (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.u_pfu.iaex_nxt[30:0]),
-       .opcode_nxt_i  (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.u_pfu.ibuf_de_nxt[15:0]),
-       .delay_count_i (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.u_pfu.ibuf_lo[13:6]),
-       .tbit_en_i     (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.u_pfu.tbit_en),
+    .iaex_i        (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.u_pfu.iaex[30:0]),
+    .iaex_nxt_i    (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.u_pfu.iaex_nxt[30:0]),
+    .opcode_nxt_i  (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.u_pfu.ibuf_de_nxt[15:0]),
+    .delay_count_i (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.u_pfu.ibuf_lo[13:6]),
+    .tbit_en_i     (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.u_pfu.tbit_en),
 
-       .cflag_en_i    (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.u_psr.cflag_ena),
-       .ipsr_en_i     (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.u_psr.ipsr_ena),
-       .nzflag_en_i   (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.u_psr.nzflag_ena),
-       .vflag_en_i    (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.u_psr.vflag_ena)
+    .cflag_en_i    (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.u_psr.cflag_ena),
+    .ipsr_en_i     (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.u_psr.ipsr_ena),
+    .nzflag_en_i   (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.u_psr.nzflag_ena),
+    .vflag_en_i    (`ARM_CM0IK_TRACK.u_top.u_sys.u_core.u_psr.vflag_ena)
   );
 
 `endif // USE_TARMAC

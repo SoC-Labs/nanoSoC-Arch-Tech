@@ -18,7 +18,8 @@
 
 module nanosoc_tb_uart_baudpll #(
   parameter BAUDPROGDIV16 = 389,
-  parameter LOGFILENAME   = "logs/uart2.log"
+  parameter LOGFILENAME   = "logs/uart2.log",
+  parameter TAG           = ""
 )(
   input  wire        PCLK,
   input  wire        NRST,
@@ -79,7 +80,8 @@ module nanosoc_tb_uart_baudpll #(
   // UART capture
 `ifndef COCOTB_SIM
   nanosoc_uart_capture #(
-    .LOGFILENAME(LOGFILENAME)
+    .LOGFILENAME(LOGFILENAME),
+    .TAG(TAG)
   ) u_nanosoc_uart_capture (
     .RESETn               (NRST),
     .CLK                  (uart_clk),

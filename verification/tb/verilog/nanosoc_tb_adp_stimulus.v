@@ -19,7 +19,8 @@ module nanosoc_tb_adp_stimulus #(
   parameter ADP_FILENAME     = "adp.cmd",
   parameter DATA_IN_FILENAME = "data_in.csv",
   parameter DATA_OUT_FILENAME= "logs/data_out.csv",
-  parameter FAST_LOAD        = 0
+  parameter FAST_LOAD        = 0,
+  parameter TAG              = ""
 )(
   input  wire        CLK,
   input  wire        NRST,
@@ -81,7 +82,8 @@ module nanosoc_tb_adp_stimulus #(
 
   // Capture: ADP output with debug tester enable detection
   soclabs_axis8_capture #(
-    .LOGFILENAME("logs/extio_adp_out.log")
+    .LOGFILENAME("logs/extio_adp_out.log"),
+    .TAG(TAG)
   ) u_soclabs_axis8_capture1 (
     .RESETn               (NRST),
     .CLK                  (CLK),

@@ -99,7 +99,7 @@ module:
       addressable: False
       params: { CLKGATE_PRESENT: $CLKGATE_PRESENT, BE: $BE, BKPT: $BKPT, DBG: $DBG, NUMIRQ: $NUMIRQ, SMUL: $SMUL, SYST: $SYST, WIC: $WIC, WICLINES: $WICLINES, WPT: $WPT, RESET_ALL_REGS: $RESET_ALL_REGS, INCLUDE_JTAG: $INCLUDE_JTAG, ROMTABLE_BASE: $ROMTABLE_BASE }
       connections:
-        - { port: ahb_master, conn: nanosoc_cpu_ss_interconnect.cpu_0 }
+        - { port: ahb_master, conn: nanosoc_cpu_ss_ahb_interconnect.cpu_0 }
 
     - instance_name: u_region_bootrom_0
       module: nanosoc_region_bootrom_0
@@ -107,7 +107,7 @@ module:
       params: { SYS_ADDR_W: $SYS_ADDR_W, SYS_DATA_W: $SYS_DATA_W, BOOTROM_ADDR_W: $BOOTROM_ADDR_W }
       connections:
         - { port: HCLK,      conn: sys_hclk }
-        - { port: ahb_slave, conn: nanosoc_cpu_ss_interconnect.bootrom_0 }
+        - { port: ahb_slave, conn: nanosoc_cpu_ss_ahb_interconnect.bootrom_0 }
 
     - instance_name: u_region_imem_0
       module: nanosoc_region_imem_0
@@ -116,7 +116,7 @@ module:
       connections:
         - { port: HCLK,      conn: sys_hclk }
         - { port: HRESETn,   conn: sys_hresetn }
-        - { port: ahb_slave, conn: nanosoc_cpu_ss_interconnect.imem_0 }
+        - { port: ahb_slave, conn: nanosoc_cpu_ss_ahb_interconnect.imem_0 }
 
     - instance_name: u_region_dmem_0
       module: nanosoc_region_dmem_0
@@ -125,11 +125,11 @@ module:
       connections:
         - { port: HCLK,      conn: sys_hclk }
         - { port: HRESETn,   conn: sys_hresetn }
-        - { port: ahb_slave, conn: nanosoc_cpu_ss_interconnect.dmem_0 }
+        - { port: ahb_slave, conn: nanosoc_cpu_ss_ahb_interconnect.dmem_0 }
 
   # Internal busmatrix — 2 initiators x 4 targets
   interconnects:
-    - name: nanosoc_cpu_ss_interconnect
+    - name: nanosoc_cpu_ss_ahb_interconnect
       gen: True
       type: ahb_lite
       desc: >

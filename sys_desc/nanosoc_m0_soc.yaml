@@ -89,6 +89,10 @@ module:
     NANOSOC_PARTNUMBER: { type: int, default: 0x001,        desc: "NanoSoC part number" }
     NANOSOC_REVISION:   { type: int, default: 0x1,          desc: "NanoSoC revision" }
 
+    # Feature enables (replacing gen_defines.v)
+    IMEM_0_RAM_PRELOAD:    { type: int, default: 0,         desc: "IMEM preload: 0=SRAM (ADP load), 1=ROM (preloaded image)" }
+    ACCELERATOR_SUBSYSTEM: { type: int, default: 0,         desc: "Enable accelerator expansion subsystem" }
+
   # =============================================================================
   # Clock Domains
   # =============================================================================
@@ -291,6 +295,7 @@ module:
         - { name: ft_miso_i,    type: wire,      direction: in,  params: { WIDTH: 1 },             desc: "FT1248 MISO" }
         - { name: ft_miosio_o,  type: wire,      direction: out, params: { WIDTH: $FT1248_WIDTH }, desc: "FT1248 MIOSIO output" }
         - { name: ft_miosio_e,  type: wire,      direction: out, params: { WIDTH: $FT1248_WIDTH }, desc: "FT1248 MIOSIO output enable" }
+        - { name: ft_miosio_z,  type: wire,      direction: out, params: { WIDTH: $FT1248_WIDTH }, desc: "FT1248 MIOSIO output enable (active low)" }
         - { name: ft_miosio_i,  type: wire,      direction: in,  params: { WIDTH: $FT1248_WIDTH }, desc: "FT1248 MIOSIO input" }
         - { name: txd,          type: axis_byte, direction: out, params: {},                        desc: "TX byte stream to ADP" }
         - { name: rxd,          type: axis_byte, direction: in,  params: {},                        desc: "RX byte stream from ADP" }
@@ -303,6 +308,7 @@ module:
         - { port: ft_miso_i,  conn: u_ss_hostio4.FT_MISO_I }
         - { port: "ft_miosio_o[0]", conn: u_ss_hostio4.FT_MIOSIO_O }
         - { port: "ft_miosio_e[0]", conn: u_ss_hostio4.FT_MIOSIO_E }
+        - { port: ft_miosio_z, conn: unconnected, desc: "Active-low complement of ft_miosio_e — not used" }
         - { port: "ft_miosio_i[0]", conn: u_ss_hostio4.FT_MIOSIO_I }
         # TX byte stream (to extio) — expanded to individual signals
         - { port: txd_tvalid, conn: u_ss_hostio4.FT_ADP_TXD_TVALID }

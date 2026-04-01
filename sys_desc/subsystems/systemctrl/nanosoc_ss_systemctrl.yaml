@@ -8,7 +8,7 @@
 #
 # Copyright 2026, SoC Labs (www.soclabs.org)
 #-----------------------------------------------------------------------------
-# Derived from RTL: nanosoc_arch_tech/rtl/src/subsystems/systemctrl/verilog/nanosoc_ss_systemctrl.v
+# Derived from RTL: nanosoc_arch_tech/rtl/src/subsystems/systemctrl/nanosoc_ss_systemctrl.v
 #
 # Contains nanosoc_clkctrl (PCLK/PCLKG/PRESETn generation), nanosoc_pin_mux
 # (GPIO pin multiplexing), and nanosoc_region_soc_peripheral (the full

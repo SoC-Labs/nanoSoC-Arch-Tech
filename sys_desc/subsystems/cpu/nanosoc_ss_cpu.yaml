@@ -8,7 +8,7 @@
 #
 # Copyright 2026, SoC Labs (www.soclabs.org)
 #-----------------------------------------------------------------------------
-# Derived from RTL: nanosoc_arch_tech/rtl/src/subsystems/cpu/verilog/nanosoc_ss_cpu.v
+# Derived from RTL: nanosoc_arch_tech/rtl/src/subsystems/cpu/nanosoc_ss_cpu.v
 #
 # Contains ARM Cortex-M0 core, PRMU (power/reset management), local memories
 # (bootrom, imem, dmem), and an internal 2x4 AHB busmatrix.
@@ -19,7 +19,7 @@
 
 module:
   name: nanosoc_ss_cpu
-  gen: False
+  gen: True
   desc: >
     CPU subsystem containing ARM Cortex-M0 core with local memories (boot ROM,
     instruction memory, data memory) and an internal 2-initiator x 4-target AHB
@@ -99,7 +99,37 @@ module:
       addressable: False
       params: { CLKGATE_PRESENT: $CLKGATE_PRESENT, BE: $BE, BKPT: $BKPT, DBG: $DBG, NUMIRQ: $NUMIRQ, SMUL: $SMUL, SYST: $SYST, WIC: $WIC, WICLINES: $WICLINES, WPT: $WPT, RESET_ALL_REGS: $RESET_ALL_REGS, INCLUDE_JTAG: $INCLUDE_JTAG, ROMTABLE_BASE: $ROMTABLE_BASE }
       connections:
+        # AHB master — routed through internal busmatrix
         - { port: ahb_master, conn: nanosoc_cpu_ss_ahb_interconnect.cpu_0 }
+        # Clock and Reset
+        - { port: SYS_FCLK,       conn: sys_fclk }
+        - { port: SYS_SYSRESETn,  conn: sys_sysresetn }
+        - { port: SYS_SCANENABLE, conn: sys_scanenable }
+        - { port: SYS_TESTMODE,   conn: sys_testmode }
+        # Reset request
+        - { port: SYS_SYSRESETREQ,   conn: sys_sysresetreq }
+        - { port: CORE_PRMURESETREQ, conn: cpu_0_prmuresetreq }
+        # Generated clocks and resets
+        - { port: SYS_PORESETn, conn: sys_poresetn }
+        - { port: SYS_HCLK,     conn: sys_hclk }
+        - { port: SYS_HRESETn,  conn: sys_hresetn }
+        # Power management
+        - { port: CORE_PMUENABLE,      conn: cpu_0_pmuenable }
+        - { port: CORE_PMUDBGRESETREQ, conn: cpu_0_pmudbgresetreq }
+        # CPU sideband
+        - { port: CORE_NMI,          conn: cpu_0_nmi }
+        - { port: CORE_IRQ,          conn: cpu_0_irq }
+        - { port: CORE_TXEV,         conn: cpu_0_txev }
+        - { port: CORE_RXEV,         conn: cpu_0_rxev }
+        - { port: CORE_LOCKUP,       conn: cpu_0_lockup }
+        - { port: CORE_SYSRESETREQ,  conn: cpu_0_sysresetreq }
+        - { port: CORE_SLEEPING,     conn: cpu_0_sleeping }
+        - { port: CORE_SLEEPDEEP,    conn: cpu_0_sleepdeep }
+        # Serial Wire Debug
+        - { port: CORE_SWDI,   conn: cpu_0_swdi }
+        - { port: CORE_SWCLK,  conn: cpu_0_swclk }
+        - { port: CORE_SWDO,   conn: cpu_0_swdo }
+        - { port: CORE_SWDOEN, conn: cpu_0_swdoen }
 
     - instance_name: u_region_bootrom_0
       module: nanosoc_region_bootrom_0
@@ -149,7 +179,7 @@ module:
         - { name: bootrom_0, base: 0x00000000, size: 0x08000000, phys_size: "4 * (2 ** $BOOTROM_ADDR_W)", sw_access: rx,  region_type: memory, role: bootrom, desc: "Boot ROM (alias at 0x00000000, default at 0x08000000)" }
         - { name: imem_0,    base: 0x10000000, size: 0x08000000, phys_size: "4 * (2 ** $IMEM_RAM_ADDR_W)", sw_access: rwx, region_type: memory, role: None,    desc: "Instruction memory (remappable to 0x00000000)" }
         - { name: dmem_0,    base: 0x18000000, size: 0x08000000, phys_size: "4 * (2 ** $DMEM_RAM_ADDR_W)", sw_access: rwx, region_type: memory, role: None,    desc: "Data memory" }
-        - { name: system,    base: 0x20000000, size: 0xE0000000, sw_access: rw,  region_type: ~,      role: ~,       desc: "System passthrough to external AHB master port (cpu_0)" }
+        - { name: system,    base: 0x20000000, size: 0xE0000000, sw_access: rw,  region_type: ~,      role: ~, passthrough: cpu_0, desc: "System passthrough to external AHB master port (cpu_0)" }
 
       initiators:
         - name: cpu_0
@@ -170,6 +200,7 @@ module:
             - name: system
 
         - name: cpu_ss
+          passthrough: cpu_ss
           targets:
             - name: bootrom_0
               visibility:

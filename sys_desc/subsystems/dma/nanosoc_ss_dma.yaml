@@ -8,7 +8,7 @@
 #
 # Copyright 2026, SoC Labs (www.soclabs.org)
 #-----------------------------------------------------------------------------
-# Derived from RTL: nanosoc_arch_tech/rtl/src/subsystems/dma/verilog/nanosoc_ss_dma.sv
+# Derived from RTL: nanosoc_arch_tech/rtl/src/subsystems/dma/nanosoc_ss_dma.sv
 #
 # Contains up to 2 configurable DMA controllers (PL230 or DMA350),
 # nanosoc_region_dmac_ctrl for APB configuration registers, and

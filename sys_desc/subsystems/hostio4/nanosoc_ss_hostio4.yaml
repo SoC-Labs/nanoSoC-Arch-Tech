@@ -8,7 +8,7 @@
 #
 # Copyright 2026, SoC Labs (www.soclabs.org)
 #-----------------------------------------------------------------------------
-# Derived from RTL: nanosoc_arch_tech/rtl/src/subsystems/hostio4/verilog/nanosoc_ss_hostio4.v
+# Derived from RTL: nanosoc_arch_tech/rtl/src/subsystems/hostio4/nanosoc_ss_hostio4.v
 #
 # Manages FT1248 FTDI interface routing and GPIO P1[6:0] muxing.
 # Routes ADP, USRT0, USRT1 byte streams between internal subsystems

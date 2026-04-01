@@ -28,12 +28,12 @@ $(SOCLABS_NANOSOC_SOC_DIR)/chip/chip/verilog/nanosoc_chip_cfg.v
 $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/rtl/src/system/nanosoc_system.v
 
 // NanoSoC Subsystems
-$(SOCLABS_NANOSOC_ARCH_TECH_DIR)/rtl/src/subsystems/cpu/verilog/nanosoc_ss_cpu.v
-$(SOCLABS_NANOSOC_ARCH_TECH_DIR)/rtl/src/subsystems/debug/verilog/nanosoc_ss_debug.v
-$(SOCLABS_NANOSOC_ARCH_TECH_DIR)/rtl/src/subsystems/systemctrl/verilog/nanosoc_ss_systemctrl.v
-$(SOCLABS_NANOSOC_ARCH_TECH_DIR)/rtl/src/subsystems/dma/verilog/nanosoc_dma_wrapper.v
-$(SOCLABS_NANOSOC_ARCH_TECH_DIR)/rtl/src/subsystems/dma/verilog/nanosoc_ss_dma.sv
-$(SOCLABS_NANOSOC_ARCH_TECH_DIR)/rtl/src/subsystems/hostio4/verilog/nanosoc_ss_hostio4.v
+$(SOCLABS_NANOSOC_ARCH_TECH_DIR)/rtl/src/subsystems/cpu/nanosoc_ss_cpu.v
+$(SOCLABS_NANOSOC_ARCH_TECH_DIR)/rtl/src/subsystems/debug/nanosoc_ss_debug.v
+$(SOCLABS_NANOSOC_ARCH_TECH_DIR)/rtl/src/subsystems/systemctrl/nanosoc_ss_systemctrl.v
+$(SOCLABS_NANOSOC_ARCH_TECH_DIR)/rtl/src/subsystems/dma/nanosoc_dma_wrapper.v
+$(SOCLABS_NANOSOC_ARCH_TECH_DIR)/rtl/src/subsystems/dma/nanosoc_ss_dma.sv
+$(SOCLABS_NANOSOC_ARCH_TECH_DIR)/rtl/src/subsystems/hostio4/nanosoc_ss_hostio4.v
 
 // Bus Matrix (generated from nanosoc_ahb_interconnect.yaml)
 -f $(SOCLABS_PROJECT_DIR)/nanosoc_m0_soc/build_soc/flist/nanosoc_interconnect.flist

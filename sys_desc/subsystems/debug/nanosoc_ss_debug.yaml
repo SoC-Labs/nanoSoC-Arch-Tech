@@ -8,7 +8,7 @@
 #
 # Copyright 2026, SoC Labs (www.soclabs.org)
 #-----------------------------------------------------------------------------
-# Derived from RTL: nanosoc_arch_tech/rtl/src/subsystems/debug/verilog/nanosoc_ss_debug.v
+# Derived from RTL: nanosoc_arch_tech/rtl/src/subsystems/debug/nanosoc_ss_debug.v
 #
 # Contains socdebug_ahb (ADP debug controller with AHB master) and
 # socdebug_usrt_control (USRT APB peripheral). ADP provides full system

@@ -22,3 +22,6 @@
 [submodule "nanosoc_gen"]
 	path = nanosoc_gen
 	url = https://git.soton.ac.uk/soclabs/nanosoc_gen.git
+[submodule "rtl/slcorem0p_tech"]
+	path = rtl/slcorem0p_tech
+	url = https://git.soton.ac.uk/soclabs/nanosoc-m0/slcorem0p_tech.git

@@ -12,7 +12,7 @@
 //    Date:    {{ date }}
 // Copyright (c) 2021-5, SoC Labs (www.soclabs.org)
 //------------------------------------------------------------------------------------
-module bootrom (
+module {{ module_name | default('bootrom') }} (
     input  logic clk,
     input  logic en,
     input  logic [{{ word_address_width }}-1:0] word_addr,

@@ -33,14 +33,17 @@ SW_MAKE_OPTIONS = CPU_PRODUCT=CORTEX_M0 TOOL_CHAIN=$(TOOL_CHAIN)
 # Stage 0 bootloader image
 BOOTLOADER        ?= stage0
 BOOTROM_ADDRW     ?= 8
-BOOTROM_OUT_DIR   ?= $(SOCLABS_PROJECT_DIR)/build/firmware/bootloader/$(BOOTLOADER)/out
-BOOTROM_HEX       ?= $(BOOTROM_OUT_DIR)/$(BOOTLOADER).hex
+BOOTROM_MODULE        ?= eth_ss_bootrom
+BOOTROM_REGION_MODULE ?= eth_ss_region_bootrom
+BOOTROM_OUT_DIR       ?= $(SOCLABS_PROJECT_DIR)/build/firmware/bootloader/$(BOOTLOADER)/out
+BOOTROM_HEX           ?= $(BOOTROM_OUT_DIR)/$(BOOTLOADER).hex
 
 # Boot ROM generation
 #--------------------------------------------------------------------------------
 # All outputs go next to the hex file in the firmware build directory
-BOOTROM_SV      := $(BOOTROM_OUT_DIR)/bootrom.sv
-BOOTROM_BIN     := $(BOOTROM_OUT_DIR)/bootrom.bintxt
+BOOTROM_SV         := $(BOOTROM_OUT_DIR)/$(BOOTROM_MODULE).sv
+BOOTROM_BIN        := $(BOOTROM_OUT_DIR)/bootrom.bintxt
+BOOTROM_REGION_SV  := $(BOOTROM_OUT_DIR)/$(BOOTROM_REGION_MODULE).v
 
 BOOTROM_SIM_DIR := $(SIM_TOP_DIR)/bootloader
 BOOTROM_SIM_HEX := $(BOOTROM_SIM_DIR)/$(BOOTLOADER).hex
@@ -48,13 +51,15 @@ BOOTROM_SIM_HEX := $(BOOTROM_SIM_DIR)/$(BOOTLOADER).hex
 # Tools
 BOOTROM_GEN_PY := $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/firmware/testcodes/bootloader/bootrom_gen.py
 
-bootrom: $(BOOTROM_SV) $(BOOTROM_BIN) $(BOOTROM_SIM_HEX)
+bootrom: $(BOOTROM_SV) $(BOOTROM_BIN) $(BOOTROM_REGION_SV) $(BOOTROM_SIM_HEX)
 
-# Generate the Boot ROM Verilog and Binary Text files from the bootloader hex file
-$(BOOTROM_SV) $(BOOTROM_BIN): $(BOOTROM_HEX) $(BOOTROM_GEN_PY) | $(BOOTROM_OUT_DIR)
-	@echo "Generating Boot ROM Verilog and Binary Text files"
+# Generate the Boot ROM Verilog, region wrapper, and Binary Text files from the bootloader hex file
+$(BOOTROM_SV) $(BOOTROM_BIN) $(BOOTROM_REGION_SV): $(BOOTROM_HEX) $(BOOTROM_GEN_PY) | $(BOOTROM_OUT_DIR)
+	@echo "Generating Boot ROM Verilog, region wrapper, and Binary Text files"
 	@echo "Toolchain: $(TOOL_CHAIN)"
-	@python3 $(BOOTROM_GEN_PY) -a $(BOOTROM_ADDRW) -i $(BOOTROM_HEX) -t $(TOOL_CHAIN) -v $(BOOTROM_SV) -b $(BOOTROM_BIN)
+	@python3 $(BOOTROM_GEN_PY) -a $(BOOTROM_ADDRW) -i $(BOOTROM_HEX) -t $(TOOL_CHAIN) \
+		-m $(BOOTROM_MODULE) -v $(BOOTROM_SV) -b $(BOOTROM_BIN) \
+		-R $(BOOTROM_REGION_MODULE) -r $(BOOTROM_REGION_SV)
 
 # Copy the bootloader hex file to the simulation directory
 $(BOOTROM_SIM_HEX): $(BOOTROM_HEX) | $(BOOTROM_SIM_DIR)

@@ -287,7 +287,7 @@ initial begin
 `endif
 
   nanosoc_tb_uart_baudpll #(
-    .BAUDPROGDIV16 (389),
+    .BAUDPROGDIV16 (163),  // 100MHz / (163*16) = 38343 ~ 38400 baud
     .LOGFILENAME   ("logs/uart2.log"),
     .TAG           ("[UART] ")
   ) u_nanosoc_tb_uart_baudpll (

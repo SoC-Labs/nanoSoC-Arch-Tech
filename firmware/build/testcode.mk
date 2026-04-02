@@ -112,6 +112,7 @@ LINKER_BASE_RW ?= $(CMSDK_CM0_RW_BASE)
 # Include Paths
 #=============================================================================
 ALL_INCLUDES := -I $(DEVICE_DIR)/Include -I $(CORE_DIR) $(USER_DEFINE)
+ALL_INCLUDES += -I $(FIRMWARE_CONFIG_DIR)
 
 ifeq ($(USE_RETARGET),1)
   ALL_INCLUDES += -I $(SOFTWARE_DIR)/common/retarget
@@ -119,7 +120,6 @@ endif
 
 ifeq ($(USE_GENERIC),1)
   ALL_INCLUDES += -I $(TEST_DIR)/../generic
-  ALL_INCLUDES += -I $(FIRMWARE_CONFIG_DIR)
 endif
 
 ALL_INCLUDES += $(EXTRA_INCLUDES)

@@ -87,10 +87,10 @@ run: run_$(SIMULATOR)
 sim: sim_$(SIMULATOR)
 
 # Preload IMEM in Simulation
-compile_mti: NANOSOC_DEFINES += IMEM_0_RAM_PRELOAD
-compile_vcs: NANOSOC_DEFINES += IMEM_0_RAM_PRELOAD
-compile_xm:  NANOSOC_DEFINES += IMEM_0_RAM_PRELOAD
-compile_iverilog: NANOSOC_DEFINES += IMEM_0_RAM_PRELOAD
+compile_mti: NANOSOC_DEFINES += RAM_PRELOAD
+compile_vcs: NANOSOC_DEFINES += RAM_PRELOAD
+compile_xm:  NANOSOC_DEFINES += RAM_PRELOAD
+compile_iverilog: NANOSOC_DEFINES += RAM_PRELOAD
 
 
 # Generate verilog .vc filelist from flists

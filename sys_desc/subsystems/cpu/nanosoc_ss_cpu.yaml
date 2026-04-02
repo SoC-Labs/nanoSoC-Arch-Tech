@@ -134,7 +134,7 @@ module:
     - instance_name: u_region_bootrom_0
       module: nanosoc_region_bootrom
       addressable: True
-      params: { SYS_ADDR_W: $SYS_ADDR_W, SYS_DATA_W: $SYS_DATA_W, BOOTROM_ADDR_W: $BOOTROM_ADDR_W }
+      params: { SYS_ADDR_W: $SYS_ADDR_W, SYS_DATA_W: $SYS_DATA_W, ROM_ADDR_W: $BOOTROM_ADDR_W }
       connections:
         - { port: HCLK,      conn: sys_hclk }
         - { port: ahb_slave, conn: nanosoc_cpu_ss_ahb_interconnect.bootrom_0 }
@@ -142,7 +142,7 @@ module:
     - instance_name: u_region_imem_0
       module: nanosoc_region_imem
       addressable: True
-      params: { SYS_ADDR_W: $SYS_ADDR_W, SYS_DATA_W: $SYS_DATA_W, IMEM_RAM_ADDR_W: $IMEM_RAM_ADDR_W, IMEM_RAM_DATA_W: $IMEM_RAM_DATA_W, IMEM_MEM_FPGA_IMG: $IMEM_MEM_FPGA_IMG }
+      params: { SYS_ADDR_W: $SYS_ADDR_W, SYS_DATA_W: $SYS_DATA_W, RAM_ADDR_W: $IMEM_RAM_ADDR_W, RAM_DATA_W: $IMEM_RAM_DATA_W, MEM_FPGA_IMG: $IMEM_MEM_FPGA_IMG }
       connections:
         - { port: HCLK,      conn: sys_hclk }
         - { port: HRESETn,   conn: sys_hresetn }
@@ -151,7 +151,7 @@ module:
     - instance_name: u_region_dmem_0
       module: nanosoc_region_dmem
       addressable: True
-      params: { SYS_ADDR_W: $SYS_ADDR_W, SYS_DATA_W: $SYS_DATA_W, DMEM_RAM_ADDR_W: $DMEM_RAM_ADDR_W, DMEM_RAM_DATA_W: $DMEM_RAM_DATA_W }
+      params: { SYS_ADDR_W: $SYS_ADDR_W, SYS_DATA_W: $SYS_DATA_W, RAM_ADDR_W: $DMEM_RAM_ADDR_W, RAM_DATA_W: $DMEM_RAM_DATA_W }
       connections:
         - { port: HCLK,      conn: sys_hclk }
         - { port: HRESETn,   conn: sys_hresetn }

@@ -132,7 +132,7 @@ module:
         - { port: CORE_SWDOEN, conn: cpu_0_swdoen }
 
     - instance_name: u_region_bootrom_0
-      module: nanosoc_region_bootrom_0
+      module: nanosoc_region_bootrom
       addressable: True
       params: { SYS_ADDR_W: $SYS_ADDR_W, SYS_DATA_W: $SYS_DATA_W, BOOTROM_ADDR_W: $BOOTROM_ADDR_W }
       connections:
@@ -140,7 +140,7 @@ module:
         - { port: ahb_slave, conn: nanosoc_cpu_ss_ahb_interconnect.bootrom_0 }
 
     - instance_name: u_region_imem_0
-      module: nanosoc_region_imem_0
+      module: nanosoc_region_imem
       addressable: True
       params: { SYS_ADDR_W: $SYS_ADDR_W, SYS_DATA_W: $SYS_DATA_W, IMEM_RAM_ADDR_W: $IMEM_RAM_ADDR_W, IMEM_RAM_DATA_W: $IMEM_RAM_DATA_W, IMEM_MEM_FPGA_IMG: $IMEM_MEM_FPGA_IMG }
       connections:
@@ -149,7 +149,7 @@ module:
         - { port: ahb_slave, conn: nanosoc_cpu_ss_ahb_interconnect.imem_0 }
 
     - instance_name: u_region_dmem_0
-      module: nanosoc_region_dmem_0
+      module: nanosoc_region_dmem
       addressable: True
       params: { SYS_ADDR_W: $SYS_ADDR_W, SYS_DATA_W: $SYS_DATA_W, DMEM_RAM_ADDR_W: $DMEM_RAM_ADDR_W, DMEM_RAM_DATA_W: $DMEM_RAM_DATA_W }
       connections:

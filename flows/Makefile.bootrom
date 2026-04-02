@@ -31,10 +31,10 @@ SW_MAKE_OPTIONS = CPU_PRODUCT=CORTEX_M0 TOOL_CHAIN=$(TOOL_CHAIN)
 
 # Bootrom Parameters:
 # Stage 0 bootloader image
-BOOTLOADER        ?= stage0
-BOOTROM_ADDRW     ?= 8
-BOOTROM_MODULE        ?= eth_ss_bootrom
-BOOTROM_REGION_MODULE ?= eth_ss_region_bootrom
+BOOTLOADER            ?= stage0
+BOOTROM_ADDRW         ?= 8
+BOOTROM_MODULE        ?= bootrom
+BOOTROM_REGION_MODULE ?= nanosoc_region_bootrom
 BOOTROM_OUT_DIR       ?= $(SOCLABS_PROJECT_DIR)/build/firmware/bootloader/$(BOOTLOADER)/out
 BOOTROM_HEX           ?= $(BOOTROM_OUT_DIR)/$(BOOTLOADER).hex
 

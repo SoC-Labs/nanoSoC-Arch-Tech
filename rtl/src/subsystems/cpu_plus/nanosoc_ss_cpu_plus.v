@@ -391,10 +391,10 @@ module nanosoc_ss_cpu_plus #(
     // ----------------------------------
     // CPU 0 Bootrom Region Instantiation
     // ----------------------------------
-    nanosoc_region_bootrom_0 #(
+    nanosoc_region_bootrom #(
         .SYS_ADDR_W      (SYS_ADDR_W),
         .SYS_DATA_W      (SYS_DATA_W),
-        .BOOTROM_ADDR_W  (BOOTROM_ADDR_W)
+        .ROM_ADDR_W      (BOOTROM_ADDR_W)
     ) u_region_bootrom_0 (
         // Clock (No Reset on Bootrom)
         .HCLK(sys_hclk),
@@ -418,12 +418,12 @@ module nanosoc_ss_cpu_plus #(
     // -----------------------------------------------
     // CPU 0 Instruction Memory Region Instantiation
     // -----------------------------------------------
-    nanosoc_region_imem_0 #(
-        .SYS_ADDR_W        (SYS_ADDR_W),
-        .SYS_DATA_W        (SYS_DATA_W),
-        .IMEM_RAM_ADDR_W   (IMEM_RAM_ADDR_W),
-        .IMEM_RAM_DATA_W   (IMEM_RAM_DATA_W),
-        .IMEM_MEM_FPGA_IMG (IMEM_MEM_FPGA_IMG)
+    nanosoc_region_imem #(
+        .SYS_ADDR_W    (SYS_ADDR_W),
+        .SYS_DATA_W    (SYS_DATA_W),
+        .RAM_ADDR_W    (IMEM_RAM_ADDR_W),
+        .RAM_DATA_W    (IMEM_RAM_DATA_W),
+        .MEM_FPGA_IMG  (IMEM_MEM_FPGA_IMG)
     ) u_region_imem_0 (
         // Clock and Reset
         .HCLK(sys_hclk),
@@ -448,11 +448,11 @@ module nanosoc_ss_cpu_plus #(
     // ---------------------------------------
     // CPU 0 Data Memory Region Instantiation
     // ---------------------------------------
-    nanosoc_region_dmem_0 #(
-        .SYS_ADDR_W        (SYS_ADDR_W),
-        .SYS_DATA_W        (SYS_DATA_W),
-        .DMEM_RAM_ADDR_W   (DMEM_RAM_ADDR_W),
-        .DMEM_RAM_DATA_W   (DMEM_RAM_DATA_W)
+    nanosoc_region_sram #(
+        .SYS_ADDR_W    (SYS_ADDR_W),
+        .SYS_DATA_W    (SYS_DATA_W),
+        .RAM_ADDR_W    (DMEM_RAM_ADDR_W),
+        .RAM_DATA_W    (DMEM_RAM_DATA_W)
     ) u_region_dmem_0 (
         // Clock and Reset
         .HCLK(sys_hclk),

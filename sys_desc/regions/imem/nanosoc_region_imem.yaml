@@ -33,3 +33,6 @@ module:
 
     # AHB slave port
     - { name: ahb_slave, type: ahb, direction: target, params: { ADDR_WIDTH: $SYS_ADDR_W, DATA_WIDTH: $SYS_DATA_W, EXCLUDE: [hburst, hmastlock] }, desc: AHB slave port for instruction memory access }
+
+  srams:
+    - { name: u_sram, addr_width: $RAM_ADDR_W, data_width: $RAM_DATA_W, desc: "Instruction memory SRAM (sl_ahb_sram / sl_ahb_rom)" }

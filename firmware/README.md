@@ -305,6 +305,58 @@ upstream changes needed for new profiles.
 
 ---
 
+## Bootloader + bootrom tooling
+
+The ROM-resident Stage 0 bootloader and its Verilog ROM artefacts are
+wired through `nanosoc_add_bootrom()`, defined in
+[cmake/NanoSoCBootromFunctions.cmake](cmake/NanoSoCBootromFunctions.cmake).
+
+```cmake
+# nanosoc_m0_soc/firmware/bootloader/stage0/CMakeLists.txt
+nanosoc_add_test(stage0
+    MAIN_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/stage0_bootloader.c"
+    LINKER_PROFILE cmsdk_bootloader
+    NO_RETARGET
+    OPT_LEVEL -O1
+    CC_FLAGS_GCC -Os -flto -mthumb-interwork
+    INCLUDES "${CMAKE_CURRENT_SOURCE_DIR}/..")
+
+nanosoc_add_bootrom(
+    NAME               nanosoc
+    TARGET             stage0
+    ADDRESS_WIDTH      8
+    MODULE_NAME        bootrom
+    REGION_MODULE_NAME nanosoc_region_bootrom)
+```
+
+Builds a `stage0.elf` / `.hex` / `.bin` / `.lst`, then runs `bootrom_gen.py`
+to emit `bootrom.sv` (synthesisable ROM module), `bootrom.bintxt` (one
+32-bit word per line, consumed by ROM compilers during ASIC synthesis), and
+`nanosoc_region_bootrom.v` (AHB region wrapper). Outputs are bit-identical
+to the Make-based `make bootrom` flow modulo the embedded timestamp comment
+in the `.sv` / `.v` headers.
+
+**QSPI stage1 + flash image** (currently gated on YAML `$QSPI_FLASH_PRESENT`):
+
+```cmake
+# Stage 1 — QSPI-loaded, DMEM-resident. Conditional on linker profile being
+# emitted by nanosoc_gen (skip with a status message when disabled).
+nanosoc_add_test(stage1
+    MAIN_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/stage1_bootloader.c"
+    LINKER_PROFILE cmsdk_stage1_bootloader
+    NO_RETARGET
+    OPT_LEVEL -O1
+    CC_FLAGS_GCC -Os -flto -mthumb-interwork)
+
+# Flash image — packs stage1 + app binaries into a QSPI image via flash_pack.py.
+nanosoc_add_flash_image(
+    NAME     myflash
+    OUTPUT   "${CMAKE_BINARY_DIR}/flash.bin"
+    YAML     "${CMAKE_SOURCE_DIR}/sys_desc/nanosoc_m0_soc.yaml"
+    STAGE1   0:stage1
+    APP      0:myapp)
+```
+
 ## CPU selection
 
 **One source of truth per CPU, shared between CMake and Make** via sibling
@@ -474,6 +526,7 @@ firmware/
 ├── cmake/
 │   ├── NanoSoCFirmwareConfig.cmake.in   ← find_package() entry point
 │   ├── NanoSoCFirmwareFunctions.cmake   ← nanosoc_add_test() definition
+│   ├── NanoSoCBootromFunctions.cmake    ← nanosoc_add_bootrom / nanosoc_add_flash_image
 │   ├── cpus/
 │   │   ├── cortex-m0.cmake              ← CPU description file (data only)
 │   │   └── cortex-m0plus.cmake

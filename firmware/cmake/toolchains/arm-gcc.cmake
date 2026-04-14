@@ -33,11 +33,13 @@ set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 # to pick (GCC: objcopy/objdump; ARMClang: fromelf).
 set(NANOSOC_TOOLCHAIN_ID "gcc" CACHE INTERNAL "NanoSoC toolchain identifier")
 
-# Default optimisation matches testcode.mk OPT_LEVEL (-O3). Overridable per-target.
+# Per-target optimisation is driven by nanosoc_add_test(... OPT_LEVEL ...)
+# which maps to testcode.mk's OPT_LEVEL. These baselines only add -g; adding
+# -O here would affect LTO partitioning for targets that override (-O1/Os).
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE MinSizeRel CACHE STRING "" FORCE)
 endif()
-set(CMAKE_C_FLAGS_RELEASE       "-O3 -g"  CACHE STRING "" FORCE)
-set(CMAKE_C_FLAGS_MINSIZEREL    "-O3 -g"  CACHE STRING "" FORCE)
-set(CMAKE_C_FLAGS_DEBUG         "-O0 -g"  CACHE STRING "" FORCE)
-set(CMAKE_C_FLAGS_RELWITHDEBINFO "-O3 -g" CACHE STRING "" FORCE)
+set(CMAKE_C_FLAGS_RELEASE        "-g"     CACHE STRING "" FORCE)
+set(CMAKE_C_FLAGS_MINSIZEREL     "-g"     CACHE STRING "" FORCE)
+set(CMAKE_C_FLAGS_DEBUG          "-O0 -g" CACHE STRING "" FORCE)
+set(CMAKE_C_FLAGS_RELWITHDEBINFO "-g"     CACHE STRING "" FORCE)

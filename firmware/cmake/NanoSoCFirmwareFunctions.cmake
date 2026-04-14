@@ -15,6 +15,7 @@
 #   [DEFINES <-DFOO=1>...]
 #   [NO_RETARGET]              # inverse of testcode.mk USE_RETARGET default
 #   [USE_GENERIC]              # adds testcodes/generic/ to include path
+#   [OPT_LEVEL <flag>]         # optimisation level (default: -O3); mirrors testcode.mk OPT_LEVEL
 #   [CC_FLAGS_ARMCLANG <...>]  # extra flags when toolchain is armclang (AC6)
 #   [CC_FLAGS_ARMCC <...>]     # extra flags when toolchain is armcc (AC5)
 #   [CC_FLAGS_GCC <...>]       # extra flags when toolchain is gcc (e.g. -flto)
@@ -40,7 +41,7 @@
 
 function(nanosoc_add_test name)
     set(options NO_RETARGET USE_GENERIC)
-    set(oneValueArgs SOURCE_DIR MAIN_SOURCE LINKER_PROFILE HEX_ADJUST_VMA STACK_SIZE HEAP_SIZE C_LIBRARY)
+    set(oneValueArgs SOURCE_DIR MAIN_SOURCE LINKER_PROFILE HEX_ADJUST_VMA STACK_SIZE HEAP_SIZE C_LIBRARY OPT_LEVEL)
     set(multiValueArgs SOURCES DRIVERS INCLUDES DEFINES CC_FLAGS_ARMCLANG CC_FLAGS_ARMCC CC_FLAGS_GCC)
     cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
@@ -59,6 +60,9 @@ function(nanosoc_add_test name)
     endif()
     if(NOT ARG_HEAP_SIZE)
         set(ARG_HEAP_SIZE "0x1000")
+    endif()
+    if(NOT ARG_OPT_LEVEL)
+        set(ARG_OPT_LEVEL "-O3")
     endif()
 
     # --- Validate profile ---------------------------------------------------
@@ -117,7 +121,9 @@ function(nanosoc_add_test name)
         target_include_directories(${name} PRIVATE "${NanoSoC_DRIVERS_DIR}")
     endif()
 
-    # Toolchain-specific extra flags
+    # OPT_LEVEL first (matches testcode.mk's `-g $(OPT_LEVEL)` flag order for GCC),
+    # then toolchain-specific extras (GNU_CC_EXTRA_FLAGS equivalent).
+    target_compile_options(${name} PRIVATE ${ARG_OPT_LEVEL})
     if(NANOSOC_TOOLCHAIN_ID STREQUAL "gcc" AND ARG_CC_FLAGS_GCC)
         target_compile_options(${name} PRIVATE ${ARG_CC_FLAGS_GCC})
     elseif(NANOSOC_TOOLCHAIN_ID STREQUAL "armclang" AND ARG_CC_FLAGS_ARMCLANG)

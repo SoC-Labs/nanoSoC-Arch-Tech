@@ -46,9 +46,9 @@ set(NANOSOC_TOOLCHAIN_ID "armclang" CACHE INTERNAL "NanoSoC toolchain identifier
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE MinSizeRel CACHE STRING "" FORCE)
 endif()
-# Match testcode.mk OPT_LEVEL=-O3 default for all build types.
+# Per-target optimisation driven by nanosoc_add_test(... OPT_LEVEL ...).
 # Also strip CMake's -DNDEBUG from MinSizeRel (Make doesn't add it).
-set(CMAKE_C_FLAGS_MINSIZEREL    "-O3 -g" CACHE STRING "" FORCE)
-set(CMAKE_C_FLAGS_RELEASE       "-O3 -g" CACHE STRING "" FORCE)
-set(CMAKE_C_FLAGS_RELWITHDEBINFO "-O3 -g" CACHE STRING "" FORCE)
-set(CMAKE_C_FLAGS_DEBUG         "-O0 -g" CACHE STRING "" FORCE)
+set(CMAKE_C_FLAGS_MINSIZEREL     "-g"     CACHE STRING "" FORCE)
+set(CMAKE_C_FLAGS_RELEASE        "-g"     CACHE STRING "" FORCE)
+set(CMAKE_C_FLAGS_RELWITHDEBINFO "-g"     CACHE STRING "" FORCE)
+set(CMAKE_C_FLAGS_DEBUG          "-O0 -g" CACHE STRING "" FORCE)

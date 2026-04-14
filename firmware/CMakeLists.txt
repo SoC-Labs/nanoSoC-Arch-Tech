@@ -275,6 +275,7 @@ set(NanoSoC_CMSDK_DRIVER_C        "${_DEVICE_DIR}/Source/CMSDK_driver.c" CACHE I
 # Pull in the common helper function
 # ============================================================================
 include("${CMAKE_CURRENT_LIST_DIR}/cmake/NanoSoCFirmwareFunctions.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/cmake/NanoSoCBootromFunctions.cmake")
 
 # ============================================================================
 # Testcode subdirectories

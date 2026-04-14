@@ -5,6 +5,16 @@ __pycache__/
 # Marker files
 .dma350_configured
 
+# CMake artefacts (in-source or out-of-source configures)
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CMakeUserPresets.json
+install_manifest.txt
+compile_commands.json
+build/
+*.cmake.user
+
 # Exclude Simulation Files
 verif/cocotb/*
 !verif/cocotb/makefile

@@ -1,0 +1,15 @@
+#-----------------------------------------------------------------------------
+# NanoSoCFirmware — CMake package config
+# A joint work commissioned on behalf of SoC Labs, under Arm Academic Access license.
+#
+# Copyright (C) 2021-6, SoC Labs (www.soclabs.org)
+#-----------------------------------------------------------------------------
+# Installed copy of this file is consumed via find_package(NanoSoCFirmware).
+# Re-exports the NanoSoCFirmware::* targets and the nanosoc_add_test() helper.
+#-----------------------------------------------------------------------------
+@PACKAGE_INIT@
+
+include("${CMAKE_CURRENT_LIST_DIR}/NanoSoCFirmwareTargets.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/NanoSoCFirmwareFunctions.cmake")
+
+check_required_components(NanoSoCFirmware)

@@ -15,8 +15,10 @@ CC_TOOL    := armclang
 ASM_TOOL   := armclang -masm=armasm $(ARM_TARGET) -c
 LINK_TOOL  := armlink
 
-# DS-6 specific target flag
-CC_TARGET ?=
+# DS-6 specific target flag — propagate ARM_TARGET so armclang gets
+# --target=arm-arm-none-eabi (without it, armclang errors out with
+# "no target architecture given").
+CC_TARGET := $(ARM_TARGET)
 
 # CPU type flags
 ifeq ($(CPU_PRODUCT),CORTEX_M0PLUS)

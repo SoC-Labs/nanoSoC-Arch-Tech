@@ -19,7 +19,8 @@ GNU_CC_EXTRA_FLAGS := -Os -flto -mthumb-interwork
 
 include $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/firmware/build/testcode.mk
 
-# DS-6 requires --no_scatterload_enabled for bootloader linking
-ifeq ($(TOOL_CHAIN),ds6)
-  ARM_LINK_OPTIONS += --no_scatterload_enabled
-endif
+# Note: an old DS-5 era flag --no_scatterload_enabled was previously appended
+# here for ds6 builds. AC6.16 armlink does not recognise that option (returns
+# fatal L3900U). The flag served to suppress scatter-load helper insertion;
+# with the explicit --rw_base / --ro_base used below, no scatter file is
+# produced anyway, so the flag is unnecessary.

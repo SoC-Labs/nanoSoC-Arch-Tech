@@ -6,7 +6,6 @@
 #include "dataio_functions.h"
 
 #include "dma_pl230_driver.h"
-#include "dma_pl230_driver.c"
 
 #define CSV_RECORD_LEN  (16+1)
 #define CSV_RECORD_COUNT  (5)

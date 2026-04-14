@@ -43,8 +43,13 @@ TARGET           := arm-none-eabi
 USE_RETARGET     ?= 1
 USE_GENERIC      ?= 0
 OPT_LEVEL        ?= -O3
-CC_EXTRA_FLAGS   ?=
-GNU_CC_EXTRA_FLAGS ?=
+# Per-toolchain extra flags. CC_EXTRA_FLAGS is applied to BOTH ARM compilers
+# (AC5 armcc and AC6 armclang) for backward compat. Use the toolchain-specific
+# variables for flags that differ (e.g. AC5 `--c99` vs AC6 `-std=c99`).
+CC_EXTRA_FLAGS        ?=
+CC_EXTRA_FLAGS_ARMCC  ?=
+CC_EXTRA_FLAGS_ARMCLANG ?=
+GNU_CC_EXTRA_FLAGS    ?=
 LINKER_NAME      ?= cmsdk_cm0
 COMPILE_BIGEND   ?= 0
 COMPILE_MICROLIB ?= 0
@@ -102,6 +107,39 @@ DEVICE_DIR   := $(CMSIS_DIR)/Device/ARM/$(CPU_DEVICE_DIR_NAME)
 USER_DEFINE  := -D$(CPU_DEFINE)
 STARTUP_FILE := $(CPU_STARTUP_STEM)
 SYSTEM_FILE  := $(CPU_SYSTEM_STEM)
+
+#=============================================================================
+# C Library Variant (data-driven) — resolved BEFORE the toolchain file
+# so gcc.mk / ds6.mk / ds5.mk can read CLIB_* to build their own flag strings.
+#
+# Resolution order:
+#   1. NANOSOC_C_LIBRARY=<name> on the make command line
+#   2. COMPILE_MICROLIB=1 (legacy) → microlib
+#   3. Sensible toolchain default (gcc → nano, others → default)
+#=============================================================================
+ifeq ($(COMPILE_MICROLIB),1)
+  NANOSOC_C_LIBRARY ?= microlib
+endif
+ifeq ($(TOOL_CHAIN),gcc)
+  NANOSOC_C_LIBRARY ?= nano
+else
+  NANOSOC_C_LIBRARY ?= default
+endif
+
+LIBRARIES_DIR := $(SOCLABS_NANOSOC_FIRMWARE_TECH_DIR)/build/libraries
+CLIB_FILE := $(LIBRARIES_DIR)/$(NANOSOC_C_LIBRARY).mk
+ifeq ($(wildcard $(CLIB_FILE)),)
+  $(error NANOSOC_C_LIBRARY='$(NANOSOC_C_LIBRARY)' has no description file. \
+          Expected: $(CLIB_FILE). \
+          Available: $(notdir $(basename $(wildcard $(LIBRARIES_DIR)/*.mk))))
+endif
+include $(CLIB_FILE)
+
+ifeq ($(filter $(TOOL_CHAIN),$(CLIB_SUPPORTED)),)
+  $(error NANOSOC_C_LIBRARY='$(NANOSOC_C_LIBRARY)' ($(CLIB_DISPLAY_NAME)) \
+          does not support TOOL_CHAIN='$(TOOL_CHAIN)'. \
+          Supported: $(CLIB_SUPPORTED))
+endif
 
 #=============================================================================
 # Toolchain Configuration
@@ -177,14 +215,22 @@ ALL_ASM_SOURCES := $(STARTUP_DIR)/$(STARTUP_FILE).s
 #=============================================================================
 ifneq ($(TOOL_CHAIN),gcc)
 
-ARM_CC_OPTIONS := $(CC_TARGET) -c $(OPT_LEVEL) -g $(CC_EXTRA_FLAGS) $(ALL_INCLUDES)
+# Select the toolchain-specific extra flags based on TOOL_CHAIN.
+ifeq ($(TOOL_CHAIN),ds6)
+  _CC_EXTRA_TOOLCHAIN := $(CC_EXTRA_FLAGS_ARMCLANG)
+else ifeq ($(TOOL_CHAIN),ds5)
+  _CC_EXTRA_TOOLCHAIN := $(CC_EXTRA_FLAGS_ARMCC)
+else
+  _CC_EXTRA_TOOLCHAIN :=
+endif
+ARM_CC_OPTIONS := $(CC_TARGET) -c $(OPT_LEVEL) -g $(CC_EXTRA_FLAGS) $(_CC_EXTRA_TOOLCHAIN) $(ALL_INCLUDES)
 ARM_ASM_OPTIONS := -g
 
 ARM_LINK_OPTIONS := "--keep=$(STARTUP_FILE).o(RESET)" "--first=$(STARTUP_FILE).o(RESET)" \
 		--rw_base $(LINKER_BASE_RW) --ro_base $(LINKER_BASE_RO) --map $(ARM_LINK_EXTRA)
 
 # Driver compile options (without -g for size optimization)
-DRIVER_CC_OPTIONS ?= $(CC_TARGET) -c $(OPT_LEVEL) $(CC_EXTRA_FLAGS) $(ALL_INCLUDES)
+DRIVER_CC_OPTIONS ?= $(CC_TARGET) -c $(OPT_LEVEL) $(CC_EXTRA_FLAGS) $(_CC_EXTRA_TOOLCHAIN) $(ALL_INCLUDES)
 
 ifeq ($(COMPILE_BIGEND),1)
   ARM_CC_OPTIONS   += --bigend
@@ -192,10 +238,17 @@ ifeq ($(COMPILE_BIGEND),1)
   ARM_LINK_OPTIONS += --be8
 endif
 
-ifeq ($(COMPILE_MICROLIB),1)
-  ARM_CC_OPTIONS   += --library_type=microlib
-  ARM_ASM_OPTIONS  += --library_type=microlib --pd "__MICROLIB SETA 1"
-  ARM_LINK_OPTIONS += --library_type=microlib
+# C library flags (driven by NANOSOC_C_LIBRARY). Toolchain-specific flags
+# come from build/libraries/<name>.mk via CLIB_*_ARMCLANG / CLIB_*_ARMCC.
+ifeq ($(TOOL_CHAIN),ds6)
+  ARM_CC_OPTIONS   += $(CLIB_CC_ARMCLANG)
+  ARM_ASM_OPTIONS  += $(CLIB_ASM_ARMCLANG)
+  ARM_LINK_OPTIONS += $(CLIB_LINK_ARMCLANG)
+endif
+ifeq ($(TOOL_CHAIN),ds5)
+  ARM_CC_OPTIONS   += $(CLIB_CC_ARMCC)
+  ARM_ASM_OPTIONS  += $(CLIB_ASM_ARMCC)
+  ARM_LINK_OPTIONS += $(CLIB_LINK_ARMCC)
 endif
 
 ifeq ($(COMPILE_SMALLMUL),1)

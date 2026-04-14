@@ -356,6 +356,55 @@ Want a second CPU variant for the same SoC? Add a preset that overrides:
   "cacheVariables": { "NANOSOC_CPU": "cortex-m0plus" } }
 ```
 
+## C library variant
+
+Similar data-driven pattern: one descriptor file per library variant,
+shared schema between CMake and Make.
+
+| Variant | Toolchains | Notes |
+|---|---|---|
+| `nano`     | GCC     | newlib-nano (`--specs=nano.specs`) — default for GCC |
+| `default`  | all     | Each toolchain's own libc with no overrides — default for AC6/AC5 |
+| `microlib` | AC6/AC5 | ARM microlib — smallest footprint, no file I/O. AC6 uses `-Wa,"--pd=..."` to forward the `__MICROLIB` predefine through `armclang -masm=armasm` to armasm. |
+
+**Resolution order:**
+
+1. `-DNANOSOC_C_LIBRARY=<name>` (CMake) / `NANOSOC_C_LIBRARY=<name>` (Make command line) — explicit.
+2. `nanosoc_add_test(... C_LIBRARY <name>)` — **per-target override** (CMake only).
+3. `COMPILE_MICROLIB=1` (Make legacy) / `NANOSOC_USE_MICROLIB=ON` (CMake legacy) → `microlib`.
+4. Toolchain default (`gcc` → `nano`, others → `default`).
+
+**Per-target example (CMake):**
+
+```cmake
+# Two tests in the same build: one with nano, one with full newlib
+nanosoc_add_test(small_test)                       # uses NANOSOC_C_LIBRARY default
+nanosoc_add_test(big_test  C_LIBRARY full)         # override for this test only
+nanosoc_add_test(tiny_boot C_LIBRARY microlib)     # armclang only
+```
+
+**Adding a new variant (e.g. `rdimon` for semihosting):**
+
+```cmake
+# cmake/libraries/rdimon.cmake
+set(NanoSoC_CLIB_DISPLAY_NAME "newlib-rdimon (semihosting)")
+set(NanoSoC_CLIB_SUPPORTED    "gcc")
+set(NanoSoC_CLIB_LINK_GCC     "--specs=rdimon.specs" "-lrdimon" "-Wl,--gc-sections")
+# ... rest
+```
+
+```make
+# build/libraries/rdimon.mk
+CLIB_DISPLAY_NAME := newlib-rdimon
+CLIB_SUPPORTED    := gcc
+CLIB_LINK_GCC     := --specs=rdimon.specs -lrdimon -Wl,--gc-sections
+# ... rest
+```
+
+Both flows pick it up with no other changes. `lib-rdimon.ld` already exists
+under `software/common/scripts/` as the linker-script side of the rdimon
+path — semihosting is a drop-in-ready addition.
+
 ## Adding a new CPU (e.g. Cortex-M3)
 
 The CPU choice is **data-driven** — one description file per CPU under
@@ -428,6 +477,10 @@ firmware/
 │   ├── cpus/
 │   │   ├── cortex-m0.cmake              ← CPU description file (data only)
 │   │   └── cortex-m0plus.cmake
+│   ├── libraries/
+│   │   ├── nano.cmake                   ← C library variant (data only)
+│   │   ├── default.cmake
+│   │   └── microlib.cmake
 │   └── toolchains/
 │       ├── arm-gcc.cmake                ← GCC toolchain
 │       ├── armclang.cmake               ← AC6 (DS-6) toolchain
@@ -435,9 +488,13 @@ firmware/
 ├── build/
 │   ├── testcode.mk                      ← Make-flow shared template
 │   ├── toolchain/{ds5,ds6,gcc}.mk       ← Make-flow toolchain configs
-│   └── cpus/                            ← Make-side CPU description files
-│       ├── cortex-m0.mk                     (mirrors cmake/cpus/*.cmake schema)
-│       └── cortex-m0plus.mk
+│   ├── cpus/                            ← Make-side CPU description files
+│   │   ├── cortex-m0.mk                     (mirrors cmake/cpus/*.cmake schema)
+│   │   └── cortex-m0plus.mk
+│   └── libraries/                       ← Make-side C library descriptors
+│       ├── nano.mk                          (mirrors cmake/libraries/*.cmake schema)
+│       ├── default.mk
+│       └── microlib.mk
 ├── software/
 │   ├── cmsis/                           ← CMSIS + ARM/CMSDK_CM0 device files
 │   ├── common/
@@ -499,8 +556,8 @@ firmware/
 
 | Toolchain | Status |
 |---|---|
-| GCC (`arm-none-eabi-gcc`) | Validated; CMake build bit-identical to Make for all 22 testcodes |
-| ARM Compiler 6 (`armclang`, DS-6) | Validated; bit-identical for 18/21 (3 use AC5-legacy flags) |
+| GCC (`arm-none-eabi-gcc`) | Validated; **22/22 testcodes bit-identical** between Make and CMake |
+| ARM Compiler 6 (`armclang`, DS-6) | Validated; **22/22 testcodes bit-identical** between Make and CMake (includes microlib via `-Wa,"--pd=..."` pass-through) |
 | ARM Compiler 5 (`armcc`, DS-5) | Wiring exists; **codebase incompatible** (uses `__has_include`, not supported by AC5). Same failure mode in Make. |
 
 ---

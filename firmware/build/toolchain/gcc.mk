@@ -31,5 +31,7 @@ LINKER_SCRIPT       = $(LINKER_SCRIPT_PATH)/$(LINKER_NAME).ld
 # Search path for generated linker MEMORY fragments
 FIRMWARE_LINKER_SEARCH = -L $(LINKER_SCRIPT_PATH) -L $(FIRMWARE_CONFIG_DIR)
 
-# GCC optimization specs
-GCC_SPEC_OPTS := --specs=nano.specs -Wl,--gc-sections
+# C library compile / link flags come from the active library descriptor
+# (build/libraries/<NANOSOC_C_LIBRARY>.mk), included by testcode.mk before
+# this toolchain file. GCC consumes both compile and link into one command.
+GCC_SPEC_OPTS := $(CLIB_FLAGS_GCC) $(CLIB_LINK_GCC)

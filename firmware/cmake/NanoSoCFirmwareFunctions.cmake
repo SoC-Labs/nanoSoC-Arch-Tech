@@ -15,8 +15,11 @@
 #   [DEFINES <-DFOO=1>...]
 #   [NO_RETARGET]              # inverse of testcode.mk USE_RETARGET default
 #   [USE_GENERIC]              # adds testcodes/generic/ to include path
-#   [CC_FLAGS_ARMCLANG <...>]  # extra flags when toolchain is armclang
+#   [CC_FLAGS_ARMCLANG <...>]  # extra flags when toolchain is armclang (AC6)
+#   [CC_FLAGS_ARMCC <...>]     # extra flags when toolchain is armcc (AC5)
 #   [CC_FLAGS_GCC <...>]       # extra flags when toolchain is gcc (e.g. -flto)
+#   [C_LIBRARY <name>]         # per-target C lib variant override (cmake/libraries/<name>.cmake).
+#                              # Empty/unset = use the package-level NanoSoCFirmware::clib.
 #   [HEX_ADJUST_VMA <name>]    # key into NanoSoC_HEX_ADJUST_<name>
 #   [STACK_SIZE <hex>]         # default: 0x200
 #   [HEAP_SIZE <hex>]          # default: 0x1000
@@ -37,8 +40,8 @@
 
 function(nanosoc_add_test name)
     set(options NO_RETARGET USE_GENERIC)
-    set(oneValueArgs SOURCE_DIR MAIN_SOURCE LINKER_PROFILE HEX_ADJUST_VMA STACK_SIZE HEAP_SIZE)
-    set(multiValueArgs SOURCES DRIVERS INCLUDES DEFINES CC_FLAGS_ARMCLANG CC_FLAGS_GCC)
+    set(oneValueArgs SOURCE_DIR MAIN_SOURCE LINKER_PROFILE HEX_ADJUST_VMA STACK_SIZE HEAP_SIZE C_LIBRARY)
+    set(multiValueArgs SOURCES DRIVERS INCLUDES DEFINES CC_FLAGS_ARMCLANG CC_FLAGS_ARMCC CC_FLAGS_GCC)
     cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
     # --- Defaults -----------------------------------------------------------
@@ -119,6 +122,8 @@ function(nanosoc_add_test name)
         target_compile_options(${name} PRIVATE ${ARG_CC_FLAGS_GCC})
     elseif(NANOSOC_TOOLCHAIN_ID STREQUAL "armclang" AND ARG_CC_FLAGS_ARMCLANG)
         target_compile_options(${name} PRIVATE ${ARG_CC_FLAGS_ARMCLANG})
+    elseif(NANOSOC_TOOLCHAIN_ID STREQUAL "armcc" AND ARG_CC_FLAGS_ARMCC)
+        target_compile_options(${name} PRIVATE ${ARG_CC_FLAGS_ARMCC})
     endif()
 
     # --- Library linkage (INTERFACE only — sources are injected directly) --
@@ -129,6 +134,9 @@ function(nanosoc_add_test name)
     if(NOT ARG_NO_RETARGET)
         target_link_libraries(${name} PRIVATE NanoSoCFirmware::retarget)
     endif()
+
+    # --- C library variant ------------------------------------------------
+    _nanosoc_apply_clib(${name} "${ARG_C_LIBRARY}")
 
     # --- Linker invocation --------------------------------------------------
     _nanosoc_apply_linker(${name} ${ARG_LINKER_PROFILE})
@@ -185,13 +193,12 @@ function(_nanosoc_apply_linker target profile)
         list(APPEND _search_args
             "-L${NanoSoC_LINKER_SCRIPT_DIR}"
             "-L${NanoSoC_FIRMWARE_CONFIG_DIR}")
+        # CPU flags + C library link flags come from nanosoc_cpu_flags and
+        # nanosoc_clib (transitively via target_link_libraries). Only the
+        # linker script + search paths are specified here.
         target_link_options(${target} PRIVATE
             "-T${_linker_script}"
             ${_search_args}
-            "-mthumb"
-            "-mcpu=cortex-m0"
-            "--specs=nano.specs"
-            "-Wl,--gc-sections"
         )
         set_target_properties(${target} PROPERTIES
             LINK_DEPENDS "${_ld_fragment};${_linker_script}")
@@ -203,6 +210,47 @@ function(_nanosoc_apply_linker target profile)
             "SHELL:--ro_base ${_ro_base}"
             "--map"
         )
+    endif()
+endfunction()
+
+
+# Applies C library variant flags to a target. `override` is either empty
+# (use the package-level NANOSOC_C_LIBRARY defaults) or a variant name whose
+# descriptor will be loaded into the function's local scope.
+function(_nanosoc_apply_clib target override)
+    if(override)
+        set(_variant "${override}")
+        set(_file "${NanoSoC_FIRMWARE_ROOT}/cmake/libraries/${_variant}.cmake")
+        if(NOT EXISTS "${_file}")
+            message(FATAL_ERROR
+                "nanosoc_add_test(${target}): C_LIBRARY='${_variant}' has no "
+                "descriptor. Expected: ${_file}.")
+        endif()
+        include("${_file}")  # populates NanoSoC_CLIB_* in this function's scope
+        if(NOT NANOSOC_TOOLCHAIN_ID IN_LIST NanoSoC_CLIB_SUPPORTED)
+            message(FATAL_ERROR
+                "nanosoc_add_test(${target}): C_LIBRARY='${_variant}' does not "
+                "support toolchain '${NANOSOC_TOOLCHAIN_ID}'. "
+                "Supported: ${NanoSoC_CLIB_SUPPORTED}.")
+        endif()
+        # Apply override flags directly on the target (ASM/C separated).
+        target_compile_options(${target} PRIVATE
+            $<$<AND:$<COMPILE_LANGUAGE:C>,$<C_COMPILER_ID:GNU>>:${NanoSoC_CLIB_FLAGS_GCC}>
+            $<$<AND:$<COMPILE_LANGUAGE:C>,$<C_COMPILER_ID:ARMClang>>:${NanoSoC_CLIB_FLAGS_ARMCLANG}>
+            $<$<AND:$<COMPILE_LANGUAGE:C>,$<C_COMPILER_ID:ARMCC>>:${NanoSoC_CLIB_FLAGS_ARMCC}>
+            $<$<AND:$<COMPILE_LANGUAGE:ASM>,$<C_COMPILER_ID:GNU>>:${NanoSoC_CLIB_ASM_GCC}>
+            $<$<AND:$<COMPILE_LANGUAGE:ASM>,$<C_COMPILER_ID:ARMClang>>:${NanoSoC_CLIB_ASM_ARMCLANG}>
+            $<$<AND:$<COMPILE_LANGUAGE:ASM>,$<C_COMPILER_ID:ARMCC>>:${NanoSoC_CLIB_ASM_ARMCC}>)
+        target_link_options(${target} PRIVATE
+            $<$<C_COMPILER_ID:GNU>:${NanoSoC_CLIB_LINK_GCC}>
+            $<$<C_COMPILER_ID:ARMClang>:${NanoSoC_CLIB_LINK_ARMCLANG}>
+            $<$<C_COMPILER_ID:ARMCC>:${NanoSoC_CLIB_LINK_ARMCC}>)
+        if(NanoSoC_CLIB_DEFINES)
+            target_compile_definitions(${target} PRIVATE ${NanoSoC_CLIB_DEFINES})
+        endif()
+    else()
+        # Default path — link the package-level nanosoc_clib INTERFACE target.
+        target_link_libraries(${target} PRIVATE NanoSoCFirmware::clib)
     endif()
 endfunction()
 

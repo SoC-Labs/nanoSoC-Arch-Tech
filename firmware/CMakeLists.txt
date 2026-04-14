@@ -30,8 +30,21 @@ endforeach()
 set_property(CACHE NANOSOC_CPU PROPERTY STRINGS ${_cpu_names})
 
 option(NANOSOC_BIGEND       "Build firmware big-endian" OFF)
-option(NANOSOC_USE_MICROLIB "Use ARM microlib (armclang only)" OFF)
 option(NANOSOC_BUILD_TESTS  "Build testcode executables" ON)
+
+# C library variant — data-driven via cmake/libraries/<name>.cmake.
+# Default is toolchain-dependent (gcc → nano, armclang/armcc → default).
+# Override per-build here, or per-target via nanosoc_add_test(... C_LIBRARY ...).
+set(NANOSOC_C_LIBRARY "" CACHE STRING
+    "C library variant (cmake/libraries/<name>.cmake). Empty = toolchain default.")
+
+# Backward-compat shim: NANOSOC_USE_MICROLIB=ON translates to NANOSOC_C_LIBRARY=microlib.
+option(NANOSOC_USE_MICROLIB "Use ARM microlib (deprecated: prefer NANOSOC_C_LIBRARY=microlib)" OFF)
+if(NANOSOC_USE_MICROLIB AND NOT NANOSOC_C_LIBRARY)
+    set(NANOSOC_C_LIBRARY "microlib" CACHE STRING "" FORCE)
+    message(DEPRECATION
+        "NANOSOC_USE_MICROLIB is deprecated; use NANOSOC_C_LIBRARY=microlib instead.")
+endif()
 
 # Backward compatibility shim: accept the old NANOSOC_CPU_VARIANT cache var.
 # Translate CORTEX_M0 → cortex-m0, CORTEX_M0PLUS → cortex-m0plus.
@@ -109,6 +122,38 @@ else()
 endif()
 
 set(NanoSoC_LINKER_SCRIPT_DIR "${_SW_ROOT}/common/scripts" CACHE INTERNAL "")
+# Firmware package root — used by nanosoc_add_test() to locate cmake/libraries/*.
+set(NanoSoC_FIRMWARE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}" CACHE INTERNAL "")
+
+# --- Resolve NANOSOC_C_LIBRARY ----------------------------------------------
+# If not set explicitly, pick a sensible toolchain-appropriate default:
+#   gcc      → nano (matches historical --specs=nano.specs default)
+#   armclang → default (AC6's standardlib, matches COMPILE_MICROLIB=0 default)
+#   armcc    → default
+if(NOT NANOSOC_C_LIBRARY)
+    if(NANOSOC_TOOLCHAIN_ID STREQUAL "gcc")
+        set(NANOSOC_C_LIBRARY "nano")
+    else()
+        set(NANOSOC_C_LIBRARY "default")
+    endif()
+endif()
+
+set(_clib_file "${CMAKE_CURRENT_SOURCE_DIR}/cmake/libraries/${NANOSOC_C_LIBRARY}.cmake")
+if(NOT EXISTS "${_clib_file}")
+    file(GLOB _clib_available RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/cmake/libraries"
+         "${CMAKE_CURRENT_SOURCE_DIR}/cmake/libraries/*.cmake")
+    message(FATAL_ERROR
+        "NANOSOC_C_LIBRARY='${NANOSOC_C_LIBRARY}' has no descriptor. "
+        "Expected: ${_clib_file}. Available: ${_clib_available}.")
+endif()
+include("${_clib_file}")
+
+if(NOT NANOSOC_TOOLCHAIN_ID IN_LIST NanoSoC_CLIB_SUPPORTED)
+    message(FATAL_ERROR
+        "NANOSOC_C_LIBRARY='${NANOSOC_C_LIBRARY}' (${NanoSoC_CLIB_DISPLAY_NAME}) "
+        "does not support toolchain '${NANOSOC_TOOLCHAIN_ID}'. "
+        "Supported: ${NanoSoC_CLIB_SUPPORTED}.")
+endif()
 
 # ============================================================================
 # Target: NanoSoCFirmware::cpu_flags - per-toolchain CPU + endianness flags
@@ -125,6 +170,42 @@ target_compile_options(nanosoc_cpu_flags INTERFACE
     $<$<C_COMPILER_ID:ARMCC>:${NanoSoC_CPU_FLAGS_ARMCC}>
     $<$<BOOL:${NANOSOC_BIGEND}>:$<$<C_COMPILER_ID:GNU>:-mbig-endian>>
 )
+# GCC links via the driver, which needs the CPU flags to pick the right
+# multilib. Propagate only the GCC CPU flags to link; armlink doesn't accept
+# compiler-style -mcpu on its command line.
+target_link_options(nanosoc_cpu_flags INTERFACE
+    $<$<C_COMPILER_ID:GNU>:${NanoSoC_CPU_FLAGS_GCC}>
+)
+
+# ============================================================================
+# Target: NanoSoCFirmware::clib - C library variant compile / link flags
+#
+# Data comes from cmake/libraries/<NANOSOC_C_LIBRARY>.cmake. Linked into the
+# cmsis target (for transitive compile flags) and applied on the link line
+# by nanosoc_add_test (for link flags).
+# ============================================================================
+add_library(nanosoc_clib INTERFACE)
+add_library(NanoSoCFirmware::clib ALIAS nanosoc_clib)
+# C-source compile flags (only applied to C files, not asm).
+target_compile_options(nanosoc_clib INTERFACE
+    $<$<AND:$<COMPILE_LANGUAGE:C>,$<C_COMPILER_ID:GNU>>:${NanoSoC_CLIB_FLAGS_GCC}>
+    $<$<AND:$<COMPILE_LANGUAGE:C>,$<C_COMPILER_ID:ARMClang>>:${NanoSoC_CLIB_FLAGS_ARMCLANG}>
+    $<$<AND:$<COMPILE_LANGUAGE:C>,$<C_COMPILER_ID:ARMCC>>:${NanoSoC_CLIB_FLAGS_ARMCC}>
+)
+# ASM-source flags (e.g. armasm --pd predefines). Scoped to ASM language.
+target_compile_options(nanosoc_clib INTERFACE
+    $<$<AND:$<COMPILE_LANGUAGE:ASM>,$<C_COMPILER_ID:GNU>>:${NanoSoC_CLIB_ASM_GCC}>
+    $<$<AND:$<COMPILE_LANGUAGE:ASM>,$<C_COMPILER_ID:ARMClang>>:${NanoSoC_CLIB_ASM_ARMCLANG}>
+    $<$<AND:$<COMPILE_LANGUAGE:ASM>,$<C_COMPILER_ID:ARMCC>>:${NanoSoC_CLIB_ASM_ARMCC}>
+)
+target_link_options(nanosoc_clib INTERFACE
+    $<$<C_COMPILER_ID:GNU>:${NanoSoC_CLIB_LINK_GCC}>
+    $<$<C_COMPILER_ID:ARMClang>:${NanoSoC_CLIB_LINK_ARMCLANG}>
+    $<$<C_COMPILER_ID:ARMCC>:${NanoSoC_CLIB_LINK_ARMCC}>
+)
+if(NanoSoC_CLIB_DEFINES)
+    target_compile_definitions(nanosoc_clib INTERFACE ${NanoSoC_CLIB_DEFINES})
+endif()
 
 # ============================================================================
 # Target: NanoSoCFirmware::cmsis - CMSIS + device headers, CPU define
@@ -136,6 +217,8 @@ target_include_directories(nanosoc_cmsis INTERFACE
     "${_CMSIS_CORE}")
 target_compile_definitions(nanosoc_cmsis INTERFACE -D${NanoSoC_CPU_DEFINE})
 target_link_libraries(nanosoc_cmsis INTERFACE nanosoc_cpu_flags)
+# Note: nanosoc_clib is NOT linked into cmsis — applied per-test in
+# nanosoc_add_test() to allow per-target C_LIBRARY overrides.
 
 # ============================================================================
 # Target: NanoSoCFirmware::memmap - generated memmap header include path

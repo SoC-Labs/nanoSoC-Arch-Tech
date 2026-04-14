@@ -305,6 +305,117 @@ upstream changes needed for new profiles.
 
 ---
 
+## CPU selection
+
+**One source of truth per CPU, shared between CMake and Make** via sibling
+description files:
+
+| Flow | Description files | Consumed by |
+|---|---|---|
+| CMake | `cmake/cpus/<name>.cmake` | `firmware/CMakeLists.txt` |
+| Make  | `build/cpus/<name>.mk`    | `firmware/build/testcode.mk` |
+
+Both hold the same schema — display name, CMSIS device dir, startup/system
+stems, architecture, capability flags, and per-toolchain CPU flags.
+
+The active CPU is resolved at configure/build time in this order (first non-empty wins):
+
+1. `-DNANOSOC_CPU=<name>` (CMake) / `NANOSOC_CPU=<name>` (Make command line) — **explicit override**.
+2. `CPU_PRODUCT=CORTEX_M0[PLUS]` (Make, legacy — translated to `NANOSOC_CPU`).
+3. `NanoSoC_DEFAULT_CPU` / `NANOSOC_DEFAULT_CPU` from the generated `<project>_memmap.{cmake,mk}` — **the SoC YAML drives the default**. `nanosoc_gen` reads the `firmware.cpu` field and emits the default.
+4. Hard-coded fallback `cortex-m0` (only hit if neither generator nor override is set).
+
+### Typical flow (SoC model picks the CPU)
+
+Set it once, in the YAML:
+
+```yaml
+# sys_desc/nanosoc_m0_soc.yaml
+  firmware:
+    cpu: cortex-m0              # ← single source of truth for the project
+    cpu_initiator: cpu_0
+    linker_profiles: ...
+```
+
+Regenerate (`make -C nanosoc_m0_soc soc_model`) — the firmware backend emits
+`NanoSoC_DEFAULT_CPU "cortex-m0"` into `build_soc/firmware/<project>_memmap.cmake`.
+
+Presets don't need to mention the CPU:
+
+```json
+{ "name": "gcc-m0-le",
+  "displayName": "GCC / inherit CPU from SoC model",
+  "inherits": "_gcc",
+  "cacheVariables": { "NANOSOC_BIGEND": "OFF" } }
+```
+
+Want a second CPU variant for the same SoC? Add a preset that overrides:
+
+```json
+{ "name": "gcc-m0plus", "inherits": "_gcc",
+  "cacheVariables": { "NANOSOC_CPU": "cortex-m0plus" } }
+```
+
+## Adding a new CPU (e.g. Cortex-M3)
+
+The CPU choice is **data-driven** — one description file per CPU under
+`cmake/cpus/<name>.cmake`. Adding a new CPU is purely additive: drop a new
+file, no edits to existing code.
+
+```cmake
+# firmware/cmake/cpus/cortex-m3.cmake
+set(NanoSoC_CPU_DISPLAY_NAME    "Cortex-M3")
+set(NanoSoC_CPU_DEFINE          "CORTEX_M3")
+set(NanoSoC_CPU_DEVICE_DIR_NAME "CMSDK_CM3")        # CMSIS device dir name
+set(NanoSoC_CPU_STARTUP_STEM    "startup_CMSDK_CM3")
+set(NanoSoC_CPU_SYSTEM_STEM     "system_CMSDK_CM3")
+set(NanoSoC_CPU_ARCH            "armv7-m")
+
+set(NanoSoC_CPU_HAS_FPU         FALSE)
+set(NanoSoC_CPU_HAS_DSP         FALSE)
+
+set(NanoSoC_CPU_FLAGS_GCC       "-mcpu=cortex-m3" "-mthumb")
+set(NanoSoC_CPU_FLAGS_ARMCLANG  "-mcpu=Cortex-M3")
+set(NanoSoC_CPU_FLAGS_ARMCC     "--cpu" "Cortex-M3")
+```
+
+Then drop the matching CMSDK_CM3 device tree under
+`software/cmsis/Device/ARM/` and add a preset:
+
+```json
+{ "name": "gcc-m3", "inherits": "_gcc",
+  "cacheVariables": { "NANOSOC_CPU": "cortex-m3" } }
+```
+
+`nanosoc_add_test()` and the toolchain selection are CPU-agnostic — they
+read from the description file at configure time, so no function-side
+changes are needed.
+
+The CPU dropdown in `cmake-gui` / `ccmake` is auto-populated from the
+files present in `cmake/cpus/`.
+
+For the Make flow, drop a sibling file with the same schema under `build/cpus/`:
+
+```make
+# firmware/build/cpus/cortex-m3.mk
+CPU_DISPLAY_NAME    := Cortex-M3
+CPU_DEFINE          := CORTEX_M3
+CPU_DEVICE_DIR_NAME := CMSDK_CM3
+CPU_STARTUP_STEM    := startup_CMSDK_CM3
+CPU_SYSTEM_STEM     := system_CMSDK_CM3
+CPU_ARCH            := armv7-m
+
+CPU_FLAGS_GCC       := -mcpu=cortex-m3 -mthumb
+CPU_FLAGS_ARMCLANG  := -mcpu=Cortex-M3
+CPU_FLAGS_ARMCC     := --cpu Cortex-M3
+```
+
+`testcode.mk` and the toolchain `.mk` files are CPU-agnostic — they read
+`$(CPU_*)` from whichever CPU file gets included. Both flows share the same
+single-source-of-truth pattern.
+
+---
+
 ## File layout
 
 ```
@@ -314,13 +425,19 @@ firmware/
 ├── cmake/
 │   ├── NanoSoCFirmwareConfig.cmake.in   ← find_package() entry point
 │   ├── NanoSoCFirmwareFunctions.cmake   ← nanosoc_add_test() definition
+│   ├── cpus/
+│   │   ├── cortex-m0.cmake              ← CPU description file (data only)
+│   │   └── cortex-m0plus.cmake
 │   └── toolchains/
 │       ├── arm-gcc.cmake                ← GCC toolchain
 │       ├── armclang.cmake               ← AC6 (DS-6) toolchain
 │       └── armcc.cmake                  ← AC5 (DS-5) toolchain (legacy)
 ├── build/
 │   ├── testcode.mk                      ← Make-flow shared template
-│   └── toolchain/{ds5,ds6,gcc}.mk       ← Make-flow toolchain configs
+│   ├── toolchain/{ds5,ds6,gcc}.mk       ← Make-flow toolchain configs
+│   └── cpus/                            ← Make-side CPU description files
+│       ├── cortex-m0.mk                     (mirrors cmake/cpus/*.cmake schema)
+│       └── cortex-m0plus.mk
 ├── software/
 │   ├── cmsis/                           ← CMSIS + ARM/CMSDK_CM0 device files
 │   ├── common/

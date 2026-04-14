@@ -20,12 +20,9 @@ LINK_TOOL  := armlink
 # "no target architecture given").
 CC_TARGET := $(ARM_TARGET)
 
-# CPU type flags
-ifeq ($(CPU_PRODUCT),CORTEX_M0PLUS)
-  CPU_TYPE := -mcpu=Cortex-M0plus
-else
-  CPU_TYPE := -mcpu=Cortex-M0
-endif
+# CPU type flags are pulled from the CPU description file included by
+# testcode.mk before this toolchain file is included.
+CPU_TYPE := $(CPU_FLAGS_ARMCLANG)
 
 # Startup code directory
 STARTUP_DIR := $(DEVICE_DIR)/Source/ARM

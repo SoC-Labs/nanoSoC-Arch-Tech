@@ -17,12 +17,9 @@ GNU_OBJCOPY := $(TARGET)-objcopy
 # CC_TARGET not used for GCC
 CC_TARGET :=
 
-# CPU type flags
-ifeq ($(CPU_PRODUCT),CORTEX_M0PLUS)
-  CPU_TYPE := -mcpu=cortex-m0plus
-else
-  CPU_TYPE := -mcpu=cortex-m0
-endif
+# CPU type flags are pulled from the CPU description file included by
+# testcode.mk before this toolchain file is included.
+CPU_TYPE := $(CPU_FLAGS_GCC)
 
 # Startup code directory
 STARTUP_DIR := $(DEVICE_DIR)/Source/GCC

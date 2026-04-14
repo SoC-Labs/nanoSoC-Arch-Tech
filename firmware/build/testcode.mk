@@ -38,7 +38,6 @@
 #=============================================================================
 # Defaults
 #=============================================================================
-CPU_PRODUCT      ?= CORTEX_M0
 TOOL_CHAIN       ?= ds5
 TARGET           := arm-none-eabi
 USE_RETARGET     ?= 1
@@ -63,19 +62,46 @@ FIRMWARE_CONFIG_DIR ?= $(SOCLABS_NANOSOC_SOC_DIR)/build_soc/firmware
 -include $(FIRMWARE_CONFIG_DIR)/nanosoc_memmap.mk
 
 #=============================================================================
-# CPU Product Selection
+# CPU Selection (data-driven)
+#
+# Resolution order (first non-empty wins):
+#   1. NANOSOC_CPU=<name> on the make command line or environment
+#   2. CPU_PRODUCT=CORTEX_M0[PLUS] (legacy, translated here)
+#   3. NANOSOC_DEFAULT_CPU from the generated *_memmap.mk (driven by YAML)
+#   4. Hard-coded fallback: cortex-m0
 #=============================================================================
-ifeq ($(CPU_PRODUCT),CORTEX_M0PLUS)
-  DEVICE_DIR   := $(CMSIS_DIR)/Device/ARM/CMSDK_CM0plus
-  USER_DEFINE  := -DCORTEX_M0PLUS
-  STARTUP_FILE := startup_CMSDK_CM0plus
-  SYSTEM_FILE  := system_CMSDK_CM0plus
-else
-  DEVICE_DIR   := $(CMSIS_DIR)/Device/ARM/CMSDK_CM0
-  USER_DEFINE  := -DCORTEX_M0
-  STARTUP_FILE := startup_CMSDK_CM0
-  SYSTEM_FILE  := system_CMSDK_CM0
+ifdef CPU_PRODUCT
+  ifeq ($(CPU_PRODUCT),CORTEX_M0PLUS)
+    NANOSOC_CPU ?= cortex-m0plus
+  else
+    NANOSOC_CPU ?= cortex-m0
+  endif
 endif
+
+NANOSOC_CPU ?= $(NANOSOC_DEFAULT_CPU)
+NANOSOC_CPU ?= cortex-m0
+
+CPUS_DIR := $(SOCLABS_NANOSOC_FIRMWARE_TECH_DIR)/build/cpus
+CPU_FILE := $(CPUS_DIR)/$(NANOSOC_CPU).mk
+ifeq ($(wildcard $(CPU_FILE)),)
+  $(error NANOSOC_CPU='$(NANOSOC_CPU)' has no description file. \
+          Expected: $(CPU_FILE). \
+          Available: $(notdir $(basename $(wildcard $(CPUS_DIR)/*.mk))))
+endif
+include $(CPU_FILE)
+
+# Backward-compatibility: older makefiles / flows pass CPU_PRODUCT. Keep the
+# variable exported so sub-makes that also reference it still work.
+ifeq ($(NANOSOC_CPU),cortex-m0plus)
+  CPU_PRODUCT := CORTEX_M0PLUS
+else
+  CPU_PRODUCT := CORTEX_M0
+endif
+
+DEVICE_DIR   := $(CMSIS_DIR)/Device/ARM/$(CPU_DEVICE_DIR_NAME)
+USER_DEFINE  := -D$(CPU_DEFINE)
+STARTUP_FILE := $(CPU_STARTUP_STEM)
+SYSTEM_FILE  := $(CPU_SYSTEM_STEM)
 
 #=============================================================================
 # Toolchain Configuration
@@ -200,7 +226,9 @@ endif # ifneq gcc
 #=============================================================================
 ifeq ($(TOOL_CHAIN),gcc)
 
-GNU_CC_FLAGS := -g $(OPT_LEVEL) -mthumb $(CPU_TYPE) $(GCC_SPEC_OPTS) $(GNU_CC_EXTRA_FLAGS)
+# CPU_TYPE is set by the toolchain .mk from CPU_FLAGS_GCC (which already
+# includes -mthumb for GCC), so no explicit -mthumb here.
+GNU_CC_FLAGS := -g $(OPT_LEVEL) $(CPU_TYPE) $(GCC_SPEC_OPTS) $(GNU_CC_EXTRA_FLAGS)
 
 ifeq ($(COMPILE_BIGEND),1)
   GNU_CC_FLAGS += -mbig-endian

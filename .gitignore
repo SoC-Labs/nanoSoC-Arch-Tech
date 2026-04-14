@@ -136,3 +136,5 @@ novas.rc
 *.elf
 *.o
 *.lst
+
+!firmware/build

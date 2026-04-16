@@ -5,10 +5,8 @@
 # Copyright (C) 2021-6, SoC Labs (www.soclabs.org)
 #-----------------------------------------------------------------------------
 #
-# NOTE: As of 2026-04, the CMSIS device files for CMSDK_CM0plus are not yet
-# vendored under software/cmsis/Device/ARM/. Selecting this CPU will fail
-# when the startup .s is resolved. To enable, drop the CMSDK_CM0plus device
-# tree (Include/, Source/{ARM,GCC}/) into that path.
+# CMSDK_CM0plus device tree vendored under software/cmsis/Device/ARM/CMSDK_CM0plus
+# (sourced from Arm BP200-r1p1 Corstone-101 release).
 #-----------------------------------------------------------------------------
 
 CPU_DISPLAY_NAME    := Cortex-M0+

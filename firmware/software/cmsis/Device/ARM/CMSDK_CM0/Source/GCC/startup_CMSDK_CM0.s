@@ -167,14 +167,15 @@ Reset_Handler:
     bgt    .LC0
 .LC1:
 
-#ifdef __STARTUP_CLEAR_BSS
-/*     This part of work usually is done in C library startup code. Otherwise,
- *     define this macro to enable it in this startup.
+/*     Loop to zero out BSS section. Newlib-nano's _start is supposed to
+ *     do this, but empirically does not on this toolchain configuration
+ *     — BSS retains its pre-reset content after SYSRESETREQ, which
+ *     corrupts every static/global the application depends on. This is
+ *     unconditional now so SYSRESETREQ-triggered reboots work.
  *
- *     Loop to zero out BSS section, which uses following symbols
- *     in linker script:
- *      __bss_start__: start of BSS section. Must align to 4
- *      __bss_end__: end of BSS section. Must align to 4
+ *     Linker-provided symbols:
+ *      __bss_start__: start of BSS section. Must align to 4.
+ *      __bss_end__:   end of BSS section. Must align to 4.
  */
     ldr r1, =__bss_start__
     ldr r2, =__bss_end__
@@ -188,7 +189,6 @@ Reset_Handler:
     subs    r2, 4
     bge .LC2
 .LC3:
-#endif /* __STARTUP_CLEAR_BSS */
 
 #ifndef __NO_SYSTEM_INIT
     /* bl    SystemInit */

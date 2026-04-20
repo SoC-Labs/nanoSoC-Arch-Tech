@@ -345,13 +345,22 @@ endif # ifneq gcc
 # ---------------------------------------------------------------------------------------
 ifeq ($(TOOL_CHAIN),gcc)
 
+# STACK_SIZE/HEAP_SIZE are overridable from the parent makefile. They
+# control the .stack_dummy and .heap section sizes in the startup file.
+# Note: -x assembler-with-cpp is required so the CMSIS startup file's
+# #ifdef __HEAP_SIZE directive actually gets preprocessed (GCC does not
+# preprocess lowercase .s files by default).
+STACK_SIZE ?= 0x200
+HEAP_SIZE  ?= 0x1000
+
 all_gcc: | $(COMPILE_DIR) $(OUTPUT_DIR)
 	$(CC_TOOL) $(GNU_CC_FLAGS) \
-		$(GCC_ALL_SOURCES) \
+		-x assembler-with-cpp $(filter %.s,$(GCC_ALL_SOURCES)) \
+		-x none $(filter-out %.s,$(GCC_ALL_SOURCES)) \
 		$(ALL_INCLUDES) \
 		$(FIRMWARE_LINKER_SEARCH) \
-		-D__STACK_SIZE=0x200 \
-		-D__HEAP_SIZE=0x1000 \
+		-D__STACK_SIZE=$(STACK_SIZE) \
+		-D__HEAP_SIZE=$(HEAP_SIZE) \
 		-T $(LINKER_SCRIPT) -o $(COMPILE_DIR)/$(TESTNAME).o
 	# Generate disassembly code
 	$(GNU_OBJDUMP) -S $(COMPILE_DIR)/$(TESTNAME).o > $(OUTPUT_DIR)/$(TESTNAME).lst

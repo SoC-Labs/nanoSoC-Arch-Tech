@@ -197,10 +197,15 @@ def output_construct_gcc(input_hex, address_width, module_name=MODULE_NAME):
     env = Environment(loader=FileSystemLoader(template_dir))
     template = env.get_template(TEMPLATE_NAME)
     
-    # Generate complete Verilog module using Jinja2 template
+    # Generate complete Verilog module using Jinja2 template.
+    # NOTE: use the CLI-supplied address_width, not the ADDRESS_WIDTH
+    # module-level default, so `-a 11` actually produces an 11-bit
+    # word_addr (2 KB bootrom at 4-byte words = 8 KB total). Previously
+    # the GCC path silently ignored -a and always emitted 9 bits,
+    # truncating the reachable ROM to 512 words.
     bootrom_verilog = template.render(
         module_name=module_name,
-        word_address_width=ADDRESS_WIDTH,
+        word_address_width=address_width,
         data_width=DATA_WIDTH,
         date=date_str,
         hex_data=hex_data_for_template

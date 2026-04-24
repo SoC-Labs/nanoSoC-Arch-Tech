@@ -202,10 +202,20 @@ module:
         - name: cpu_ss
           passthrough: cpu_ss
           targets:
+            # Default bootrom views (0x0 remap alias, 0x08000000 default).
+            # Additional alias at 0x80000000 so an external DMA initiator
+            # driving this slave port from a top-level aperture rooted at
+            # 0x80000000 lands in bootrom. The CPU-internal `cpu_0` initiator
+            # never drives 0x8xxx_xxxx — its system passthrough (0x20+)
+            # covers the range but its target list excludes admin aliases.
             - name: bootrom_0
               visibility:
                 - base: 0x00000000
                 - base: 0x08000000
+                - base: 0x80000000
+            # imem visible at 0x0 (under REMAP) / 0x10000000 / 0x90000000
+            # (admin alias, same aperture shape as 0x10000000, base shifted
+            # +0x80000000 to match the top-level admin aperture).
             - name: imem_0
               visibility:
                 - base: 0x00000000
@@ -214,5 +224,10 @@ module:
                     remap_behaviour: alias
                     remap_bit: 0
                 - base: 0x10000000
+                - base: 0x90000000
+            # dmem at local 0x18000000 + admin alias at 0x98000000.
             - name: dmem_0
+              visibility:
+                - base: 0x18000000
+                - base: 0x98000000
             # Note: cpu_ss initiator cannot access 'system' target (prevents routing loops)

@@ -89,15 +89,17 @@ module:
     - { name: cpu_0_sleeping,     type: wire, direction: out, params: { WIDTH: 1 },  desc: "CPU sleeping status" }
     - { name: cpu_0_sleepdeep,    type: wire, direction: out, params: { WIDTH: 1 },  desc: "CPU deep sleep status" }
 
-    # Serial Wire Debug
-    - { name: cpu_0_swd, type: swd, direction: receiver, params: {}, desc: "CPU SWD debug interface (swdi, swclk in; swdo, swdoen out)" }
+    # Debug AHB-AP slave bus (CoreSight SoC-400 DAP -> matrix bridge -> slcorem0
+    # EXTERNAL_DAP=1 DBGAHB_* port group). Replaces the per-core SWD interface;
+    # SWD is now owned by the SoC-level SWJ-DP that drives the matrix DAP.
+    - { name: cpu_0_dbgahb, type: dbg_ahb, direction: receiver, params: {}, desc: "Cortex-M0 debug-slave bus (driven by system DAP via matrix bridge)" }
 
   # Internal instances within cpu_ss
   instances:
     - instance_name: u_cpu_0
       module: slcorem0
       addressable: False
-      params: { CLKGATE_PRESENT: $CLKGATE_PRESENT, BE: $BE, BKPT: $BKPT, DBG: $DBG, NUMIRQ: $NUMIRQ, SMUL: $SMUL, SYST: $SYST, WIC: $WIC, WICLINES: $WICLINES, WPT: $WPT, RESET_ALL_REGS: $RESET_ALL_REGS, INCLUDE_JTAG: $INCLUDE_JTAG, ROMTABLE_BASE: $ROMTABLE_BASE }
+      params: { CLKGATE_PRESENT: $CLKGATE_PRESENT, BE: $BE, BKPT: $BKPT, DBG: $DBG, NUMIRQ: $NUMIRQ, SMUL: $SMUL, SYST: $SYST, WIC: $WIC, WICLINES: $WICLINES, WPT: $WPT, RESET_ALL_REGS: $RESET_ALL_REGS, INCLUDE_JTAG: $INCLUDE_JTAG, ROMTABLE_BASE: $ROMTABLE_BASE, EXTERNAL_DAP: 1 }
       connections:
         # AHB master — routed through internal busmatrix
         - { port: ahb_master, conn: nanosoc_cpu_ss_ahb_interconnect.cpu_0 }
@@ -125,11 +127,21 @@ module:
         - { port: CORE_SYSRESETREQ,  conn: cpu_0_sysresetreq }
         - { port: CORE_SLEEPING,     conn: cpu_0_sleeping }
         - { port: CORE_SLEEPDEEP,    conn: cpu_0_sleepdeep }
-        # Serial Wire Debug
-        - { port: CORE_SWDI,   conn: cpu_0_swdi }
-        - { port: CORE_SWCLK,  conn: cpu_0_swclk }
-        - { port: CORE_SWDO,   conn: cpu_0_swdo }
-        - { port: CORE_SWDOEN, conn: cpu_0_swdoen }
+        # Per-core SWD pins are tied off — slcorem0 with EXTERNAL_DAP=1 ignores
+        # them. The system DAP at the SoC top drives the DBGAHB bus.
+        - { port: CORE_SWDI,   conn: 1'b1 }
+        - { port: CORE_SWCLK,  conn: 1'b0 }
+        - { port: CORE_SWDO,   conn: unconnected, desc: "Tied off in EXTERNAL_DAP=1" }
+        - { port: CORE_SWDOEN, conn: unconnected, desc: "Tied off in EXTERNAL_DAP=1" }
+        # Debug AHB-AP slave bus — driven by the system DAP via matrix bridge
+        - { port: DBGAHB_SLVADDR,  conn: cpu_0_dbgahb_slvaddr }
+        - { port: DBGAHB_SLVWDATA, conn: cpu_0_dbgahb_slvwdata }
+        - { port: DBGAHB_SLVTRANS, conn: cpu_0_dbgahb_slvtrans }
+        - { port: DBGAHB_SLVWRITE, conn: cpu_0_dbgahb_slvwrite }
+        - { port: DBGAHB_SLVSIZE,  conn: cpu_0_dbgahb_slvsize }
+        - { port: DBGAHB_SLVRDATA, conn: cpu_0_dbgahb_slvrdata }
+        - { port: DBGAHB_SLVREADY, conn: cpu_0_dbgahb_slvready }
+        - { port: DBGAHB_SLVRESP,  conn: cpu_0_dbgahb_slvresp }
 
     - instance_name: u_region_bootrom_0
       module: nanosoc_region_bootrom

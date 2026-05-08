@@ -127,9 +127,18 @@ def output_construct(input_hex, address_width, module_name=MODULE_NAME):
     hex_bytes = f.readlines()
     f.close()
 
-    # Number of bytes expected depending on address_width
+    # Number of bytes addressable by the requested word_addr width
     address_bytes = 1 << (address_width + 2)
     print(len(hex_bytes))
+
+    if len(hex_bytes) > address_bytes:
+        raise SystemExit(
+            f"ERROR: bootrom_gen: input '{input_hex}' is {len(hex_bytes)} bytes "
+            f"but -a {address_width} only addresses {address_bytes} bytes. "
+            f"Increase BOOTROM_ADDRW (need at least "
+            f"{max(1, math.ceil(math.log2(math.ceil(len(hex_bytes)/4))))})."
+        )
+
     # Fill hex_bytes with zeros for addresses than aren't in the hex file
     while (len(hex_bytes) < address_bytes): hex_bytes.append("00")
     hex_words = math.ceil(len(hex_bytes)/4)
@@ -173,10 +182,22 @@ def output_construct_gcc(input_hex, address_width, module_name=MODULE_NAME):
     # Read and normalise hex file to a flat list of byte strings
     hex_bytes = normalise_hex_file(input_hex)
 
-    # Number of bytes expected depending on address_width
+    # Number of bytes addressable by the requested word_addr width
     address_bytes = 1 << (address_width + 2)
 
-    # Fill hex_bytes with zeros for addresses than aren't in the hex file
+    # Refuse to silently emit more entries than the requested word_addr can
+    # index. Without this guard, case-statement labels above 2^address_width
+    # quietly truncate to width and collide with low addresses, corrupting
+    # the boot image (and producing width-mismatch errors at synthesis).
+    if len(hex_bytes) > address_bytes:
+        raise SystemExit(
+            f"ERROR: bootrom_gen: input '{input_hex}' is {len(hex_bytes)} bytes "
+            f"but -a {address_width} only addresses {address_bytes} bytes. "
+            f"Increase BOOTROM_ADDRW (need at least "
+            f"{max(1, math.ceil(math.log2(math.ceil(len(hex_bytes)/4))))})."
+        )
+
+    # Pad with zeros to fill the addressable space
     while (len(hex_bytes) < address_bytes): hex_bytes.append("00")
     hex_words = math.ceil(len(hex_bytes)/4)
     hex_data = []

@@ -13,7 +13,26 @@ import argparse
 import math
 import os
 from jinja2 import Environment, FileSystemLoader
-from datetime import datetime
+from datetime import datetime, timezone
+
+
+def _generated_date():
+    """Deterministic value for the generated-header 'Date:' field.
+
+    Reproducible builds: a wall-clock timestamp here produced a spurious
+    1-line diff on every firmware regen (see nanosoc-multicore-system
+    docs/BRINGUP_TODO.md "bootrom_gen.py timestamp churn"). Honour the
+    reproducible-builds standard SOURCE_DATE_EPOCH when set; otherwise
+    omit the wall-clock entirely so regen is byte-stable.
+    """
+    epoch = os.environ.get('SOURCE_DATE_EPOCH')
+    if epoch:
+        try:
+            return datetime.fromtimestamp(
+                int(epoch), tz=timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+        except (ValueError, OverflowError, OSError):
+            pass
+    return '(omitted for reproducible builds)'
 
 TEMPLATE_NAME         = 'bootrom_templ.sv.jinja'
 REGION_TEMPLATE_NAME  = 'bootrom_region_templ.v.jinja'
@@ -114,7 +133,7 @@ def generate_region_wrapper(region_module_name, rom_module_name):
     template_dir = os.path.dirname(os.path.abspath(__file__))
     env = Environment(loader=FileSystemLoader(template_dir))
     template = env.get_template(REGION_TEMPLATE_NAME)
-    date_str = datetime.today().strftime('%Y-%m-%d %H:%M:%S')
+    date_str = _generated_date()
     return template.render(
         region_module_name=region_module_name,
         rom_module_name=rom_module_name,
@@ -153,7 +172,7 @@ def output_construct(input_hex, address_width, module_name=MODULE_NAME):
         hex_data_for_template.append({'index': i, 'word': word_value})
 
     # Get Date and Time to put in Generated Header
-    date_str = datetime.today().strftime('%Y-%m-%d %H:%M:%S')
+    date_str = _generated_date()
 
     # Set up Jinja2 environment and load template
     template_dir = os.path.dirname(os.path.abspath(__file__))
@@ -211,7 +230,7 @@ def output_construct_gcc(input_hex, address_width, module_name=MODULE_NAME):
         hex_data_for_template.append({'index': i, 'word': word_value})
     
     # Get Date and Time to put in Generated Header
-    date_str = datetime.today().strftime('%Y-%m-%d %H:%M:%S')
+    date_str = _generated_date()
 
     # Set up Jinja2 environment and load template
     template_dir = os.path.dirname(os.path.abspath(__file__))

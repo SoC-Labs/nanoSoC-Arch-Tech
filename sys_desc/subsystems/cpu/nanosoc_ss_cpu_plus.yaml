@@ -10,28 +10,28 @@
 #-----------------------------------------------------------------------------
 # Derived from RTL: nanosoc_arch_tech/rtl/src/subsystems/cpu_plus/nanosoc_ss_cpu_plus.v
 #
-# Drop-in M0+ alternative to nanosoc_ss_cpu. Contains an ARM Cortex-M0+ core
-# (slcorem0p), PRMU (power/reset management), local memories (bootrom, imem,
-# dmem), and an internal 2x4 AHB busmatrix. Address map, remap behaviour,
-# memories and busmatrix are IDENTICAL to nanosoc_ss_cpu — only the core is
-# swapped for the M0+ and the M0+ IOP/VTOR/MPU features are added.
+# TRUE drop-in M0+ replacement for nanosoc_ss_cpu. The subsystem boundary
+# (interfaces) is IDENTICAL to nanosoc_ss_cpu: same clocks/resets, AHB master
+# (cpu_0) + slave (cpu_ss) ports, sys_remap_ctrl, CPU sideband, and the same
+# CoreSight debug-slave bus (cpu_0_dbgahb). The ONLY differences vs the M0
+# subsystem are inside the core instance:
+#   * slcorem0  -> slcorem0p  (Cortex-M0 -> Cortex-M0+)
+#   * VTOR=1    : Vector Table Offset Register enabled. (Reset value is 0, so
+#                 boot still vectors from 0x0 and the existing sys_remap_ctrl
+#                 alias keeps working unchanged — firmware can later program
+#                 VTOR to retire the remap hack.)
+#   * IOP=0     : single-cycle I/O port disabled. The chip-control CPU has no
+#                 fast-IO peripheral, so all accesses go via AHB exactly like
+#                 the M0. The wrapper's IO* ports always exist in RTL, so they
+#                 are tied off internally here (IORDATA=0, outputs unconnected)
+#                 and NOT brought to the subsystem boundary.
+#   * MPU=0     : Memory Protection Unit not fitted.
 #
-# DEBUG PATH DIVERGENCE FROM M0 SUBSYSTEM (matches the RTL):
-#   nanosoc_ss_cpu_plus.v instantiates slcorem0p WITHOUT EXTERNAL_DAP (defaults
-#   to 0 -> legacy internal CM0PDAP). It therefore exposes per-core SWD pins
-#   (cpu_0_swdi/swclk/swdo/swdoen) at the subsystem boundary and does NOT use
-#   the DBGAHB_* debug-slave bus that the M0 subsystem (EXTERNAL_DAP=1) uses.
-#
-# I/O PORT (matches the RTL):
-#   The M0+ single-cycle I/O port is brought straight out to the subsystem
-#   boundary as cpu_0_io* (no internal tie-off; cpu_0_iordata is a subsystem
-#   input). Same naming convention as ethernet_ss_ahb.yaml lines ~182-191.
-#
-# External AHB interfaces:
-#   cpu_0  — AHB master port carrying system traffic (addresses >= 0x20000000)
-#   cpu_ss — AHB slave port for debug/DMA access to local memories
-#
-# This subsystem is INERT: nothing references it yet.
+# DEBUG: EXTERNAL_DAP=1 (same as nanosoc_ss_cpu). The per-core CM0PDAP is
+# omitted and the Cortex-M0+ debug-slave bus is driven from the SoC-level
+# CoreSight SoC-400 AHB-AP via the DBGAHB_* ports. Per-core SWD pins are tied
+# off. This matches how the multicore SoC top wires u_cpu_ss_1, so swapping
+# nanosoc_ss_cpu -> nanosoc_ss_cpu_plus needs NO top-level rewiring.
 
 module:
   name: nanosoc_ss_cpu_plus
@@ -42,7 +42,8 @@ module:
     2-initiator x 4-target AHB busmatrix. Generates sys_hclk and sys_hresetn
     from sys_fclk and sys_sysresetn via the PRMU. The internal busmatrix
     supports memory remap (IMEM overlay at 0x00000000 controlled by
-    sys_remap_ctrl[0]). Drop-in M0+ alternative to nanosoc_ss_cpu.
+    sys_remap_ctrl[0]). Drop-in M0+ alternative to nanosoc_ss_cpu (identical
+    boundary; VTOR enabled, IOP/MPU off; debug via system DAP / DBGAHB).
 
   params:
     SYS_ADDR_W:      { type: int, default: 32,           desc: "System address width" }
@@ -66,8 +67,8 @@ module:
     IMEM_MEM_FPGA_IMG: { type: str, default: "image.hex", desc: "FPGA image to preload into IMEM" }
     DMEM_RAM_ADDR_W: { type: int, default: 14,           desc: "DMEM address width" }
     DMEM_RAM_DATA_W: { type: int, default: 32,           desc: "DMEM data width" }
-    # Cortex-M0+ specific parameters (IOP + VTOR on, MPU off)
-    IOP:             { type: int, default: 1,            desc: "Single-cycle I/O port: 0=disabled, 1=enabled" }
+    # Cortex-M0+ specific parameters (VTOR on; IOP + MPU off — see header)
+    IOP:             { type: int, default: 0,            desc: "Single-cycle I/O port: 0=disabled, 1=enabled" }
     VTOR:            { type: int, default: 1,            desc: "Vector Table Offset Register: 0=disabled, 1=enabled" }
     MPU:             { type: int, default: 0,            desc: "Memory Protection Unit: 0=disabled, 8=8 regions" }
 
@@ -100,16 +101,6 @@ module:
     # AHB slave port — debug/DMA access to local memories
     - { name: cpu_ss, type: ahb, direction: target, params: { ADDR_WIDTH: 32, DATA_WIDTH: 32, EXCLUDE: [hready] }, desc: "CPU subsystem AHB slave port (debug/DMA access to bootrom, imem, dmem)" }
 
-    # Single-cycle I/O port (M0+ IOP, brought out to boundary; active when IOP=1)
-    - { name: cpu_0_ioaddr,   type: wire, direction: out, params: { WIDTH: 32 }, desc: "M0+ single-cycle I/O address" }
-    - { name: cpu_0_iotrans,  type: wire, direction: out, params: { WIDTH: 1 },  desc: "M0+ single-cycle I/O transfer request" }
-    - { name: cpu_0_iowrite,  type: wire, direction: out, params: { WIDTH: 1 },  desc: "M0+ single-cycle I/O direction" }
-    - { name: cpu_0_iosize,   type: wire, direction: out, params: { WIDTH: 3 },  desc: "M0+ single-cycle I/O transfer size" }
-    - { name: cpu_0_iowdata,  type: wire, direction: out, params: { WIDTH: 32 }, desc: "M0+ single-cycle I/O write data" }
-    - { name: cpu_0_ioprot,   type: wire, direction: out, params: { WIDTH: 4 },  desc: "M0+ single-cycle I/O protection" }
-    - { name: cpu_0_iordata,  type: wire, direction: in,  params: { WIDTH: 32 }, desc: "M0+ single-cycle I/O read data (tie to 0 if unused)" }
-    - { name: cpu_0_iomaster, type: wire, direction: out, params: { WIDTH: 1 },  desc: "M0+ single-cycle I/O master indicator" }
-
     # CPU sideband
     - { name: cpu_0_nmi,          type: wire, direction: in,  params: { WIDTH: 1 },  desc: "Non-maskable interrupt" }
     - { name: cpu_0_irq,          type: wire, direction: in,  params: { WIDTH: 32 }, desc: "Maskable interrupt requests" }
@@ -120,20 +111,18 @@ module:
     - { name: cpu_0_sleeping,     type: wire, direction: out, params: { WIDTH: 1 },  desc: "CPU sleeping status" }
     - { name: cpu_0_sleepdeep,    type: wire, direction: out, params: { WIDTH: 1 },  desc: "CPU deep sleep status" }
 
-    # Serial Wire Debug — per-core SWD exposed at boundary (slcorem0p with
-    # EXTERNAL_DAP=0 / legacy internal CM0PDAP). This differs from the M0
-    # subsystem, which routes debug over the DBGAHB_* slave bus instead.
-    - { name: cpu_0_swdi,   type: wire, direction: in,  params: { WIDTH: 1 }, desc: "SWD data input" }
-    - { name: cpu_0_swclk,  type: wire, direction: in,  params: { WIDTH: 1 }, desc: "SWD clock" }
-    - { name: cpu_0_swdo,   type: wire, direction: out, params: { WIDTH: 1 }, desc: "SWD data output" }
-    - { name: cpu_0_swdoen, type: wire, direction: out, params: { WIDTH: 1 }, desc: "SWD data output enable" }
+    # Debug AHB-AP slave bus (CoreSight SoC-400 DAP -> matrix bridge -> slcorem0p
+    # EXTERNAL_DAP=1 DBGAHB_* port group). Replaces the per-core SWD interface;
+    # SWD is owned by the SoC-level SWJ-DP that drives the matrix DAP. Identical
+    # to nanosoc_ss_cpu so the SoC top needs no rewiring.
+    - { name: cpu_0_dbgahb, type: dbg_ahb, direction: receiver, params: {}, desc: "Cortex-M0+ debug-slave bus (driven by system DAP via matrix bridge)" }
 
   # Internal instances within cpu_ss
   instances:
     - instance_name: u_cpu_0
       module: slcorem0p
       addressable: False
-      params: { CLKGATE_PRESENT: $CLKGATE_PRESENT, BE: $BE, BKPT: $BKPT, DBG: $DBG, NUMIRQ: $NUMIRQ, SMUL: $SMUL, SYST: $SYST, WIC: $WIC, WICLINES: $WICLINES, WPT: $WPT, RESET_ALL_REGS: $RESET_ALL_REGS, INCLUDE_JTAG: $INCLUDE_JTAG, ROMTABLE_BASE: $ROMTABLE_BASE, IOP: $IOP, VTOR: $VTOR, MPU: $MPU }
+      params: { CLKGATE_PRESENT: $CLKGATE_PRESENT, BE: $BE, BKPT: $BKPT, DBG: $DBG, NUMIRQ: $NUMIRQ, SMUL: $SMUL, SYST: $SYST, WIC: $WIC, WICLINES: $WICLINES, WPT: $WPT, RESET_ALL_REGS: $RESET_ALL_REGS, INCLUDE_JTAG: $INCLUDE_JTAG, ROMTABLE_BASE: $ROMTABLE_BASE, IOP: $IOP, VTOR: $VTOR, MPU: $MPU, EXTERNAL_DAP: 1 }
       connections:
         # AHB master — routed through internal busmatrix
         - { port: ahb_master, conn: nanosoc_cpu_ss_ahb_interconnect.cpu_0 }
@@ -152,15 +141,17 @@ module:
         # Power management
         - { port: CORE_PMUENABLE,      conn: cpu_0_pmuenable }
         - { port: CORE_PMUDBGRESETREQ, conn: cpu_0_pmudbgresetreq }
-        # Single-cycle I/O port (M0+ IOP) — brought straight out to boundary
-        - { port: IOADDR,   conn: cpu_0_ioaddr }
-        - { port: IOTRANS,  conn: cpu_0_iotrans }
-        - { port: IOWRITE,  conn: cpu_0_iowrite }
-        - { port: IOSIZE,   conn: cpu_0_iosize }
-        - { port: IOWDATA,  conn: cpu_0_iowdata }
-        - { port: IOPROT,   conn: cpu_0_ioprot }
-        - { port: IORDATA,  conn: cpu_0_iordata }
-        - { port: IOMASTER, conn: cpu_0_iomaster }
+        # Single-cycle I/O port (M0+ IOP) — DISABLED (IOP=0) and tied off
+        # internally; not exposed at the subsystem boundary so this stays a
+        # drop-in for nanosoc_ss_cpu. IORDATA driven to 0; outputs left open.
+        - { port: IOADDR,   conn: unconnected }
+        - { port: IOTRANS,  conn: unconnected }
+        - { port: IOWRITE,  conn: unconnected }
+        - { port: IOSIZE,   conn: unconnected }
+        - { port: IOWDATA,  conn: unconnected }
+        - { port: IOPROT,   conn: unconnected }
+        - { port: IORDATA,  conn: 32'h0 }
+        - { port: IOMASTER, conn: unconnected }
         # CPU sideband
         - { port: CORE_NMI,          conn: cpu_0_nmi }
         - { port: CORE_IRQ,          conn: cpu_0_irq }
@@ -170,12 +161,21 @@ module:
         - { port: CORE_SYSRESETREQ,  conn: cpu_0_sysresetreq }
         - { port: CORE_SLEEPING,     conn: cpu_0_sleeping }
         - { port: CORE_SLEEPDEEP,    conn: cpu_0_sleepdeep }
-        # Per-core SWD pins exposed at boundary (slcorem0p EXTERNAL_DAP=0,
-        # legacy internal CM0PDAP). EXTERNAL_DAP/DBGAHB are NOT used here.
-        - { port: CORE_SWDI,   conn: cpu_0_swdi }
-        - { port: CORE_SWCLK,  conn: cpu_0_swclk }
-        - { port: CORE_SWDO,   conn: cpu_0_swdo }
-        - { port: CORE_SWDOEN, conn: cpu_0_swdoen }
+        # Per-core SWD pins are tied off — slcorem0p with EXTERNAL_DAP=1 ignores
+        # them. The system DAP at the SoC top drives the DBGAHB bus.
+        - { port: CORE_SWDI,   conn: 1'b1 }
+        - { port: CORE_SWCLK,  conn: 1'b0 }
+        - { port: CORE_SWDO,   conn: unconnected, desc: "Tied off in EXTERNAL_DAP=1" }
+        - { port: CORE_SWDOEN, conn: unconnected, desc: "Tied off in EXTERNAL_DAP=1" }
+        # Debug AHB-AP slave bus — driven by the system DAP via matrix bridge
+        - { port: DBGAHB_SLVADDR,  conn: cpu_0_dbgahb_slvaddr }
+        - { port: DBGAHB_SLVWDATA, conn: cpu_0_dbgahb_slvwdata }
+        - { port: DBGAHB_SLVTRANS, conn: cpu_0_dbgahb_slvtrans }
+        - { port: DBGAHB_SLVWRITE, conn: cpu_0_dbgahb_slvwrite }
+        - { port: DBGAHB_SLVSIZE,  conn: cpu_0_dbgahb_slvsize }
+        - { port: DBGAHB_SLVRDATA, conn: cpu_0_dbgahb_slvrdata }
+        - { port: DBGAHB_SLVREADY, conn: cpu_0_dbgahb_slvready }
+        - { port: DBGAHB_SLVRESP,  conn: cpu_0_dbgahb_slvresp }
 
     - instance_name: u_region_bootrom_0
       module: nanosoc_region_bootrom

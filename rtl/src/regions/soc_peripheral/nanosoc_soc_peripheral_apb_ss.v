@@ -42,7 +42,16 @@ module nanosoc_soc_peripheral_apb_ss #(
   parameter APB_EXT_PORT12_ENABLE = 0,
   parameter APB_EXT_PORT13_ENABLE = 0,
   parameter APB_EXT_PORT14_ENABLE = 0,
-  parameter APB_EXT_PORT15_ENABLE = 0
+  parameter APB_EXT_PORT15_ENABLE = 0,
+  // Latch HWDATA at the AHB address phase in the AHB-to-APB bridge.
+  // Default 0 preserves legacy single-master behaviour. Set to 1 when this
+  // peripheral block is a target on a multi-master AHB matrix (e.g. driven by
+  // a Cortex-M0+ over the multicore interconnect): with REGISTER_WDATA=0 the
+  // bridge samples HWDATA combinatorially during the APB access, so a master
+  // that advances to its next transaction before the APB write completes
+  // corrupts back-to-back writes. REGISTER_WDATA=1 also enables the
+  // write-retire hold below. See the multicore-system local-override history.
+  parameter REGISTER_WDATA = 0
 ) (
   // AHB interface for AHB to APB bridge
   input  wire           HCLK,
@@ -238,12 +247,15 @@ module nanosoc_soc_peripheral_apb_ss #(
   wire             i_dualtimer2_int;
   wire             i_watchdog_int;
   wire             i_watchdog_rst;
-  
+
+  // Bridge HREADYOUT before the (optional) write-retire hold below
+  wire             i_hreadyout_raw;
+
   // AHB to APB bus bridge
   cmsdk_ahb_to_apb #(
     .ADDRWIDTH      (16),
     .REGISTER_RDATA (1),
-    .REGISTER_WDATA (0)
+    .REGISTER_WDATA (REGISTER_WDATA)
   ) u_ahb_to_apb (
     // AHB side
     .HCLK       (HCLK),
@@ -257,7 +269,7 @@ module nanosoc_soc_peripheral_apb_ss #(
     .HREADY     (HREADY),
     .HWDATA     (HWDATA),
 
-    .HREADYOUT  (HREADYOUT), // AHB Outputs
+    .HREADYOUT  (i_hreadyout_raw), // AHB Outputs (through write-retire hold)
     .HRDATA     (HRDATA),
     .HRESP      (HRESP),
 
@@ -276,6 +288,44 @@ module nanosoc_soc_peripheral_apb_ss #(
     .PREADY     (i_pready_mux),
     .PSLVERR    (i_pslverr_mux)
   );
+
+  // -------------------------------------------------------------------------
+  // Write-retire hold (only when REGISTER_WDATA=1).
+  //
+  // With REGISTER_WDATA=1 the bridge accepts the next AHB transaction IN the
+  // ENDOK cycle (HREADYOUT=1 -> apb_select=1). A DATA write followed
+  // immediately by a STATE read means the read's address phase overlaps the
+  // write's final cycle; the bridge has not yet updated rwdata_reg, so the
+  // STATE read can return stale data. Holding HREADYOUT=0 for the single ENDOK
+  // cycle forces ENDOK->IDLE before the read address is captured, giving
+  // rwdata_reg time to settle.
+  //
+  // When REGISTER_WDATA=0 this collapses to a direct passthrough, leaving
+  // legacy timing bit-identical.
+  // -------------------------------------------------------------------------
+  generate if (REGISTER_WDATA) begin : g_write_retire_hold
+    wire  i_ahb_accepted;
+    assign i_ahb_accepted = HSEL & HTRANS[1] & HREADY;
+
+    reg   r_last_was_write;
+    always @(posedge HCLK or negedge HRESETn) begin
+      if (!HRESETn)             r_last_was_write <= 1'b0;
+      else if (i_ahb_accepted)  r_last_was_write <= HWRITE;
+    end
+
+    reg   r_prev_hreadyout;
+    always @(posedge HCLK or negedge HRESETn) begin
+      if (!HRESETn) r_prev_hreadyout <= 1'b1;  // bridge idles with HREADYOUT=1
+      else          r_prev_hreadyout <= i_hreadyout_raw;
+    end
+
+    wire  w_hreadyout_rise = i_hreadyout_raw & ~r_prev_hreadyout;
+    wire  w_wr_hold        = r_last_was_write & w_hreadyout_rise;
+
+    assign HREADYOUT = i_hreadyout_raw & ~w_wr_hold;
+  end else begin : g_no_write_retire_hold
+    assign HREADYOUT = i_hreadyout_raw;
+  end endgenerate
 
   // APB slave multiplexer
   cmsdk_apb_slave_mux #( // Parameter to determine which ports are used

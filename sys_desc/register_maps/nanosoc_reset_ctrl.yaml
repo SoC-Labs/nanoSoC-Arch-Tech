@@ -1,0 +1,197 @@
+#-----------------------------------------------------------------------------
+# NanoSoC Per-Core Reset Controller Register Map
+# Based on the CMSDK / NanoSoC System Controller (nanosoc_sysctrl)
+#
+# A joint work commissioned on behalf of SoC Labs, under Arm Academic Access license.
+# Copyright 2026, SoC Labs (www.soclabs.org)
+#-----------------------------------------------------------------------------
+
+register_map:
+  name: nanosoc_reset_ctrl
+  module: nanosoc_reset_ctrl
+  gen: False
+  description: >
+    Per-core reset controller register block. Configures lockup-reset enable,
+    records the cause of the last reset for each core (W1C), and provides a
+    self-clearing software-reset register. PID/CID identification ROM is
+    inherited from the NanoSoC system controller.
+  address_width: 12
+  data_width: 32
+
+  identification:
+    pid4: 0x04
+    pid5: 0x00
+    pid6: 0x00
+    pid7: 0x00
+    pid0: 0x26
+    pid1: 0xB8
+    pid2: 0x1B
+    pid3: 0x00
+    cid0: 0x0D
+    cid1: 0xF0
+    cid2: 0x05
+    cid3: 0xB1
+
+  registers:
+    - name: REMAP_CTRL
+      offset: 0x000
+      width: 32
+      access: RO
+      reset_value: 0x00000000
+      description: Reserved (parity with nanosoc_sysctrl; reads as zero)
+
+    - name: PMU_CTRL
+      offset: 0x004
+      width: 32
+      access: RO
+      reset_value: 0x00000000
+      description: Reserved (parity with nanosoc_sysctrl; reads as zero)
+
+    - name: SYS_CTRL
+      offset: 0x008
+      width: 32
+      access: RW
+      reset_value: 0x00000000
+      description: System control register
+      fields:
+        - name: LOCKUPRESETEN
+          bits: "0"
+          access: RW
+          reset_value: 0
+          description: >
+            Enable automatic reset when a CPU enters lockup. Applies to BOTH
+            cores (gates cpu0_lockup and cpu1_lockup into the reset request).
+
+    - name: RESET_INFO_CPU0
+      offset: 0x010
+      width: 32
+      access: W1C
+      reset_value: 0x00000000
+      description: CPU0 reset information (cause of last reset; write 1 to clear)
+      fields:
+        - name: SYSRESETREQ
+          bits: "0"
+          access: W1C
+          description: CPU0 system reset request occurred (SYSRESETREQ)
+        - name: LOCKUPRESET
+          bits: "2"
+          access: W1C
+          description: CPU0 lockup reset occurred (lockup with LOCKUPRESETEN=1)
+        - name: EXTRESET
+          bits: "3"
+          access: W1C
+          description: External reset request occurred (ext_sysresetreq)
+
+    - name: RESET_INFO_CPU1
+      offset: 0x014
+      width: 32
+      access: W1C
+      reset_value: 0x00000000
+      description: CPU1 reset information (cause of last reset; write 1 to clear)
+      fields:
+        - name: SYSRESETREQ
+          bits: "0"
+          access: W1C
+          description: CPU1 system reset request occurred (SYSRESETREQ)
+        - name: WDOGRESETREQ
+          bits: "1"
+          access: W1C
+          description: CPU1 watchdog reset request occurred
+        - name: LOCKUPRESET
+          bits: "2"
+          access: W1C
+          description: CPU1 lockup reset occurred (lockup with LOCKUPRESETEN=1)
+        - name: EXTRESET
+          bits: "3"
+          access: W1C
+          description: External reset request occurred (ext_sysresetreq)
+
+    - name: SW_RESET
+      offset: 0x020
+      width: 32
+      access: W
+      reset_value: 0x00000000
+      description: >
+        Software reset register. Writing 1 to a bit generates a one-shot reset
+        request for that core (self-clearing). Always reads back 0.
+      fields:
+        - name: CPU0_SWRST
+          bits: "0"
+          access: W
+          description: Write 1 to issue a one-shot software reset of CPU0
+        - name: CPU1_SWRST
+          bits: "1"
+          access: W
+          description: Write 1 to issue a one-shot software reset of CPU1
+
+    - name: PID4
+      offset: 0xFD0
+      width: 32
+      access: RO
+      description: Peripheral ID 4
+
+    - name: PID5
+      offset: 0xFD4
+      width: 32
+      access: RO
+      description: Peripheral ID 5
+
+    - name: PID6
+      offset: 0xFD8
+      width: 32
+      access: RO
+      description: Peripheral ID 6
+
+    - name: PID7
+      offset: 0xFDC
+      width: 32
+      access: RO
+      description: Peripheral ID 7
+
+    - name: PID0
+      offset: 0xFE0
+      width: 32
+      access: RO
+      description: Peripheral ID 0
+
+    - name: PID1
+      offset: 0xFE4
+      width: 32
+      access: RO
+      description: Peripheral ID 1
+
+    - name: PID2
+      offset: 0xFE8
+      width: 32
+      access: RO
+      description: Peripheral ID 2
+
+    - name: PID3
+      offset: 0xFEC
+      width: 32
+      access: RO
+      description: Peripheral ID 3
+
+    - name: CID0
+      offset: 0xFF0
+      width: 32
+      access: RO
+      description: Component ID 0
+
+    - name: CID1
+      offset: 0xFF4
+      width: 32
+      access: RO
+      description: Component ID 1
+
+    - name: CID2
+      offset: 0xFF8
+      width: 32
+      access: RO
+      description: Component ID 2
+
+    - name: CID3
+      offset: 0xFFC
+      width: 32
+      access: RO
+      description: Component ID 3

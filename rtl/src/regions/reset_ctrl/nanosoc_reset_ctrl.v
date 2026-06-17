@@ -201,8 +201,13 @@ module nanosoc_reset_ctrl #(
   assign reg_lockupreset_write = reg_write_enable &
                                  (reg_addr[11:2] == 10'h002) & reg_byte_strobe[0];
 
-  always @(posedge HCLK or negedge HRESETn) begin
-    if (~HRESETn)
+  // Persist LOCKUPRESETEN across a CPU0/fabric HRESETn dip: clock on FCLK and
+  // async-clear only on PORESETn, matching the RESET_INFO capture domain below.
+  // On HRESETn it would disarm on every CPU0/external reset, silently dropping
+  // lockup protection exactly when it is needed. The write enable/data are the
+  // same HCLK-domain signals the RESET_INFO captures already sample into FCLK.
+  always @(posedge FCLK or negedge PORESETn) begin
+    if (~PORESETn)
       reg_lockupreset <= 1'b0;
     else if (reg_lockupreset_write)
       reg_lockupreset <= HWDATA[0];

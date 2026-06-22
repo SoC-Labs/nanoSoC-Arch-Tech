@@ -1,0 +1,58 @@
+#-----------------------------------------------------------------------------
+# Managed-Core Remap / Boot-Gate Control Register (core_remap_ctrl)
+# A joint work commissioned on behalf of SoC Labs, under Arm Academic Access license.
+#
+# Contributors
+#
+# David Mapstone (d.a.mapstone@soton.ac.uk)
+#
+# Copyright 2026, SoC Labs (www.soclabs.org)
+#-----------------------------------------------------------------------------
+# Derived from RTL: rtl/src/subsystems/ipc/core_remap_ctrl.v
+# (generalised from the multicore system's cpu1_remap_ctrl — same logic).
+#
+# Minimal AHB-Lite single-register slave for a dual-core nanosoc where one core
+# is the MANAGER and the other is a boot-gated MANAGED core (M0+/M0+ or
+# M0+/M4). Its REMAP_CTRL register drives the managed core's sys_remap_ctrl:
+#   bit0 REMAP    — when 1, the managed core's address 0x00000000 aliases its
+#                   local IMEM (else BOOTROM). The managed core's stage-0
+#                   bootrom sets this just before branching into the DMA-copied
+#                   application so the app's vector table is used. (A core with
+#                   VTOR may instead program VTOR; this alias is the VTOR-less
+#                   / pre-VTOR path.)
+#   bit1 BOOTGATE — when 0, the managed core is held in hardware reset. The
+#                   MANAGER core's stage-0 writes 0x2 (after XiP/flash is ready)
+#                   to release it. Folded into the managed core's resetn by the
+#                   reset controller. Write-1-set; cleared only by PORESETn so
+#                   the gate value persists across a manager (HRESETn) reset.
+
+module:
+  name: core_remap_ctrl
+  gen: False
+  desc: >
+    Managed-core memory-remap + boot-gate control register. A single AHB-Lite
+    32-bit register whose low nibble drives the managed (boot-gated) core's
+    sys_remap_ctrl: bit0 moves address 0x0 from BOOTROM to IMEM after boot,
+    bit1 is the boot-gate the manager core releases once flash/XiP is ready.
+    Write-1-set; storage reset by the stable PORESETn only (persists across a
+    manager-core HRESETn reset).
+
+  params:
+    SYS_ADDR_W:  { type: int, default: 32, desc: "System address width" }
+    SYS_DATA_W:  { type: int, default: 32, desc: "System data width" }
+
+  interfaces:
+    # Clock and Reset
+    - { name: HCLK,    type: wire, direction: in, params: { WIDTH: 1 }, desc: "AHB clock" }
+    - { name: HRESETn, type: wire, direction: in, params: { WIDTH: 1 }, desc: "AHB bus-interface reset (active low) — resets the address/data-phase handshake flop only" }
+    # Stable power-on reset (= external sys_sysresetn). Resets the REMAP_CTRL
+    # storage (bootgate/remap bits) so they persist across a manager-core
+    # (HRESETn) reset and the managed core is not re-gated. Mirrors
+    # nanosoc_reset_ctrl's PORESETn.
+    - { name: PORESETn, type: wire, direction: in, params: { WIDTH: 1 }, desc: "Stable power-on reset (active low) — resets the bootgate/remap storage; persists across a manager-core HRESETn reset" }
+
+    # AHB slave port (single register)
+    - { name: ahb_slave, type: ahb, direction: target, params: { ADDR_WIDTH: $SYS_ADDR_W, DATA_WIDTH: $SYS_DATA_W }, desc: "AHB slave port — REMAP_CTRL register" }
+
+    # Remap control output -> managed core's sys_remap_ctrl
+    - { name: remap_ctrl, type: wire, direction: out, params: { WIDTH: 4 }, desc: "Managed-core address remap + boot-gate control (bit0 = 0x0->IMEM, bit1 = bootgate release)" }

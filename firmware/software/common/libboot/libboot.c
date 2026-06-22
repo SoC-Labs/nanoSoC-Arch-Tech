@@ -57,6 +57,7 @@ boot_status_t boot_verify(const void *flash_base, const boot_entry_t *e)
 
 void boot_handoff(uint32_t vtor)
 {
+#if defined(__arm__)
     uint32_t sp = *(volatile uint32_t *)(uintptr_t)vtor;
     uint32_t pc = *(volatile uint32_t *)(uintptr_t)(vtor + 4u);
     SCB_VTOR = vtor;
@@ -64,5 +65,8 @@ void boot_handoff(uint32_t vtor)
     __asm volatile ("isb");
     __asm volatile ("msr msp, %0" : : "r" (sp) : );
     __asm volatile ("bx  %0"      : : "r" (pc) : );
+#else
+    (void)vtor;   /* host build (unit tests): hand-off is ARM/MMIO-only */
+#endif
     for (;;) { }
 }

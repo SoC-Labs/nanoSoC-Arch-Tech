@@ -1,0 +1,91 @@
+#-----------------------------------------------------------------------------
+# SoC Labs Cortex-M4 Core Wrapper (slcorem4) Module
+# A joint work commissioned on behalf of SoC Labs, under Arm Academic Access license.
+#
+# Contributors
+#   David Mapstone (d.a.mapstone@soton.ac.uk)
+#
+# Copyright 2026, SoC Labs (www.soclabs.org)
+#-----------------------------------------------------------------------------
+# Derived from RTL: compute-subsystem/src/rtl/cortexm4_ahb_wrap.v
+#
+# Hand-authored wrapper around the Arm CORTEXM4INTEGRATION IP. The integration
+# IP itself is sourced READ-ONLY from /research/AAA/ip_library/Cortex-M4 via the
+# flist (never copied/edited here); this block describes only the wrapper's
+# boundary so nanosoc_gen can instantiate + wire it like any core block.
+#
+# v1 (single-master): the wrapper merges the M4's three native master buses
+# (I-Code + D-Code via a code-mux, and System) into ONE standard AHB-Lite master
+# `ahb_master`, adapting HRESP[1:0]->[0], tying MEMATTR, and terminating
+# exclusives. It also normalises debug to a DBGAHB-style slave bus so the SoC's
+# existing CoreSight DAP / matrix-bridge wiring is reused (the M4's own SW/JTAG-DP
+# is tied off inside the wrapper). This makes slcorem4 a structural drop-in for
+# the M0+ core block (slcorem0p) from the generator's point of view.
+#
+# Clock/reset: unlike slcorem0p (which has an integrated PRMU and GENERATES
+# sys_hclk/sys_hresetn), the M4 takes its clocks/resets as INPUTS — the compute
+# subsystem is a clock/reset CONSUMER, driven by the SoC manager core (CPU1 M0+).
+#
+# The structured 2-master (Code+System) upgrade is a documented v2 (see
+# docs/M4_STRUCTURED_BUS_GENERATOR_DESIGN.md); it keeps this same external
+# boundary, so the SoC integration does not change.
+
+module:
+  name: slcorem4
+  gen: False
+  desc: >
+    ARM Cortex-M4 core wrapper (CORTEXM4INTEGRATION + code-mux + AHB-Lite
+    protocol adaptation). Presents a single AHB-Lite master, wide NVIC IRQ bus,
+    CPU sideband, and a DBGAHB debug-slave bus. Clock/reset consumer (no PRMU).
+    FPU + MPU enabled; trace/ETM excluded (TRACE_LVL=1).
+
+  params:
+    # Cortex-M4 integration parameters (mirror CORTEXM4INTEGRATION; see the IP).
+    FPU_PRESENT:     { type: int, default: 1,  desc: "Include the FPU (single-precision M4F)" }
+    MPU_PRESENT:     { type: int, default: 1,  desc: "Include the MPU" }
+    NUM_IRQ:         { type: int, default: 64, desc: "Number of external NVIC IRQ lines (1..240)" }
+    LVL_WIDTH:       { type: int, default: 4,  desc: "Interrupt priority bits (3..8)" }
+    TRACE_LVL:       { type: int, default: 1,  desc: "0=none,1=ITM/DWT,2=+ETM(license),3=+HTM" }
+    DEBUG_LVL:       { type: int, default: 3,  desc: "0=none(no DAP)..3=full" }
+    WIC_PRESENT:     { type: int, default: 0,  desc: "Wake-up interrupt controller" }
+    BB_PRESENT:      { type: int, default: 1,  desc: "Bit-banding" }
+    CLKGATE_PRESENT: { type: int, default: 0,  desc: "Architectural clock gating" }
+    RESET_ALL_REGS:  { type: int, default: 0,  desc: "Reset all registers" }
+    BE:              { type: int, default: 0,  desc: "Endianness: 0=little (BIGEND), 1=big" }
+
+  interfaces:
+    # Clock and Reset INPUTS (consumer — driven by the SoC manager PRMU)
+    - { name: SYS_FCLK,       type: wire, direction: in, params: { WIDTH: 1 }, desc: "Free-running clock input" }
+    - { name: SYS_HCLK,       type: wire, direction: in, params: { WIDTH: 1 }, desc: "AHB clock input (from manager PRMU)" }
+    - { name: SYS_PORESETn,   type: wire, direction: in, params: { WIDTH: 1 }, desc: "Power-on reset input (active low)" }
+    - { name: SYS_HRESETn,    type: wire, direction: in, params: { WIDTH: 1 }, desc: "AHB reset input (active low)" }
+    - { name: SYS_SYSRESETn,  type: wire, direction: in, params: { WIDTH: 1 }, desc: "System reset input (active low)" }
+    - { name: SYS_SCANENABLE, type: wire, direction: in, params: { WIDTH: 1 }, desc: "Scan mode enable" }
+    - { name: SYS_TESTMODE,   type: wire, direction: in, params: { WIDTH: 1 }, desc: "Test mode enable" }
+
+    # Single merged AHB-Lite master (I+D code-mux + System, protocol-adapted)
+    - { name: ahb_master, type: ahb, direction: initiator, params: { ADDR_WIDTH: 32, DATA_WIDTH: 32 }, desc: "Merged AHB-Lite master port (v1 single-master)" }
+
+    # CPU sideband
+    - { name: CORE_NMI,         type: wire, direction: in,  params: { WIDTH: 1 },        desc: "Non-maskable interrupt" }
+    - { name: CORE_IRQ,         type: wire, direction: in,  params: { WIDTH: $NUM_IRQ }, desc: "NVIC maskable interrupt requests" }
+    - { name: CORE_TXEV,        type: wire, direction: out, params: { WIDTH: 1 },        desc: "Send event (SEV) output" }
+    - { name: CORE_RXEV,        type: wire, direction: in,  params: { WIDTH: 1 },        desc: "Receive event input" }
+    - { name: CORE_LOCKUP,      type: wire, direction: out, params: { WIDTH: 1 },        desc: "CPU lockup status" }
+    - { name: CORE_SYSRESETREQ, type: wire, direction: out, params: { WIDTH: 1 },        desc: "CPU system reset request" }
+    - { name: CORE_SLEEPING,    type: wire, direction: out, params: { WIDTH: 1 },        desc: "CPU sleeping status" }
+    - { name: CORE_SLEEPDEEP,   type: wire, direction: out, params: { WIDTH: 1 },        desc: "CPU deep sleep status" }
+    - { name: CORE_FPU_FLAGS,   type: wire, direction: out, params: { WIDTH: 6 },        desc: "FPU cumulative exception flags {IXC,OFC,UFC,IOC,DZC,IDC}" }
+
+    # Debug AHB-AP slave bus (wrapper normalises the M4 debug to this DBGAHB
+    # group so the SoC's existing CoreSight DAP / matrix bridge drives it; the
+    # M4's own SW/JTAG-DP is tied off inside the wrapper). Same shape as the M0+
+    # EXTERNAL_DAP=1 bus -> drop-in for the SoC debug wiring.
+    - { name: DBGAHB_SLVADDR,  type: wire, direction: in,  params: { WIDTH: 32 }, desc: "Debug slave address from system DAP" }
+    - { name: DBGAHB_SLVWDATA, type: wire, direction: in,  params: { WIDTH: 32 }, desc: "Debug slave write data" }
+    - { name: DBGAHB_SLVTRANS, type: wire, direction: in,  params: { WIDTH: 2 },  desc: "Debug slave transfer type" }
+    - { name: DBGAHB_SLVWRITE, type: wire, direction: in,  params: { WIDTH: 1 },  desc: "Debug slave write enable" }
+    - { name: DBGAHB_SLVSIZE,  type: wire, direction: in,  params: { WIDTH: 2 },  desc: "Debug slave transfer size" }
+    - { name: DBGAHB_SLVRDATA, type: wire, direction: out, params: { WIDTH: 32 }, desc: "Debug slave read data to system DAP" }
+    - { name: DBGAHB_SLVREADY, type: wire, direction: out, params: { WIDTH: 1 },  desc: "Debug slave ready to system DAP" }
+    - { name: DBGAHB_SLVRESP,  type: wire, direction: out, params: { WIDTH: 1 },  desc: "Debug slave response to system DAP" }

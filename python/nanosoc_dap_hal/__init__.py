@@ -17,6 +17,12 @@ from nanosoc_dap_hal.channel import (
     RegisterChannel,
 )
 from nanosoc_dap_hal.swd import SwdRegisterChannel
+from nanosoc_dap_hal.loader import (
+    image_words,
+    inject_procs,
+    launch_imem,
+    proc_defs,
+)
 
 __all__ = [
     "Channel",
@@ -24,4 +30,8 @@ __all__ = [
     "RegRead",
     "CoreStatus",
     "SwdRegisterChannel",
+    "launch_imem",
+    "inject_procs",
+    "proc_defs",
+    "image_words",
 ]

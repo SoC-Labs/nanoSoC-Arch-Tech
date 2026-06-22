@@ -40,6 +40,24 @@ BOOT_ENTRY_FLAG_VALID = 0x01
 BOOT_TABLE_ENTRY_SIZE = 32      # bytes per entry
 BOOT_TABLE_HEADER_SIZE = 16     # bytes for header
 
+# ---------------------------------------------------------------------------
+# Boot ROLE -> PHYSICAL core_id mapping (CPU1-chip-control inversion, dec. B).
+#
+# Entries are written keyed by PHYSICAL core_id (the --app/--stage1
+# CORE_ID:file argument), which is UNCHANGED by the inversion: eth/CPU0 stays
+# physical entry 0 and CPU1 stays physical entry 1. The boot-role swap is
+# purely behavioural in the bootroms (the chip-control MANAGER is CPU1, the
+# SECONDARY is eth/CPU0). These role names document, for image builders, which
+# physical slot each boot role maps to; the firmware side mirrors them in
+# firmware/include/nanosoc_multicore_addrmap.h
+# (NANOSOC_BOOT_ROLE_MASTER_IDX / NANOSOC_BOOT_ROLE_SECONDARY_IDX). Keeping the
+# physical keying fixed is what lets the existing flash-builder tests stay green.
+# ---------------------------------------------------------------------------
+BOOT_PHYS_IDX_CPU0      = 0     # physical entry 0 = eth/CPU0
+BOOT_PHYS_IDX_CPU1      = 1     # physical entry 1 = CPU1
+BOOT_ROLE_MASTER_IDX    = BOOT_PHYS_IDX_CPU1   # chip-control MANAGER = CPU1
+BOOT_ROLE_SECONDARY_IDX = BOOT_PHYS_IDX_CPU0   # SECONDARY            = eth/CPU0
+
 
 def crc32(data):
     """Compute CRC32 matching the boot_table.h implementation."""

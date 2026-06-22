@@ -76,6 +76,7 @@ module nanosoc_reset_ctrl #(
   input  wire                   cpu1_lockup,
   input  wire                   ext_sysresetreq,
   input  wire                   cpu1_bootgate,
+  input  wire                   cpu0_bootgate,
 
   // Per-core reset outputs (active-low)
   output wire                   cpu0_resetn,
@@ -349,9 +350,17 @@ module nanosoc_reset_ctrl #(
   // --------------------------------------------------------------------------
   // Outputs
   // --------------------------------------------------------------------------
-  // Active-low core resets. cpu1_bootgate folded in: bootgate=0 holds CPU1 in
-  // reset (drives cpu1_resetn low) regardless of the stretcher state.
-  assign cpu0_resetn = ~cpu0_reset_pulse;
+  // Active-low core resets. Each core's boot-gate is folded in: bootgate=0
+  // holds that core in reset (drives its resetn low) regardless of the
+  // stretcher state.
+  //   cpu1_bootgate — legacy eth-releases-CPU1 path (set by CPU0 stage-0).
+  //   cpu0_bootgate — CPU1-chip-control inversion: CPU1 (the chip-control
+  //                   manager) releases CPU0/eth. At power-on cpu0_bootgate=0
+  //                   so CPU0 is held until CPU1's stage-0 sets it (mirror of
+  //                   the cpu1_bootgate mechanism). Both gate bits live in
+  //                   cpu1_remap_ctrl and reset only on the stable PORESETn,
+  //                   so a gate VALUE persists across the manager's HRESETn.
+  assign cpu0_resetn = cpu0_bootgate & ~cpu0_reset_pulse;
   assign cpu1_resetn = cpu1_bootgate & ~cpu1_reset_pulse;
 
   // AHB response

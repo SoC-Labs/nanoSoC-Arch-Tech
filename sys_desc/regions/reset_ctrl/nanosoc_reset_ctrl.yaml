@@ -49,7 +49,8 @@ module:
     - { name: cpu0_lockup,       type: wire, direction: in, params: { WIDTH: 1 }, desc: "CPU0 lockup indication" }
     - { name: cpu1_lockup,       type: wire, direction: in, params: { WIDTH: 1 }, desc: "CPU1 lockup indication" }
     - { name: ext_sysresetreq,   type: wire, direction: in, params: { WIDTH: 1 }, desc: "External system reset request (resets both cores)" }
-    - { name: cpu1_bootgate,     type: wire, direction: in, params: { WIDTH: 1 }, desc: "CPU1 boot-gate; 0 holds CPU1 in reset" }
+    - { name: cpu1_bootgate,     type: wire, direction: in, params: { WIDTH: 1 }, desc: "CPU1 boot-gate; 0 holds CPU1 in reset (legacy eth-releases-CPU1 path)" }
+    - { name: cpu0_bootgate,     type: wire, direction: in, params: { WIDTH: 1 }, desc: "CPU0 boot-gate; 0 holds CPU0/eth in reset (CPU1-chip-control inversion: CPU1 releases CPU0)" }
 
     # Per-core reset outputs (active-low)
     - { name: cpu0_resetn, type: wire, direction: out, params: { WIDTH: 1 }, desc: "CPU0 reset (active low)" }

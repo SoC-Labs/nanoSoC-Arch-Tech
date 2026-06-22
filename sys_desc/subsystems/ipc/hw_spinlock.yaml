@@ -1,0 +1,47 @@
+#-----------------------------------------------------------------------------
+# Hardware Spinlock Block (hw_spinlock)
+# A joint work commissioned on behalf of SoC Labs, under Arm Academic Access license.
+#
+# Contributors
+#
+# David Mapstone (d.a.mapstone@soton.ac.uk)
+#
+# Copyright 2026, SoC Labs (www.soclabs.org)
+#-----------------------------------------------------------------------------
+# Derived from RTL: src/rtl/wrappers/hw_spinlock.v
+#
+# RP2040-SIO-style hardware mutexes on the multicore interconnect, reachable by
+# both CPU initiators and the DAP. N_LOCKS single-bit locks, each with a 2-bit
+# owner {free, CPU0, CPU1, DBG}. The requester is selected by ADDRESS via three
+# alias pages (the generated matrix presents no requester-ID to slaves), so no
+# generator sideband is needed. Acquire is a READ side-effect (read-to-acquire);
+# release is a write to the same alias page. cpu0_resetn / cpu1_resetn (from
+# u_reset_ctrl_0) auto-release locks owned by a resetting core.
+
+module:
+  name: hw_spinlock
+  gen: False
+  desc: >
+    Hardware spinlock block. N_LOCKS single-bit cross-core mutexes acquired by
+    a read side-effect on a per-requester alias page (CPU0 0x000, CPU1 0x100,
+    DBG 0x200) and released by a write to the same page. OWNER (0x300) is a RO
+    diagnostic view, FORCE_RELEASE (0x304) is a WO recovery path. Per-core reset
+    inputs auto-release locks owned by the resetting core.
+
+  params:
+    SYS_ADDR_W:  { type: int, default: 32, desc: "System address width" }
+    SYS_DATA_W:  { type: int, default: 32, desc: "System data width" }
+    N_LOCKS:     { type: int, default: 16, desc: "Number of single-bit locks" }
+
+  interfaces:
+    # Clock and Reset
+    - { name: HCLK,    type: wire, direction: in, params: { WIDTH: 1 }, desc: "AHB clock" }
+    - { name: HRESETn, type: wire, direction: in, params: { WIDTH: 1 }, desc: "AHB reset (active low) — frees all locks" }
+
+    # AHB slave port (register bank)
+    - { name: ahb_slave, type: ahb, direction: target, params: { ADDR_WIDTH: $SYS_ADDR_W, DATA_WIDTH: $SYS_DATA_W }, desc: "AHB slave port — spinlock alias pages + OWNER/FORCE_RELEASE" }
+
+    # Per-core reset auto-release strobes (active-low, from u_reset_ctrl_0:
+    # reset_ctrl_cpu0_resetn_w / reset_ctrl_cpu1_resetn_w).
+    - { name: cpu0_resetn, type: wire, direction: in, params: { WIDTH: 1 }, desc: "CPU0 reset (active low); when low, free all CPU0-owned locks" }
+    - { name: cpu1_resetn, type: wire, direction: in, params: { WIDTH: 1 }, desc: "CPU1 reset (active low); when low, free all CPU1-owned locks" }

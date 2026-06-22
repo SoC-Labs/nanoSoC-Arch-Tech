@@ -1,0 +1,157 @@
+#-----------------------------------------------------------------------------
+# Event Routing Control Register Map (evt_route_ctrl)
+#
+# A joint work commissioned on behalf of SoC Labs, under Arm Academic Access license.
+# Copyright 2026, SoC Labs (www.soclabs.org)
+#-----------------------------------------------------------------------------
+# Descriptive register map (gen: False) for the hand-written evt_route_ctrl
+# AHB-Lite register slave (src/rtl/wrappers/evt_route_ctrl.v). Drives software
+# headers and the device-discovery table; the RTL is hand-written.
+
+register_map:
+  name: evt_route_ctrl
+  module: evt_route_ctrl
+  description: >
+    Dynamic event-routing control. Per-destination-CPU bitmask registers select
+    which DMA-230 done channels raise each CPU's NVIC DMA-done IRQ and
+    (independently) each CPU's RXEV (WFE wake). Bits [31:N_SRC] are RAZ/WI.
+    Reset routes all DMA-done channels to CPU1 (IRQ_ROUTE_CPU1 = 0x0000000F).
+  address_width: 12
+  data_width: 32
+
+  identification:
+    pid4: 0x04
+    pid5: 0x00
+    pid6: 0x00
+    pid7: 0x00
+    pid0: 0x22
+    pid1: 0xB8
+    pid2: 0x1B
+    pid3: 0x00
+    cid0: 0x0D
+    cid1: 0xF0
+    cid2: 0x05
+    cid3: 0xB1
+
+  registers:
+    - name: IRQ_ROUTE_CPU0
+      offset: 0x000
+      width: 32
+      access: RW
+      reset_value: 0x00000000
+      description: >
+        DMA-done -> CPU0 NVIC IRQ enable, one bit per channel.
+        bit i (i in 0..N_SRC-1) = 1 routes dma230_done_w[i] to CPU0.
+
+    - name: IRQ_ROUTE_CPU1
+      offset: 0x004
+      width: 32
+      access: RW
+      reset_value: 0x0000000F
+      description: >
+        DMA-done -> CPU1 NVIC IRQ enable, one bit per channel.
+        RESET 0x0000000F: all N_SRC=4 DMA-done channels route to CPU1
+        (chip-control) at power-on. LOAD-BEARING reset default.
+
+    - name: EVT_ROUTE_CPU0
+      offset: 0x008
+      width: 32
+      access: RW
+      reset_value: 0x00000000
+      description: >
+        DMA-done -> CPU0 RXEV (WFE wake) enable, one bit per channel.
+
+    - name: EVT_ROUTE_CPU1
+      offset: 0x00C
+      width: 32
+      access: RW
+      reset_value: 0x00000000
+      description: >
+        DMA-done -> CPU1 RXEV (WFE wake) enable, one bit per channel.
+
+    - name: ROUTE_LOCK
+      offset: 0x010
+      width: 32
+      access: RW
+      reset_value: 0x00000000
+      description: >
+        Routing lock. bit0 is write-1-set: once set to 1, the four ROUTE
+        registers become read-only until system reset (HRESETn). Anti-clobber.
+      fields:
+        - name: LOCK
+          bits: "0"
+          access: RW
+          reset_value: 0
+          description: Write 1 to freeze the route registers until reset (W1S)
+
+    - name: PID4
+      offset: 0xFD0
+      width: 32
+      access: RO
+      description: Peripheral ID 4
+
+    - name: PID5
+      offset: 0xFD4
+      width: 32
+      access: RO
+      description: Peripheral ID 5
+
+    - name: PID6
+      offset: 0xFD8
+      width: 32
+      access: RO
+      description: Peripheral ID 6
+
+    - name: PID7
+      offset: 0xFDC
+      width: 32
+      access: RO
+      description: Peripheral ID 7
+
+    - name: PID0
+      offset: 0xFE0
+      width: 32
+      access: RO
+      description: Peripheral ID 0
+
+    - name: PID1
+      offset: 0xFE4
+      width: 32
+      access: RO
+      description: Peripheral ID 1
+
+    - name: PID2
+      offset: 0xFE8
+      width: 32
+      access: RO
+      description: Peripheral ID 2
+
+    - name: PID3
+      offset: 0xFEC
+      width: 32
+      access: RO
+      description: Peripheral ID 3 (includes ECOREVNUM in bits [7:4])
+
+    - name: CID0
+      offset: 0xFF0
+      width: 32
+      access: RO
+      description: Component ID 0
+
+    - name: CID1
+      offset: 0xFF4
+      width: 32
+      access: RO
+      description: Component ID 1
+
+    - name: CID2
+      offset: 0xFF8
+      width: 32
+      access: RO
+      description: Component ID 2
+
+    - name: CID3
+      offset: 0xFFC
+      width: 32
+      access: RO
+      description: Component ID 3

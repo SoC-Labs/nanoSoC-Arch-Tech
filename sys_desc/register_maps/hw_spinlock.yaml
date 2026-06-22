@@ -1,0 +1,193 @@
+#-----------------------------------------------------------------------------
+# Hardware Spinlock Block Register Map (hw_spinlock)
+#
+# A joint work commissioned on behalf of SoC Labs, under Arm Academic Access license.
+# Copyright 2026, SoC Labs (www.soclabs.org)
+#-----------------------------------------------------------------------------
+# Descriptive register map (gen: False) for the hand-written hw_spinlock
+# AHB-Lite register slave (src/rtl/wrappers/hw_spinlock.v). Drives software
+# headers and the device-discovery table; the RTL is hand-written.
+#
+# DESIGN — address-aliased acquire. The generated AHB matrix presents no
+# requester-ID to slaves, so the requester is selected by ADDRESS. Three alias
+# pages map the same N_LOCKS=16 single-bit locks, one per requester:
+#
+#   0x000 + n*4  LOCKn_CPU0   requester CPU0
+#   0x100 + n*4  LOCKn_CPU1   requester CPU1
+#   0x200 + n*4  LOCKn_DBG    requester DBG  (the DAP / bench scripts)
+#
+# ACQUIRE is a READ side-effect (read-to-acquire). Reading LOCKn_<req> attempts
+# to acquire lock n as <req>:
+#   * lock free          -> owner becomes <req>, read returns 1 (acquired)
+#   * owner == <req>      -> read returns 1 (re-entrant, harmless)
+#   * owner == other      -> read returns 0 (held by another owner; no change)
+# The acquire fires exactly once per accepted read, in the AHB data phase, and
+# is a single zero-wait read — immune to the multi-beat write-contention that
+# causes the IPC back-to-back-write wedge.
+#
+# RELEASE is a WRITE (any data) to LOCKn_<req>: frees lock n iff its current
+# owner == <req>. A write from a non-owner page is a no-op.
+#
+# The scheme is COOPERATIVE: CPU0 *could* read CPU1's alias page and acquire as
+# CPU1. This is fine for trusted firmware; do not rely on it for isolation.
+#
+# Owner code (2 bits): 00 free, 01 CPU0, 10 CPU1, 11 DBG.
+
+register_map:
+  name: hw_spinlock
+  module: hw_spinlock
+  description: >
+    Hardware spinlock block. 16 single-bit cross-core mutexes, each with a 2-bit
+    owner {00 free, 01 CPU0, 10 CPU1, 11 DBG}. Acquired by a READ side-effect on
+    a per-requester alias page (CPU0 0x000, CPU1 0x100, DBG 0x200): the read
+    returns 1 if it acquired (or already owned by the requester) and 0 if held by
+    another owner. Released by a WRITE (any data) to the same page iff the
+    current owner matches the page. OWNER (0x300) is a RO packed diagnostic view
+    (2 bits/lock, lock0 in [1:0]); FORCE_RELEASE (0x304) is a WO recovery path
+    (write bit n frees lock n). cpu0_resetn / cpu1_resetn auto-release locks
+    owned by a resetting core. All locks free at HRESETn.
+  address_width: 12
+  data_width: 32
+
+  identification:
+    pid4: 0x04
+    pid5: 0x00
+    pid6: 0x00
+    pid7: 0x00
+    pid0: 0x23          # bumped from evt_route_ctrl's 0x22 to identify this block
+    pid1: 0xB8
+    pid2: 0x1B
+    pid3: 0x00
+    cid0: 0x0D          # reuse evt_route component IDs
+    cid1: 0xF0
+    cid2: 0x05
+    cid3: 0xB1
+
+  registers:
+    # ---- CPU0 alias page (0x000..0x03C, 16 locks) --------------------------
+    - name: LOCK0_CPU0
+      offset: 0x000
+      width: 32
+      access: RW
+      reset_value: 0x00000000
+      description: >
+        Lock 0, CPU0 alias. READ = attempt acquire as CPU0 (returns 1 if
+        acquired or already CPU0-owned, 0 if held by another owner; side-effect
+        grants the lock to CPU0 if it was free). WRITE (any data) releases lock 0
+        iff its current owner is CPU0. LOCKn_CPU0 = 0x000 + n*4 for n in 0..15.
+
+    # ---- CPU1 alias page (0x100..0x13C, 16 locks) --------------------------
+    - name: LOCK0_CPU1
+      offset: 0x100
+      width: 32
+      access: RW
+      reset_value: 0x00000000
+      description: >
+        Lock 0, CPU1 alias. READ = attempt acquire as CPU1; WRITE = release iff
+        owner is CPU1. LOCKn_CPU1 = 0x100 + n*4 for n in 0..15.
+
+    # ---- DBG (DAP) alias page (0x200..0x23C, 16 locks) ---------------------
+    - name: LOCK0_DBG
+      offset: 0x200
+      width: 32
+      access: RW
+      reset_value: 0x00000000
+      description: >
+        Lock 0, DBG alias (the DAP / bench scripts / loader). READ = attempt
+        acquire as DBG; WRITE = release iff owner is DBG. LOCKn_DBG = 0x200 + n*4
+        for n in 0..15.
+
+    # ---- Diagnostics / recovery (0x300, 0x304) -----------------------------
+    - name: OWNER
+      offset: 0x300
+      width: 32
+      access: RO
+      reset_value: 0x00000000
+      description: >
+        Packed owner view, 2 bits per lock (lock n in [2n+1:2n]; lock0 in [1:0]).
+        Owner code 00 free, 01 CPU0, 10 CPU1, 11 DBG. Pure diagnostics — reading
+        OWNER has NO side effect. For N_LOCKS=16 all 32 bits are used.
+
+    - name: FORCE_RELEASE
+      offset: 0x304
+      width: 32
+      access: WO
+      reset_value: 0x00000000
+      description: >
+        Recovery path. Writing 1 to bit n force-frees lock n regardless of its
+        current owner; bits written 0 are left unchanged. Reads as 0. Intended
+        for the reset/recovery path (per-core reset auto-release is in hardware
+        via cpu0_resetn / cpu1_resetn; this is the software escape hatch).
+
+    # ---- Identification ROM ------------------------------------------------
+    - name: PID4
+      offset: 0xFD0
+      width: 32
+      access: RO
+      description: Peripheral ID 4
+
+    - name: PID5
+      offset: 0xFD4
+      width: 32
+      access: RO
+      description: Peripheral ID 5
+
+    - name: PID6
+      offset: 0xFD8
+      width: 32
+      access: RO
+      description: Peripheral ID 6
+
+    - name: PID7
+      offset: 0xFDC
+      width: 32
+      access: RO
+      description: Peripheral ID 7
+
+    - name: PID0
+      offset: 0xFE0
+      width: 32
+      access: RO
+      description: Peripheral ID 0
+
+    - name: PID1
+      offset: 0xFE4
+      width: 32
+      access: RO
+      description: Peripheral ID 1
+
+    - name: PID2
+      offset: 0xFE8
+      width: 32
+      access: RO
+      description: Peripheral ID 2
+
+    - name: PID3
+      offset: 0xFEC
+      width: 32
+      access: RO
+      description: Peripheral ID 3 (includes ECOREVNUM in bits [7:4])
+
+    - name: CID0
+      offset: 0xFF0
+      width: 32
+      access: RO
+      description: Component ID 0
+
+    - name: CID1
+      offset: 0xFF4
+      width: 32
+      access: RO
+      description: Component ID 1
+
+    - name: CID2
+      offset: 0xFF8
+      width: 32
+      access: RO
+      description: Component ID 2
+
+    - name: CID3
+      offset: 0xFFC
+      width: 32
+      access: RO
+      description: Component ID 3

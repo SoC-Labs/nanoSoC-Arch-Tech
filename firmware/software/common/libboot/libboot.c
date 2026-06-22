@@ -3,19 +3,17 @@
  * Copyright 2026, SoC Labs (www.soclabs.org)
  *----------------------------------------------------------------------------*/
 #include "libboot.h"
+#include "../util/nanosoc_crc32.h"
 
 #define SCB_VTOR (*(volatile uint32_t *)0xE000ED08u)
 
+/* CRC-32/IEEE 802.3 (reflected, poly 0xEDB88320, init/xor 0xFFFFFFFF) —
+ * bit-exact with Python binascii.crc32 used by flash_pack.py. The single
+ * shared implementation lives in util/nanosoc_crc32.h; boot_crc32 keeps its
+ * size_t signature and forwards to it so there is only one CRC in the tree. */
 uint32_t boot_crc32(const void *data, size_t len)
 {
-    const uint8_t *p = (const uint8_t *)data;
-    uint32_t crc = 0xFFFFFFFFu;
-    for (size_t i = 0; i < len; i++) {
-        crc ^= p[i];
-        for (int b = 0; b < 8; b++)
-            crc = (crc >> 1) ^ (0xEDB88320u & (uint32_t)(-(int32_t)(crc & 1u)));
-    }
-    return ~crc;
+    return nanosoc_crc32(data, (uint32_t)len);
 }
 
 boot_status_t boot_table_get(const boot_table_t *t, uint32_t stage,

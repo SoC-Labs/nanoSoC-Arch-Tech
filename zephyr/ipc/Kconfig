@@ -1,0 +1,25 @@
+# Generic nanosoc ipc_service backend (SPSC ring + mailbox doorbell).
+# Reusable by any nanosoc dual-core system. Copyright 2026, SoC Labs.
+
+config IPC_SERVICE_BACKEND_NANOSOC_SPSC
+	bool "nanosoc SPSC-ring + mailbox ipc_service backend"
+	depends on IPC_SERVICE
+	depends on MBOX
+	help
+	  ipc_service backend that carries messages over the nanosoc shared-SRAM
+	  SPSC ring and signals the peer via the IPC mailbox doorbell. Matches the
+	  existing firmware ring contract (8-deep, 256 B/slot, word-only accesses,
+	  RMW-guarded shared IRQ-enable). The manager (M0+) and the compute core
+	  (M4/Zephyr) are symmetric endpoints.
+
+if IPC_SERVICE_BACKEND_NANOSOC_SPSC
+
+config NANOSOC_IPC_RING_DEPTH
+	int "SPSC ring depth (slots)"
+	default 8
+
+config NANOSOC_IPC_SLOT_BYTES
+	int "SPSC slot size (bytes)"
+	default 256
+
+endif

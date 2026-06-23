@@ -35,7 +35,10 @@
 //-----------------------------------------------------------------------------
 `include "cm4_lic_defs.v"   // from $CM4_IP_DIR/cm4_lic_defs (read-only IP)
 
-module cortexm4_ahb_wrap #(
+// Module is named `slcorem4` to match the slcorem4 sys_desc core block (the
+// generator binds instances by the YAML `name`, mirroring slcorem0p ->
+// slcorem0p_tech). The file keeps its cortexm4_ahb_wrap.v name.
+module slcorem4 #(
     parameter FPU_PRESENT     = 1,
     parameter MPU_PRESENT     = 1,
     parameter NUM_IRQ         = 64,

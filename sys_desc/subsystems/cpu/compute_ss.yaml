@@ -127,7 +127,10 @@ module:
         - { port: DBGAHB_SLVRESP,  conn: cpu_0_dbgahb_slvresp }
 
     - instance_name: u_region_bootrom_0
-      module: nanosoc_region_bootrom
+      # Distinct module name from the M0+ manager's nanosoc_region_bootrom so a
+      # two-core SoC carries two separate boot ROMs (M4 here, M0+ manager there)
+      # without a module/cell clash.
+      module: compute_ss_region_bootrom
       addressable: True
       params: { SYS_ADDR_W: $SYS_ADDR_W, SYS_DATA_W: $SYS_DATA_W, ROM_ADDR_W: $BOOTROM_ADDR_W }
       connections:

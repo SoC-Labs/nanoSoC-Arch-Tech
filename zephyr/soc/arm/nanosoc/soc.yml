@@ -1,0 +1,10 @@
+# nanosoc SoC family (generic). Concrete boards live in the system repo.
+family:
+  - name: nanosoc
+    series:
+      - name: nanosoc_cm4      # M4 compute core (FPU/MPU, M4F hard-float)
+        socs:
+          - name: nanosoc_cm4
+      - name: nanosoc_cm0p     # M0+ manager core (for completeness)
+        socs:
+          - name: nanosoc_cm0p

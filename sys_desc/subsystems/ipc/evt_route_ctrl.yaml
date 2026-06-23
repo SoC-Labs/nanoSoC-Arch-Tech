@@ -1,0 +1,44 @@
+#-----------------------------------------------------------------------------
+# Event Routing Control Register (evt_route_ctrl)
+# A joint work commissioned on behalf of SoC Labs, under Arm Academic Access license.
+#
+# Contributors
+#
+# David Mapstone (d.a.mapstone@soton.ac.uk)
+#
+# Copyright 2026, SoC Labs (www.soclabs.org)
+#-----------------------------------------------------------------------------
+# Derived from RTL: src/rtl/wrappers/evt_route_ctrl.v
+#
+# Minimal AHB-Lite register slave on the multicore interconnect, reachable by
+# both CPU initiators (CPU1 owns routing policy; CPU0 may revoke/grant its own
+# channels). It exposes per-destination-CPU bitmask registers that select which
+# DMA-230 done channels raise each CPU's NVIC DMA-done IRQ and (independently)
+# each CPU's RXEV (WFE wake). The mask outputs are consumed by the SoC AND/OR
+# routing glue. Reset routes all DMA-done channels to CPU1 (chip-control).
+
+module:
+  name: evt_route_ctrl
+  gen: False
+  desc: >
+    Dynamic event-routing control. Per-destination-CPU bitmask registers
+    select which DMA-230 done channels raise each CPU's NVIC DMA-done IRQ
+    and (independently) each CPU's RXEV. Reset routes all DMA-done to CPU1.
+
+  params:
+    SYS_ADDR_W:  { type: int, default: 32, desc: "System address width" }
+    SYS_DATA_W:  { type: int, default: 32, desc: "System data width" }
+    N_SRC:       { type: int, default: 4,  desc: "Routable event sources (DMA channels)" }
+    N_CPU:       { type: int, default: 2,  desc: "Destination CPUs" }
+
+  interfaces:
+    # Clock and Reset
+    - { name: HCLK,    type: wire, direction: in, params: { WIDTH: 1 }, desc: "AHB clock" }
+    - { name: HRESETn, type: wire, direction: in, params: { WIDTH: 1 }, desc: "AHB reset (active low)" }
+
+    # AHB slave port (register bank)
+    - { name: ahb_slave, type: ahb, direction: target, params: { ADDR_WIDTH: $SYS_ADDR_W, DATA_WIDTH: $SYS_DATA_W }, desc: "AHB slave port — event-routing register bank" }
+
+    # Routing-mask outputs, flattened [cpu*N_SRC + src] (N_CPU*N_SRC = 8)
+    - { name: irq_route_mask, type: wire, direction: out, params: { WIDTH: 8 }, desc: "DMA-done -> per-CPU NVIC IRQ mask, irq_route_mask[c*N_SRC + i]" }
+    - { name: evt_route_mask, type: wire, direction: out, params: { WIDTH: 8 }, desc: "DMA-done -> per-CPU RXEV mask, evt_route_mask[c*N_SRC + i]" }

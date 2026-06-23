@@ -1,0 +1,20 @@
+# Copyright 2026, SoC Labs (www.soclabs.org)
+# doc-05 Feature-6 param group for the Cortex-M4 compute core. Pulled with
+#   params_from: [cortex_m4_core]
+# to supply the M4 integration parameters (defaults: FPU+MPU on, 64 IRQs,
+# trace/ETM off) without re-typing them in slcorem4 / compute_ss. A module's
+# own params override these.
+preset:
+  name: cortex_m4_core
+  params:
+    FPU_PRESENT:     { type: int, default: 1,  desc: "Include the FPU (single-precision M4F)" }
+    MPU_PRESENT:     { type: int, default: 1,  desc: "Include the MPU" }
+    NUM_IRQ:         { type: int, default: 64, desc: "Number of external NVIC IRQ lines (1..240)" }
+    LVL_WIDTH:       { type: int, default: 4,  desc: "Interrupt priority bits (3..8)" }
+    TRACE_LVL:       { type: int, default: 1,  desc: "0=none,1=ITM/DWT,2=+ETM(license),3=+HTM" }
+    DEBUG_LVL:       { type: int, default: 3,  desc: "0=none(no DAP)..3=full" }
+    WIC_PRESENT:     { type: int, default: 0,  desc: "Wake-up interrupt controller" }
+    BB_PRESENT:      { type: int, default: 1,  desc: "Bit-banding" }
+    CLKGATE_PRESENT: { type: int, default: 0,  desc: "Architectural clock gating" }
+    RESET_ALL_REGS:  { type: int, default: 0,  desc: "Reset all registers" }
+    BE:              { type: int, default: 0,  desc: "Endianness: 0=little (BIGEND), 1=big" }

@@ -1,0 +1,54 @@
+#-----------------------------------------------------------------------------
+# IPC Mailbox AHB Module (ipc_mbx_ahb)
+# A joint work commissioned on behalf of SoC Labs, under Arm Academic Access license.
+#
+# Contributors
+#
+# David Mapstone (d.a.mapstone@soton.ac.uk)
+#
+# Copyright 2026, SoC Labs (www.soclabs.org)
+#-----------------------------------------------------------------------------
+# Derived from RTL: src/rtl/wrappers/ipc_mbx_ahb.sv (thin wrapper around the
+# inter-processor-communications-ahb submodule's ipc_mailbox_ahb).
+#
+# Inter-processor mailbox with AHB slave interface for CPU-to-CPU message
+# passing between two processors on a shared AHB bus. Provides two data
+# slots (CPU0->CPU1 and CPU1->CPU0), control/status registers, and two
+# interrupt outputs (one per CPU).
+#
+# Register map (via AHB-to-APB bridge, 12-bit address space = 4 KB):
+#   0x000 - 0x00C   Slot 0 data (CPU0 writes, CPU1 reads)
+#   0x010 - 0x01C   Slot 1 data (CPU1 writes, CPU0 reads)
+#   0x020           Slot 0 control (MSG_VALID / MSG_ACK)
+#   0x024           Slot 1 control (MSG_VALID / MSG_ACK)
+#   0x028           IRQ status (W1C)
+#   0x02C           IRQ enable mask
+#   0x030           Lock register
+#   0x034           Peripheral ID (RO)
+
+module:
+  name: ipc_mbx_ahb
+  gen: False
+  desc: >
+    Inter-processor mailbox with AHB slave register/data interface.
+    Two slot FIFOs (configurable depth) carry messages between CPU0 and
+    CPU1; dedicated per-CPU interrupt outputs indicate new-message and
+    acknowledgement events. Configuration via AHB-to-APB bridge.
+
+  params:
+    SYS_ADDR_W:  { type: int, default: 32, desc: "System address width" }
+    SYS_DATA_W:  { type: int, default: 32, desc: "System data width" }
+    APB_ADDR_W:  { type: int, default: 12, desc: "APB address width (4 KB register aperture)" }
+    SLOT_DEPTH:  { type: int, default: 4,  desc: "Number of data words per mailbox slot" }
+
+  interfaces:
+    # Clock and Reset
+    - { name: HCLK,    type: wire, direction: in, params: { WIDTH: 1 }, desc: "AHB clock" }
+    - { name: HRESETn, type: wire, direction: in, params: { WIDTH: 1 }, desc: "AHB reset (active low)" }
+
+    # AHB slave port (register / data-slot access)
+    - { name: ahb_slave, type: ahb, direction: target, params: { ADDR_WIDTH: $SYS_ADDR_W, DATA_WIDTH: $SYS_DATA_W }, desc: "AHB slave port — mailbox registers and data slots" }
+
+    # Per-CPU interrupt outputs
+    - { name: cpu0_irq, type: wire, direction: out, params: { WIDTH: 1 }, desc: "CPU0 interrupt (slot1 new-msg, slot0 ack)" }
+    - { name: cpu1_irq, type: wire, direction: out, params: { WIDTH: 1 }, desc: "CPU1 interrupt (slot0 new-msg, slot1 ack)" }

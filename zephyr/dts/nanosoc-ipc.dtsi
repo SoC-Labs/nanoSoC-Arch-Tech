@@ -1,0 +1,37 @@
+/*
+ * Generic nanosoc inter-core DTS fragment (reusable). A board .dts includes this
+ * and overrides the concrete reg addresses if its SoC places them differently.
+ * Backs the ipc_service backend in zephyr/ipc/. Copyright 2026, SoC Labs.
+ */
+
+/ {
+	soc {
+		/* IPC mailbox doorbell (manager <-> compute). Drives the Zephyr
+		 * mbox/ipc kick. TODO(board): confirm reg + interrupt line. */
+		ipc_mbox: mailbox@23000000 {
+			compatible = "nanosoc,ipc-mailbox";
+			reg = <0x23000000 0x1000>;
+			#mbox-cells = <1>;            /* channel = slot id */
+			interrupt-parent = <&nvic>;
+			interrupts = <0 1>;          /* TODO(board): IPC line on cpu_*_irq */
+			status = "okay";
+		};
+
+		/* Shared SRAM carrying the SPSC ring / OpenAMP vrings (the only
+		 * common-address RAM). TODO(board): size per the system's
+		 * SHARED_SRAM_RAM_ADDR_W. */
+		ipc_shm: memory@2d000000 {
+			compatible = "mmio-sram";
+			reg = <0x2d000000 0x2000>;   /* default 8 KB; grow for rpmsg */
+		};
+	};
+
+	/* ipc_service instance binding the mailbox + shared memory. */
+	ipc0: ipc {
+		compatible = "nanosoc,ipc-spsc";
+		mboxes = <&ipc_mbox 0>, <&ipc_mbox 1>;   /* tx slot, rx slot */
+		mbox-names = "tx", "rx";
+		memory-region = <&ipc_shm>;
+		status = "okay";
+	};
+};

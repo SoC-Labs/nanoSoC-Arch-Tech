@@ -96,20 +96,36 @@ module slcorem4 #(
 );
 
   // --- M4 native master buses (between the IP and the merge block) ----------
+  // Per-master HREADY/HRESP routing, gated by the merge's data-phase grant
+  // (sel_grant = sel_q): the granted bus sees the downstream HREADY/HRESP; a
+  // requesting-but-not-granted bus is stalled (HREADY=0); an idle bus sees
+  // HREADY=1. This gets the M4 executing real firmware, but a specific I/D
+  // interleaving (back-to-back D-Code reads while I-Code is active) still mis-
+  // aligns one read -> a full pipelined merge fix is a tracked WIP item. SEL_I=1/D=2/S=3.
+  wire [1:0]  sel_grant;
   // I-Code (fetch-only)
   wire [1:0]  htransi; wire [2:0] hsizei; wire [31:0] haddri; wire [2:0] hbursti;
-  wire [3:0]  hproti;  wire [1:0] memattri; wire iflush;
-  wire        hreadyi = HREADY;  wire [31:0] hrdatai = HRDATA; wire [1:0] hrespi = {1'b0, HRESP};
+  wire [3:0]  hproti;  wire [1:0] memattri;
+  // IFLUSH is an M4 INPUT (ICode-bus buffer flush). It was declared but never
+  // driven -> floating X -> the core's instruction fetch keeps flushing and the
+  // PC never advances past the reset vector (a combinational input, so
+  // RESET_ALL_REGS could not mask it). Tie inactive: no flush needed (no remap/
+  // cache-invalidate event drives it in this integration).
+  wire iflush = 1'b0;
+  wire        hreadyi = (sel_grant == 2'd1) ? HREADY : (htransi[1] ? 1'b0 : 1'b1);
+  wire [31:0] hrdatai = HRDATA; wire [1:0] hrespi = {1'b0, (sel_grant == 2'd1) ? HRESP : 1'b0};
   // D-Code
   wire [1:0]  hmasterd; wire [1:0] htransd; wire [2:0] hsized; wire [31:0] haddrd;
   wire [2:0]  hburstd; wire [3:0] hprotd; wire [1:0] memattrd; wire exreqd;
   wire        hwrited; wire [31:0] hwdatad;
-  wire        hreadyd = HREADY; wire [31:0] hrdatad = HRDATA; wire [1:0] hrespd = {1'b0, HRESP};
+  wire        hreadyd = (sel_grant == 2'd2) ? HREADY : (htransd[1] ? 1'b0 : 1'b1);
+  wire [31:0] hrdatad = HRDATA; wire [1:0] hrespd = {1'b0, (sel_grant == 2'd2) ? HRESP : 1'b0};
   // System
   wire [1:0]  hmasters; wire [1:0] htranss; wire hwrites; wire [2:0] hsizes;
   wire        hmastlocks; wire [31:0] haddrs; wire [31:0] hwdatas; wire [2:0] hbursts;
   wire [3:0]  hprots; wire [1:0] memattrs; wire exreqs;
-  wire        hreadys = HREADY; wire [31:0] hrdatas = HRDATA; wire [1:0] hresps = {1'b0, HRESP};
+  wire        hreadys = (sel_grant == 2'd3) ? HREADY : (htranss[1] ? 1'b0 : 1'b1);
+  wire [31:0] hrdatas = HRDATA; wire [1:0] hresps = {1'b0, (sel_grant == 2'd3) ? HRESP : 1'b0};
 
   // --- 3:1 AHB-Lite merge (I+D code-mux + System) -> single master ----------
   // NOTE: reference arbiter — verify/replace on EDA host (see header banner).
@@ -126,7 +142,9 @@ module slcorem4 #(
     // merged downstream master
     .m_haddr(HADDR), .m_htrans(HTRANS), .m_hwrite(HWRITE), .m_hsize(HSIZE),
     .m_hburst(HBURST), .m_hprot(HPROT), .m_hwdata(HWDATA), .m_hmastlock(HMASTLOCK),
-    .m_hrdata(HRDATA), .m_hready(HREADY), .m_hresp(HRESP)
+    .m_hrdata(HRDATA), .m_hready(HREADY), .m_hresp(HRESP),
+    // grant export for per-master HREADY/HRESP routing above
+    .sel_grant(sel_grant)
   );
 
   // --- DBGAHB v1 stub (OKAY, no data) ---------------------------------------

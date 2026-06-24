@@ -38,7 +38,13 @@ module cm4_ahb_merge3 (
     output reg  [31:0] m_haddr, output reg [1:0] m_htrans, output reg m_hwrite,
     output reg  [2:0]  m_hsize, output reg [2:0] m_hburst, output reg [3:0] m_hprot,
     output reg  [31:0] m_hwdata, output reg m_hmastlock,
-    input  wire [31:0] m_hrdata, input wire m_hready, input wire m_hresp
+    input  wire [31:0] m_hrdata, input wire m_hready, input wire m_hresp,
+    // grant export (= sel_q) so the wrapper can route per-master HREADY/HRESP.
+    // NOTE: gating on sel_q alone is correct only when the data-phase master is
+    // also the next address-phase master. A full pipelined fix (OR with sel_aphase)
+    // plus interconnect-latency tuning is needed for clean I/D/S interleaving and
+    // must be verified in a merge unit testbench — see docs/COMPUTE_SOC_BUILDOUT.md.
+    output wire [1:0]  sel_grant
 );
 
   localparam SEL_NONE = 2'd0, SEL_I = 2'd1, SEL_D = 2'd2, SEL_S = 2'd3;
@@ -59,6 +65,7 @@ module cm4_ahb_merge3 (
     if (!HRESETn)      sel_q <= SEL_NONE;
     else if (m_hready) sel_q <= sel_aphase;
   end
+  assign sel_grant = sel_q;
 
   // address-phase mux onto the downstream master
   always @(*) begin

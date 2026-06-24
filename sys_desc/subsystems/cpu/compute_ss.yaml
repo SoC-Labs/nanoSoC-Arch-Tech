@@ -96,8 +96,10 @@ module:
       addressable: False
       params: { FPU_PRESENT: $FPU_PRESENT, MPU_PRESENT: $MPU_PRESENT, NUM_IRQ: $NUM_IRQ, LVL_WIDTH: $LVL_WIDTH, TRACE_LVL: $TRACE_LVL, DEBUG_LVL: $DEBUG_LVL, WIC_PRESENT: $WIC_PRESENT, BB_PRESENT: $BB_PRESENT, CLKGATE_PRESENT: $CLKGATE_PRESENT, RESET_ALL_REGS: $RESET_ALL_REGS, BE: $BE }
       connections:
-        # AHB master — routed through internal busmatrix
-        - { port: ahb_master, conn: nanosoc_compute_ss_ahb_interconnect.cpu_0 }
+        # Three AHB masters (I/D/S) — arbitrated by the internal busmatrix
+        - { port: mst_i, conn: nanosoc_compute_ss_ahb_interconnect.cpu_0_i }
+        - { port: mst_d, conn: nanosoc_compute_ss_ahb_interconnect.cpu_0_d }
+        - { port: mst_s, conn: nanosoc_compute_ss_ahb_interconnect.cpu_0_s }
         # Clock and Reset (consumed)
         - { port: SYS_FCLK,       conn: sys_fclk }
         - { port: SYS_HCLK,       conn: sys_hclk }
@@ -179,7 +181,8 @@ module:
         - { name: system,    base: 0x20000000, size: 0xE0000000, sw_access: rw,  region_type: ~,      role: ~, passthrough: cpu_0, desc: "System passthrough to external AHB master port (cpu_0)" }
 
       initiators:
-        - name: cpu_0
+        # M4 I-Code (fetch): local code/data memories (0x0-0x1FFFFFFF). No system.
+        - name: cpu_0_i
           targets:
             - name: bootrom_0
               visibility:
@@ -194,6 +197,27 @@ module:
                     remap_bit: 0
                 - base: 0x10000000
             - name: dmem_0
+
+        # M4 D-Code (data to 0x0-0x1FFFFFFF): same local memories. No system.
+        - name: cpu_0_d
+          targets:
+            - name: bootrom_0
+              visibility:
+                - base: 0x00000000
+                - base: 0x08000000
+            - name: imem_0
+              visibility:
+                - base: 0x00000000
+                  remap:
+                    remapping: true
+                    remap_behaviour: alias
+                    remap_bit: 0
+                - base: 0x10000000
+            - name: dmem_0
+
+        # M4 System (>= 0x20000000): system passthrough only.
+        - name: cpu_0_s
+          targets:
             - name: system
 
         - name: cpu_ss

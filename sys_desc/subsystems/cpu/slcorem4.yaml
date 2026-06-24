@@ -63,8 +63,12 @@ module:
     - { name: SYS_SCANENABLE, type: wire, direction: in, params: { WIDTH: 1 }, desc: "Scan mode enable" }
     - { name: SYS_TESTMODE,   type: wire, direction: in, params: { WIDTH: 1 }, desc: "Test mode enable" }
 
-    # Single merged AHB-Lite master (I+D code-mux + System, protocol-adapted)
-    - { name: ahb_master, type: ahb, direction: initiator, params: { ADDR_WIDTH: 32, DATA_WIDTH: 32 }, desc: "Merged AHB-Lite master port (v1 single-master)" }
+    # Three AHB-Lite masters (I-Code, D-Code, System) exposed directly; the
+    # compute_ss busmatrix arbitrates them. Non-`ahb_master` names => the subsystem
+    # backend expands each to {name}_<sig> RTL ports (mst_i_haddr, ...).
+    - { name: mst_i, type: ahb, direction: initiator, params: { ADDR_WIDTH: 32, DATA_WIDTH: 32 }, desc: "M4 I-Code AHB-Lite master (fetch-only)" }
+    - { name: mst_d, type: ahb, direction: initiator, params: { ADDR_WIDTH: 32, DATA_WIDTH: 32 }, desc: "M4 D-Code AHB-Lite master" }
+    - { name: mst_s, type: ahb, direction: initiator, params: { ADDR_WIDTH: 32, DATA_WIDTH: 32 }, desc: "M4 System AHB-Lite master" }
 
     # CPU sideband
     - { name: CORE_NMI,         type: wire, direction: in,  params: { WIDTH: 1 },        desc: "Non-maskable interrupt" }

@@ -28,9 +28,22 @@ void DebugMon_Handler(void)   ALIAS;
 void PendSV_Handler(void)     ALIAS;
 void SysTick_Handler(void)    ALIAS;
 
-/* Cortex-M system vector table (16 entries). */
+/* Weak external NVIC interrupt handlers (vectors 16..31 = IRQ0..IRQ15), all
+ * default to Default_Handler. Firmware overrides the ones it uses by defining a
+ * strong symbol of the same name (e.g. Interrupt0_Handler for the IPC mailbox
+ * doorbell on NVIC IRQ0). Extend this list if more device IRQs are wired. */
+void Interrupt0_Handler(void)  ALIAS;  void Interrupt1_Handler(void)  ALIAS;
+void Interrupt2_Handler(void)  ALIAS;  void Interrupt3_Handler(void)  ALIAS;
+void Interrupt4_Handler(void)  ALIAS;  void Interrupt5_Handler(void)  ALIAS;
+void Interrupt6_Handler(void)  ALIAS;  void Interrupt7_Handler(void)  ALIAS;
+void Interrupt8_Handler(void)  ALIAS;  void Interrupt9_Handler(void)  ALIAS;
+void Interrupt10_Handler(void) ALIAS;  void Interrupt11_Handler(void) ALIAS;
+void Interrupt12_Handler(void) ALIAS;  void Interrupt13_Handler(void) ALIAS;
+void Interrupt14_Handler(void) ALIAS;  void Interrupt15_Handler(void) ALIAS;
+
+/* Cortex-M system vector table (16) + 16 external NVIC vectors (IRQ0..IRQ15). */
 __attribute__((section(".isr_vector"), used))
-void (* const g_vectors[16])(void) = {
+void (* const g_vectors[32])(void) = {
     (void (*)(void))(&_estack),  /* 0  initial MSP            */
     Reset_Handler,               /* 1  reset                  */
     NMI_Handler,                 /* 2                          */
@@ -44,6 +57,10 @@ void (* const g_vectors[16])(void) = {
     0,                           /* 13 reserved               */
     PendSV_Handler,              /* 14                         */
     SysTick_Handler,             /* 15                         */
+    Interrupt0_Handler,  Interrupt1_Handler,  Interrupt2_Handler,  Interrupt3_Handler,
+    Interrupt4_Handler,  Interrupt5_Handler,  Interrupt6_Handler,  Interrupt7_Handler,
+    Interrupt8_Handler,  Interrupt9_Handler,  Interrupt10_Handler, Interrupt11_Handler,
+    Interrupt12_Handler, Interrupt13_Handler, Interrupt14_Handler, Interrupt15_Handler,
 };
 
 void Reset_Handler(void)

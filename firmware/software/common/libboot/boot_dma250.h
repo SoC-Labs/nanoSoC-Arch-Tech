@@ -19,19 +19,27 @@
 /* Per-channel register offsets from the channel base. */
 #define DMA250_CH_CMD         0x000u   /* [0]=ENABLE, [1]=CLEAR                  */
 #define DMA250_CH_STATUS      0x004u   /* [16]=DONE, [17]=ERR (W1C)             */
+#define DMA250_CH_INTREN      0x008u   /* per-channel interrupt enables         */
 #define DMA250_CH_CTRL        0x00Cu   /* TRANSIZE[2:0] XTYPE[11:9] DONETYPE[22:21] */
 #define DMA250_CH_SRCADDR     0x010u
 #define DMA250_CH_DESADDR     0x018u
 #define DMA250_CH_XSIZE       0x020u   /* [15:0]=SRC beats, [31:16]=DES beats   */
 #define DMA250_CH_SRCTRANSCFG 0x028u   /* source memory attributes              */
 #define DMA250_CH_XADDRINC    0x030u   /* [15:0]=SRC inc, [31:16]=DES inc       */
+#define DMA250_CH_LINKADDR    0x078u   /* command-link descriptor addr (0=off)  */
 
 #define DMA250_CMD_ENABLE     (1u << 0)
 #define DMA250_CMD_CLEAR      (1u << 1)
+#define DMA250_STAT_INTR_DONE (1u << 0)
+#define DMA250_STAT_INTR_ERR  (1u << 1)
 #define DMA250_STAT_DONE      (1u << 16)
 #define DMA250_STAT_ERR       (1u << 17)
 /* word transfer (TRANSIZE=2), 1D (XTYPE=1), end-of-cycle done (DONETYPE=1). */
 #define DMA250_CTRL_1D_W      ((2u << 0) | (1u << 9) | (1u << 21))
+/* Field masks for the CTRL read-modify-write (preserve unrelated template bits). */
+#define DMA250_CTRL_TRANSIZE_Msk  (0x7u << 0)
+#define DMA250_CTRL_XTYPE_Msk     (0x7u << 9)
+#define DMA250_CTRL_DONETYPE_Msk  (0x3u << 21)
 /* Normal memory, inner+outer write-back cacheable -> HPROT[3]=1 (XiP cache). */
 #define DMA250_SRC_CACHEABLE  0x000000FFu
 

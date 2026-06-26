@@ -13,13 +13,31 @@
 static int dma250_one(uintptr_t ch, uint32_t dst, uint32_t src,
                       uint32_t beats, int src_cacheable)
 {
-    REG32(ch + DMA250_CH_STATUS)      = DMA250_STAT_DONE | DMA250_STAT_ERR; /* W1C */
+    /* Channel reset/init — REQUIRED on the context-managed CG097 (DMA-350 arch),
+     * mirrors the validated dma250_driver.c dma250_init(). CLEARCMD returns the
+     * channel registers + internal queues/context to a known idle state; we then
+     * W1C the status flags, disable per-channel IRQs, and — load-bearing — clear
+     * LINKADDR to DISABLE command-linking so the engine runs the immediate
+     * register-programmed command instead of fetching an in-memory descriptor.
+     * Omitting this leaves an enabled channel that never starts a transfer (no
+     * bus activity, STATUS never DONE/ERR) — the "engine never starts" symptom. */
+    REG32(ch + DMA250_CH_CMD)         = DMA250_CMD_CLEAR;
+    REG32(ch + DMA250_CH_STATUS)      = DMA250_STAT_DONE | DMA250_STAT_ERR |
+                                        DMA250_STAT_INTR_DONE | DMA250_STAT_INTR_ERR;
+    REG32(ch + DMA250_CH_INTREN)      = 0u;
+    REG32(ch + DMA250_CH_LINKADDR)    = 0u;
+
     REG32(ch + DMA250_CH_SRCADDR)     = src;
     REG32(ch + DMA250_CH_DESADDR)     = dst;
     REG32(ch + DMA250_CH_XSIZE)       = beats | (beats << 16);
     REG32(ch + DMA250_CH_XADDRINC)    = 1u | (1u << 16);   /* inc src + des 1 beat */
     REG32(ch + DMA250_CH_SRCTRANSCFG) = src_cacheable ? DMA250_SRC_CACHEABLE : 0u;
-    REG32(ch + DMA250_CH_CTRL)        = DMA250_CTRL_1D_W;
+    /* CTRL: read-modify-write the transfer-template fields (word/1D/end-of-cmd),
+     * preserving any unrelated reset bits — as the validated driver does. */
+    uint32_t ctrl = REG32(ch + DMA250_CH_CTRL);
+    ctrl &= ~(DMA250_CTRL_TRANSIZE_Msk | DMA250_CTRL_XTYPE_Msk | DMA250_CTRL_DONETYPE_Msk);
+    ctrl |= DMA250_CTRL_1D_W;
+    REG32(ch + DMA250_CH_CTRL)        = ctrl;
 #if defined(__arm__)
     __asm volatile ("dsb" ::: "memory");
 #endif

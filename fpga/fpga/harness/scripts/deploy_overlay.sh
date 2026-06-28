@@ -37,7 +37,12 @@ PYNQ_PROXY="${PYNQ_PROXY:-}"
 
 SSH_OPTS=()
 if [ -n "$PYNQ_PROXY" ]; then
-    SSH_OPTS=(-o "ProxyJump=$PYNQ_PROXY")
+    # Use ProxyCommand (not ProxyJump): -o StrictHostKeyChecking=no applies ONLY
+    # to the final target, NOT the jump host, so ProxyJump fails with "Host key
+    # verification failed" whenever the jump host's key isn't already trusted in
+    # the caller's known_hosts — e.g. when run by the fpgahubd daemon as root.
+    # ProxyCommand lets us disable strict checking on the proxy hop too.
+    SSH_OPTS=(-o "ProxyCommand=ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=15 -W %h:%p $PYNQ_PROXY")
 fi
 SSH_OPTS+=(
     -o "StrictHostKeyChecking=no"

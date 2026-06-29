@@ -184,11 +184,17 @@ module slcorem4 #(
   // matrix's cold default (0) -> SP=0 -> the reset handler's stack push faults ->
   // HardFault lockup. (The M0+ manager avoids this via its PRMU reset sequencing;
   // the M4 is a reset CONSUMER, so it would otherwise fetch immediately.)
-  reg [3:0] m4_rdly;
+  // Widened 8->256 HCLKs (2026-06-29 HW bring-up): the 8-HCLK delay was enough in
+  // zero-delay cocotb but the M4 dies before first-fetch on z2_04 silicon (M4
+  // wrote no breadcrumb; DMA-250 idle). 256 HCLKs (~10us @25MHz) gives the real
+  // FPGA busmatrix decode/HREADY and the unsynchronised POR deassert ample settle
+  // before the M4's first vector fetch. Cheap insurance against the cold-default
+  // (SP@0x0=0) first-fetch HardFault this delay exists to prevent.
+  reg [7:0] m4_rdly;
   always @(posedge SYS_HCLK or negedge SYS_HRESETn)
-    if (!SYS_HRESETn)      m4_rdly <= 4'h0;
-    else if (~m4_rdly[3])  m4_rdly <= m4_rdly + 4'h1;
-  wire m4_rst_rel   = m4_rdly[3];                 // 1 after 8 HCLKs post-HRESETn
+    if (!SYS_HRESETn)      m4_rdly <= 8'h0;
+    else if (~m4_rdly[7])  m4_rdly <= m4_rdly + 8'h1;
+  wire m4_rst_rel   = m4_rdly[7];                 // 1 after 256 HCLKs post-HRESETn
   wire m4_poresetn  = SYS_PORESETn  & m4_rst_rel;
   wire m4_sysresetn = SYS_SYSRESETn & m4_rst_rel;
 

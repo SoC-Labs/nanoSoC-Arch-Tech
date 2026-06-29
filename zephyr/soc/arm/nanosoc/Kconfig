@@ -1,0 +1,20 @@
+# nanosoc SoC family Kconfig (CPU / architecture feature selects).
+#
+# Per-series CPU selects. Modeled on soc/arm/beetle/Kconfig and
+# soc/arm/musca/Kconfig (M-profile reference SoCs).
+#
+# Copyright 2026, SoC Labs.
+# SPDX-License-Identifier: Apache-2.0
+
+config SOC_SERIES_NANOSOC_CM4
+	select ARM
+	select CPU_CORTEX_M4
+	select CPU_HAS_FPU         # FPU_PRESENT=1 (M4F, single precision)
+	select CPU_HAS_ARM_MPU     # MPU_PRESENT=1
+	select ARMV7_M_ARMV8_M_FP
+	select CPU_CORTEX_M_HAS_DWT
+
+config SOC_SERIES_NANOSOC_CM0P
+	select ARM
+	select CPU_CORTEX_M0PLUS
+	select CPU_HAS_ARM_MPU

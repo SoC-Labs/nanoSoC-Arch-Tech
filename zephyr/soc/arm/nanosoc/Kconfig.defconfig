@@ -1,0 +1,27 @@
+# nanosoc SoC family Kconfig.defconfig (per-series defaults).
+#
+# NUM_IRQS and the system clock match the generated compute_ss RTL params.
+# Modeled on soc/arm/beetle/Kconfig.defconfig.
+#
+# Copyright 2026, SoC Labs.
+# SPDX-License-Identifier: Apache-2.0
+
+if SOC_SERIES_NANOSOC_CM4
+
+config NUM_IRQS
+	default 64
+
+config SYS_CLOCK_HW_CYCLES_PER_SEC
+	default 25000000
+
+endif # SOC_SERIES_NANOSOC_CM4
+
+if SOC_SERIES_NANOSOC_CM0P
+
+config NUM_IRQS
+	default 32
+
+config SYS_CLOCK_HW_CYCLES_PER_SEC
+	default 25000000
+
+endif # SOC_SERIES_NANOSOC_CM0P

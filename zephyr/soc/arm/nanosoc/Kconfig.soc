@@ -1,5 +1,11 @@
-# nanosoc SoC family Kconfig (generic). The board selects the concrete SoC and
-# fills NUM_IRQS / priority bits to match the generated RTL (compute_ss params).
+# nanosoc SoC family Kconfig.soc (HWMv2 symbol declarations).
+#
+# Declares the SOC_*/SOC_SERIES_* bool symbols and the SOC_SERIES / SOC string
+# defaults. CPU/feature selects live in Kconfig; NUM_IRQS / clock defaults live
+# in Kconfig.defconfig. Modeled on soc/arm/designstart and soc/arm/beetle.
+#
+# Copyright 2026, SoC Labs.
+# SPDX-License-Identifier: Apache-2.0
 
 config SOC_FAMILY_NANOSOC
 	bool
@@ -10,24 +16,30 @@ config SOC_FAMILY
 config SOC_SERIES_NANOSOC_CM4
 	bool
 	select SOC_FAMILY_NANOSOC
+	help
+	  nanosoc Cortex-M4F compute core series
 
 config SOC_SERIES_NANOSOC_CM0P
 	bool
 	select SOC_FAMILY_NANOSOC
+	help
+	  nanosoc Cortex-M0+ manager core series
 
 config SOC_NANOSOC_CM4
 	bool
 	select SOC_SERIES_NANOSOC_CM4
-	select CPU_CORTEX_M4
-	select CPU_HAS_FPU            # FPU_PRESENT=1 (M4F, single precision)
-	select CPU_HAS_ARM_MPU       # MPU_PRESENT=1
-	select ARMV7_M_ARMV8_M_FP
+	help
+	  nanosoc Cortex-M4F compute core
 
 config SOC_NANOSOC_CM0P
 	bool
 	select SOC_SERIES_NANOSOC_CM0P
-	select CPU_CORTEX_M0PLUS
-	select CPU_HAS_ARM_MPU
+	help
+	  nanosoc Cortex-M0+ manager core
+
+config SOC_SERIES
+	default "nanosoc_cm4"  if SOC_SERIES_NANOSOC_CM4
+	default "nanosoc_cm0p" if SOC_SERIES_NANOSOC_CM0P
 
 config SOC
 	default "nanosoc_cm4"  if SOC_NANOSOC_CM4

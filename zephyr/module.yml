@@ -1,10 +1,10 @@
-# Makes arch_tech/zephyr a Zephyr module: contributes the nanosoc SoC family,
-# generic DTS fragments, and the IPC backend. The system repo's west.yml lists
-# this module; the board + app stay in the system repo.
+# Makes arch_tech a Zephyr module: contributes the nanosoc SoC family and the
+# generic DTS fragments. The module root is the arch_tech repo; this descriptor
+# lives at <module_root>/zephyr/module.yml. The board + app stay in the system
+# repo. soc_root/dts_root are relative to the module ROOT (the repo dir), so they
+# point at the zephyr/ subdir that holds soc/ and dts/.
 name: nanosoc-arch-tech
 build:
-  cmake: zephyr
-  kconfig: zephyr/Kconfig
   settings:
     soc_root: zephyr          # zephyr/soc/arm/nanosoc/...
     dts_root: zephyr          # zephyr/dts/*.dtsi

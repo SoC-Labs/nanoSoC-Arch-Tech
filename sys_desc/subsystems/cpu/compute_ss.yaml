@@ -45,15 +45,17 @@ module:
     CLKGATE_PRESENT: { type: int, default: 0,          desc: "Architectural clock gating" }
     RESET_ALL_REGS:  { type: int, default: 0,          desc: "Reset all registers" }
     BE:              { type: int, default: 0,          desc: "Endianness: 0=little, 1=big" }
-    # Local memory sizing (Linux-style staged boot + Zephyr XiP): IMEM 32 KB,
-    # DMEM 32 KB, bootrom 8 KB. Code runs XiP from QSPI; IMEM = vectors/hot code
-    # + SPL during boot; DMEM = data/stacks/heap (IPC buffers live in shared SRAM,
-    # off this budget). See docs/BOOT_ARCHITECTURE.md.
-    BOOTROM_ADDR_W:  { type: int, default: 11,         desc: "Boot ROM address width (phys = 4 * 2^N bytes = 8 KB)" }
-    IMEM_RAM_ADDR_W: { type: int, default: 13,         desc: "IMEM address width (phys = 4 * 2^N bytes = 32 KB)" }
+    # Local memory sizing. IMPORTANT: *_ADDR_W is a BYTE address width, so the
+    # physical size is 2^N BYTES (it drives sl_ahb_sram HADDR[RAM_ADDR_W-1:0]).
+    # The old "4 * 2^N" comments were WRONG: N=13 => 8 KB (not 32 KB), N=15 => 32 KB.
+    # IMEM must be >=32 KB so a RAM-exec OS (Zephyr: image+bss+stack in the
+    # 0x10001000 region, ~28 KB) fits — at N=13 the 14.6 KB image wrapped the 8 KB
+    # RAM and clobbered the SPL. See docs/BOOT_ARCHITECTURE.md.
+    BOOTROM_ADDR_W:  { type: int, default: 11,         desc: "Boot ROM address width (phys = 2^N bytes = 2 KB)" }
+    IMEM_RAM_ADDR_W: { type: int, default: 15,         desc: "IMEM address width (phys = 2^N bytes = 32 KB)" }
     IMEM_RAM_DATA_W: { type: int, default: 32,         desc: "IMEM data width" }
     IMEM_MEM_FPGA_IMG: { type: str, default: "image.hex", desc: "FPGA image to preload into IMEM" }
-    DMEM_RAM_ADDR_W: { type: int, default: 13,         desc: "DMEM address width (phys = 4 * 2^N bytes = 32 KB)" }
+    DMEM_RAM_ADDR_W: { type: int, default: 15,         desc: "DMEM address width (phys = 2^N bytes = 32 KB)" }
     DMEM_RAM_DATA_W: { type: int, default: 32,         desc: "DMEM data width" }
 
   interfaces:

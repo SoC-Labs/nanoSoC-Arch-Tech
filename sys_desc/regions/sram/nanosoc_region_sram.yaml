@@ -22,7 +22,7 @@ module:
   params:
     SYS_ADDR_W: { type: int, default: 32, desc: "System address width" }
     SYS_DATA_W: { type: int, default: 32, desc: "System data width" }
-    RAM_ADDR_W: { type: int, default: 14, desc: "RAM address width (phys = 4 * 2^N bytes)" }
+    RAM_ADDR_W: { type: int, default: 14, desc: "RAM address width (phys = 2^N bytes)" }
     RAM_DATA_W: { type: int, default: 32, desc: "RAM data width" }
 
   interfaces:

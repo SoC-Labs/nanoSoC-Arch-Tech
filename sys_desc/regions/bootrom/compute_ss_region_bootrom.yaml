@@ -28,7 +28,7 @@ module:
   params:
     SYS_ADDR_W: { type: int, default: 32, desc: "System address width" }
     SYS_DATA_W: { type: int, default: 32, desc: "System data width" }
-    ROM_ADDR_W: { type: int, default: 11, desc: "Boot ROM address width (phys = 4 * 2^N bytes, default 8 KB)" }
+    ROM_ADDR_W: { type: int, default: 11, desc: "Boot ROM address width (phys = 2^N bytes, default 2 KB)" }
 
   interfaces:
     # Clock (no reset — ROM content is fixed)

@@ -222,9 +222,9 @@ module:
         - { port: sys_remap_ctrl,  conn: sys_remap_ctrl }
 
       targets:
-        - { name: bootrom_0, base: 0x00000000, size: 0x08000000, phys_size: "4 * (2 ** $BOOTROM_ADDR_W)", sw_access: rx,  region_type: memory, role: bootrom, desc: "Boot ROM (alias at 0x00000000, default at 0x08000000)" }
-        - { name: imem_0,    base: 0x10000000, size: 0x08000000, phys_size: "4 * (2 ** $IMEM_RAM_ADDR_W)", sw_access: rwx, region_type: memory, role: None,    desc: "Instruction memory (remappable to 0x00000000)" }
-        - { name: dmem_0,    base: 0x18000000, size: 0x08000000, phys_size: "4 * (2 ** $DMEM_RAM_ADDR_W)", sw_access: rwx, region_type: memory, role: None,    desc: "Data memory" }
+        - { name: bootrom_0, base: 0x00000000, size: 0x08000000, phys_size: "2 ** $BOOTROM_ADDR_W", sw_access: rx,  region_type: memory, role: bootrom, desc: "Boot ROM (alias at 0x00000000, default at 0x08000000)" }
+        - { name: imem_0,    base: 0x10000000, size: 0x08000000, phys_size: "2 ** $IMEM_RAM_ADDR_W", sw_access: rwx, region_type: memory, role: None,    desc: "Instruction memory (remappable to 0x00000000)" }
+        - { name: dmem_0,    base: 0x18000000, size: 0x08000000, phys_size: "2 ** $DMEM_RAM_ADDR_W", sw_access: rwx, region_type: memory, role: None,    desc: "Data memory" }
         - { name: system,    base: 0x20000000, size: 0xE0000000, sw_access: rw,  region_type: ~,      role: ~, passthrough: cpu_0, desc: "System passthrough to external AHB master port (cpu_0)" }
 
       initiators:

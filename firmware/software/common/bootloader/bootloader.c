@@ -82,12 +82,22 @@ void UartStdOutInit(void)
 }
 
 // Output a character
+//
+// The banner goes out on the SoCDebug USRT2 (FT1248/ADP drain), which only
+// drains when a host (FTDI/ADP, or the testbench drain loop) is attached and
+// consuming. The THR-full wait is therefore BOUNDED (~40 ms/char budget):
+// with no host draining USRT2 (headless FPGA / standalone boot) an unbounded
+// spin wedged the boot mid-banner, before the REMAP->IMEM jump ever ran
+// (observed on PYNQ-Z2 hardware bring-up, 2026-07-06). Simulation never sees
+// this because the TB host always drains. Worst case when the drain is dead:
+// the banner costs ~40 ms/char and boot still completes.
 unsigned char UartPutc(unsigned char my_ch)
 {
 //  while ((CMSDK_UART2->STATE & 1)); // Wait if Transmit Holding register is full
 //  CMSDK_UART2->DATA = my_ch; // write to transmit holding register
 //  return (my_ch);
-  while (((CMSDK_USRT2->STATE & 1)==1) ); // Wait if Transmit Holding register full
+  unsigned int budget = 200000u; // ~40 ms @ 25 MHz; >> one USRT frame time
+  while (((CMSDK_USRT2->STATE & 1)==1) && (--budget != 0u)); // Wait (bounded) if Transmit Holding register full
     CMSDK_USRT2->DATA = my_ch; // write to transmit holding register
   return (my_ch);
 }

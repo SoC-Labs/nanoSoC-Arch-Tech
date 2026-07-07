@@ -81,15 +81,31 @@ void Uart2StdOutInit(void)
 }
 
 // Output a character
+//
+// FPGA bring-up fix (nanosoc_m0_soc pynq flow, pynq_z2_04, 2026-07-06):
+// always emit on UART2 and treat the SoCDebug USRT2 (FT1248/ADP drain) as
+// best-effort with a BOUNDED wait. As shipped, UartStdOutInit() enables
+// USRT2 (CTRL=0x03) and this function then routed ALL console output
+// exclusively to USRT2 with an unbounded THR spin; on FPGA builds whose
+// FT1248 drain-loop does not actually drain, the very first character hung
+// the application silently (UART2 showed nothing after the stage-0 boot
+// markers). UART2 always drains at its programmed baud so its wait stays
+// unbounded; the USRT2 side can no longer wedge the app and still receives
+// every character whenever the ADP/FT1248 host is really draining.
 unsigned char UartPutc(unsigned char my_ch)
 {
+  static unsigned char usrt2_stuck = 0; // latched on first drain timeout
+  unsigned int budget = 200000u;      // ~40 ms @ 25 MHz; >> one USRT frame
+  while (CMSDK_UART2->STATE & 1); // Wait if Transmit Holding register full
+  CMSDK_UART2->DATA = my_ch; // write to transmit holding register
   if ((CMSDK_USRT2->CTRL & 1)==0) {
-    while (CMSDK_UART2->STATE & 1); // Wait if Transmit Holding register full
-    CMSDK_UART2->DATA = my_ch; // write to transmit holding register
     CMSDK_USRT2->DATA = my_ch; // (also write to transmit holding register)
-  } else {
-    while (CMSDK_USRT2->STATE & 1); // Wait if Transmit Holding register full
-    CMSDK_USRT2->DATA = my_ch; // write to transmit holding register
+  } else if (usrt2_stuck == 0) {
+    while ((CMSDK_USRT2->STATE & 1) && (--budget != 0u)); // bounded wait
+    if (budget != 0u)
+      CMSDK_USRT2->DATA = my_ch; // write to transmit holding register
+    else
+      usrt2_stuck = 1; // drain dead: stop waiting on it (pay 40 ms once)
   }
   return (my_ch);
 }

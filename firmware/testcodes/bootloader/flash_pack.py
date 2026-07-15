@@ -33,12 +33,25 @@ import struct
 import sys
 import os
 
-# Boot table constants (must match boot_table.h)
+# Boot table constants (must match firmware/include/nanosoc_multicore_addrmap.h).
+# CYCLE 3: the header is now v2 (32 bytes: magic, version=2, num_entries, seq,
+# table_crc, active_note, reserved[2]); the entry format (32 B) is UNCHANGED.
+# A v1 header (16 B: magic, version=1, num_entries, reserved) is still emittable
+# via --table-version 1 for regression parity (CYCLE3_CONTRACT.md §2.3).
 BOOT_TABLE_MAGIC = 0x424F4F54   # "BOOT"
-BOOT_TABLE_VERSION = 1
+BOOT_TABLE_VERSION = 2          # v2 (Cycle 3); was 1
+BOOT_TABLE_VERSION_V1 = 1       # legacy single-table
 BOOT_ENTRY_FLAG_VALID = 0x01
-BOOT_TABLE_ENTRY_SIZE = 32      # bytes per entry
-BOOT_TABLE_HEADER_SIZE = 16     # bytes for header
+BOOT_TABLE_ENTRY_SIZE = 32      # bytes per entry (unchanged)
+BOOT_TABLE_HEADER_SIZE = 32     # v2 header bytes (v1 = 16)
+BOOT_TABLE_HEADER_SIZE_V1 = 16
+
+# PINNED table_crc (v2) coverage — MUST match the ROM (addrmap.h
+# NANOSOC_BOOT_TABLE_CRC_START_OFF): CRC32 over the table bytes
+#   [ 0x14 , 0x20 + num_entries*0x20 )
+# i.e. from active_note (0x14) through the end of the entries, excluding
+# magic/version/num_entries/seq (0x00..0x14) and the table_crc field (0x10).
+BOOT_TABLE_CRC_START_OFF = 0x14
 
 # ---------------------------------------------------------------------------
 # Boot ROLE -> PHYSICAL core_id mapping (CPU1-chip-control inversion, dec. B).
@@ -93,25 +106,8 @@ def parse_yaml_flash_layout(yaml_path):
     return flash_layout
 
 
-def build_boot_table(entries, num_cores):
-    """Build the boot table binary (header + entries).
-
-    Args:
-        entries: dict mapping core_id -> (stage1_offset, stage1_size, stage1_crc,
-                                          app_offset, app_size, app_crc)
-        num_cores: total number of core entries
-
-    Returns:
-        bytes: the complete boot table binary
-    """
-    # Header: magic, version, num_entries, reserved
-    header = struct.pack('<IIII',
-                         BOOT_TABLE_MAGIC,
-                         BOOT_TABLE_VERSION,
-                         num_cores,
-                         0)  # reserved
-
-    # Entries
+def _pack_entries(entries, num_cores):
+    """Pack the fixed 32-B-per-entry body (identical for v1 and v2)."""
     entry_data = b''
     for core_id in range(num_cores):
         if core_id in entries:
@@ -128,8 +124,42 @@ def build_boot_table(entries, num_cores):
         else:
             # Invalid/empty entry
             entry_data += struct.pack('<IIIIIIII', 0, 0, 0, 0, 0, 0, 0, 0)
+    return entry_data
 
-    return header + entry_data
+
+def build_boot_table(entries, num_cores, version=BOOT_TABLE_VERSION,
+                     seq=1, active_note=0):
+    """Build the boot table binary (header + entries).
+
+    version 2 (default) -> 32-B v2 header {magic, version, num_entries, seq,
+        table_crc, active_note, reserved[2]} with table_crc over the PINNED
+        range [0x14 .. 0x20 + num_entries*0x20) (matches the bootrom).
+    version 1 -> legacy 16-B header {magic, version, num_entries, reserved};
+        no seq / table_crc (regression parity, --table-version 1).
+
+    The entry body (32 B/entry) is identical for both.
+    """
+    entry_data = _pack_entries(entries, num_cores)
+
+    if version == BOOT_TABLE_VERSION_V1:
+        header = struct.pack('<IIII', BOOT_TABLE_MAGIC, BOOT_TABLE_VERSION_V1,
+                             num_cores, 0)  # reserved
+        return header + entry_data
+
+    # v2: build with a zero table_crc placeholder, CRC the pinned range, patch.
+    header = struct.pack('<IIIIIIII',
+                         BOOT_TABLE_MAGIC,   # 0x00 magic
+                         BOOT_TABLE_VERSION, # 0x04 version = 2
+                         num_cores,          # 0x08 num_entries
+                         seq,                # 0x0C seq
+                         0,                  # 0x10 table_crc (placeholder)
+                         active_note,        # 0x14 active_note
+                         0, 0)               # 0x18 reserved[2]
+    table = bytearray(header + entry_data)
+    crc_end = BOOT_TABLE_HEADER_SIZE + num_cores * BOOT_TABLE_ENTRY_SIZE
+    table_crc = crc32(bytes(table[BOOT_TABLE_CRC_START_OFF:crc_end]))
+    struct.pack_into('<I', table, 0x10, table_crc)
+    return bytes(table)
 
 
 def main():
@@ -161,6 +191,32 @@ def main():
     parser.add_argument('--app-stride', type=lambda x: int(x, 0),
                         default=0x10000,
                         help='Stride between app images (default: 0x10000)')
+
+    # --- Cycle 3: v2 boot-table + A/B/golden slot layout --------------------
+    parser.add_argument('--table-version', type=int, choices=(1, 2), default=2,
+                        help='Boot-table header version: 2 = v2 (seq + '
+                             'table_crc, default), 1 = legacy 16-B header '
+                             '(regression parity)')
+    parser.add_argument('--seq', type=lambda x: int(x, 0), default=1,
+                        help='v2 monotonic sequence number (default: 1)')
+    parser.add_argument('--active-note', type=lambda x: int(x, 0), default=None,
+                        help='v2 active_note (0=A/1=B); default auto from the '
+                             'CPU1 slot')
+    parser.add_argument('--cpu1-slot', choices=('A', 'B'), default=None,
+                        help='Place the CPU1 (core 1) app into A/B slot and set '
+                             'active_note accordingly')
+    parser.add_argument('--slot-a-offset', type=lambda x: int(x, 0),
+                        default=0x30000, help='CPU1 image Slot A (default 0x30000)')
+    parser.add_argument('--slot-b-offset', type=lambda x: int(x, 0),
+                        default=0x40000, help='CPU1 image Slot B (default 0x40000)')
+    parser.add_argument('--table1-offset', type=lambda x: int(x, 0), default=None,
+                        help='Also write a duplicate boot-table copy here '
+                             '(secondary sector, e.g. 0x10000)')
+    parser.add_argument('--golden', default=None,
+                        help='Golden CPU1 recovery image .bin (self-describing '
+                             'v2 mini-table + image written to --golden-offset)')
+    parser.add_argument('--golden-offset', type=lambda x: int(x, 0),
+                        default=0x50000, help='Golden slot (default 0x50000)')
 
     args = parser.parse_args()
 
@@ -224,8 +280,21 @@ def main():
             'app_crc': crc32(app_data) if app_data else 0,
         }
 
+    # Cycle 3: optionally steer the CPU1 (core 1) app into an A/B slot and set
+    # active_note so the on-flash offset matches the ping-pong layout.
+    active_note = args.active_note
+    if args.cpu1_slot is not None and BOOT_PHYS_IDX_CPU1 in entries:
+        slot_off = args.slot_b_offset if args.cpu1_slot == 'B' else args.slot_a_offset
+        entries[BOOT_PHYS_IDX_CPU1]['app_offset'] = slot_off
+        if active_note is None:
+            active_note = 1 if args.cpu1_slot == 'B' else 0
+    if active_note is None:
+        active_note = 0
+
     # Build boot table
-    boot_table = build_boot_table(entries, num_cores)
+    boot_table = build_boot_table(entries, num_cores,
+                                  version=args.table_version,
+                                  seq=args.seq, active_note=active_note)
 
     # Assemble flash image
     flash = bytearray(args.flash_size)
@@ -233,10 +302,41 @@ def main():
     for i in range(len(flash)):
         flash[i] = 0xFF
 
-    # Place boot table
+    # Place boot table (primary copy)
     bt_offset = args.boot_table_offset
     flash[bt_offset:bt_offset + len(boot_table)] = boot_table
-    print(f"  Boot table: offset 0x{bt_offset:08X}, {len(boot_table)} bytes")
+    print(f"  Boot table: v{args.table_version} offset 0x{bt_offset:08X}, "
+          f"{len(boot_table)} bytes, seq={args.seq}")
+
+    # Optional duplicate copy in a second sector (dual sequenced tables, §3b).
+    if args.table1_offset is not None:
+        flash[args.table1_offset:args.table1_offset + len(boot_table)] = boot_table
+        print(f"  Boot table copy 1: offset 0x{args.table1_offset:08X}")
+
+    # Optional golden slot: a self-describing v2 mini-table at --golden-offset
+    # whose CPU1 (entry 1) points at the golden image placed right after it.
+    # The ROM tries this via the identical validate+load+CRC path (§4.2).
+    if args.golden is not None:
+        with open(args.golden, 'rb') as f:
+            gdata = f.read()
+        while len(gdata) % 4:
+            gdata += b'\x00'
+        g_img_off = args.golden_offset + BOOT_TABLE_HEADER_SIZE + \
+            2 * BOOT_TABLE_ENTRY_SIZE
+        g_entries = {
+            BOOT_PHYS_IDX_CPU0: {'stage1_offset': 0, 'stage1_size': 0,
+                                 'stage1_crc': 0, 'app_offset': 0,
+                                 'app_size': 0, 'app_crc': 0},
+            BOOT_PHYS_IDX_CPU1: {'stage1_offset': 0, 'stage1_size': 0,
+                                 'stage1_crc': 0, 'app_offset': g_img_off,
+                                 'app_size': len(gdata),
+                                 'app_crc': crc32(gdata)},
+        }
+        g_table = build_boot_table(g_entries, 2, version=2, seq=0, active_note=0)
+        flash[args.golden_offset:args.golden_offset + len(g_table)] = g_table
+        flash[g_img_off:g_img_off + len(gdata)] = gdata
+        print(f"  Golden: table 0x{args.golden_offset:08X}, image 0x{g_img_off:08X}, "
+              f"{len(gdata)} bytes, CRC32=0x{crc32(gdata):08X}")
 
     # Place Stage 1 and app binaries
     for core_id in sorted(all_core_ids):

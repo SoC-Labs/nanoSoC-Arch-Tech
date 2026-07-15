@@ -26,6 +26,14 @@ module:
     APB_ADDR_W: { type: int, default: 12, desc: "APB peripheral address width" }
     APB_DATA_W: { type: int, default: 32, desc: "APB peripheral data width" }
 
+    # Boot configuration — passed straight through to nanosoc_sysctrl, which
+    # exposes them read-only in BOOT_CFG @ 0x4001F014 (see
+    # register_maps/nanosoc_sysctrl.yaml). Defaults of 0 make BOOT_CFG read as
+    # zero, which is the historical behaviour of that offset.
+    QSPI_PRESENT: { type: int, default: 0, desc: "BOOT_CFG.QSPI_PRESENT [0]: QSPI flash controller fitted (1 bit)" }
+    BOOT_MODE:    { type: int, default: 0, desc: "BOOT_CFG.BOOT_MODE [3:1]: 0=ADP external load, 1=QSPI 2-stage flash boot (3 bits)" }
+    CORE_ID:      { type: int, default: 0, desc: "BOOT_CFG.CORE_ID [7:4]: hardwired core identifier (4 bits)" }
+
   interfaces:
     # Clock and Reset
     - { name: HCLK,    type: wire, direction: in, params: { WIDTH: 1 }, desc: AHB clock }

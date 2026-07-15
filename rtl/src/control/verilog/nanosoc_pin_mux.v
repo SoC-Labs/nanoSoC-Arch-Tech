@@ -64,12 +64,27 @@ module nanosoc_pin_mux (
 `endif
 
     // IO Ports
-    output wire  [15:0]     p0_in,
+    //
+    // p0_in / p1_in are the SAMPLED PAD VALUES, driven in from outside this
+    // block. They were originally OUTPUTS, synthesized here by a "port input
+    // feedback" network that modelled the pads internally (read back what you
+    // drove, else a pull-up '1'). That made sense when this block owned the
+    // pads. It no longer does: the SoC takes real pad inputs and routes them
+    // to the GPIO blocks directly.
+    //
+    // When that refactor happened, nanosoc_ss_systemctrl stopped connecting
+    // these ports (`.p1_in ( ), // was(p1_in) now from pad inputs`) but the
+    // feedback network was left in place — and this block DERIVES the UART
+    // receive lines from p1_in (see `uart2_rxd` below). The result was that
+    // UART2's RXD was a loopback of the SoC's own P1[4] drive (or a constant
+    // '1'), and a host byte could never reach the console receiver on any
+    // target. Making these true inputs is what closes that path.
+    input  wire  [15:0]     p0_in,
     input  wire  [15:0]     p0_out,
     input  wire  [15:0]     p0_outen,
     input  wire  [15:0]     p0_altfunc,
 
-    output wire  [15:0]     p1_in,
+    input  wire  [15:0]     p1_in,
     input  wire  [15:0]     p1_out,
     input  wire  [15:0]     p1_outen,
     input  wire  [15:0]     p1_altfunc,
@@ -131,39 +146,24 @@ module nanosoc_pin_mux (
   assign    p1_out_en_mux[15:6] = p1_outen[15:6];
 
 
-// port input feedback
-  assign    p0_in[ 0] = p0_out_en_mux[ 0] ? p0_out_mux[ 0] : 1'b1;
-  assign    p0_in[ 1] = p0_out_en_mux[ 1] ? p0_out_mux[ 1] : 1'b1;
-  assign    p0_in[ 2] = p0_out_en_mux[ 2] ? p0_out_mux[ 2] : 1'b1;
-  assign    p0_in[ 3] = p0_out_en_mux[ 3] ? p0_out_mux[ 3] : 1'b1;
-  assign    p0_in[ 4] = p0_out_en_mux[ 4] ? p0_out_mux[ 4] : 1'b1;
-  assign    p0_in[ 5] = p0_out_en_mux[ 5] ? p0_out_mux[ 5] : 1'b1;
-  assign    p0_in[ 6] = p0_out_en_mux[ 6] ? p0_out_mux[ 6] : 1'b1;
-  assign    p0_in[ 7] = p0_out_en_mux[ 7] ? p0_out_mux[ 7] : 1'b1;
-  assign    p0_in[ 8] = p0_out_en_mux[ 8] ? p0_out_mux[ 8] : 1'b1;
-  assign    p0_in[ 9] = p0_out_en_mux[ 9] ? p0_out_mux[ 9] : 1'b1;
-  assign    p0_in[10] = p0_out_en_mux[10] ? p0_out_mux[10] : 1'b1;
-  assign    p0_in[11] = p0_out_en_mux[11] ? p0_out_mux[11] : 1'b1;
-  assign    p0_in[12] = p0_out_en_mux[12] ? p0_out_mux[12] : 1'b1;
-  assign    p0_in[13] = p0_out_en_mux[13] ? p0_out_mux[13] : 1'b1;
-  assign    p0_in[14] = p0_out_en_mux[14] ? p0_out_mux[14] : 1'b1;
-  assign    p0_in[15] = p0_out_en_mux[15] ? p0_out_mux[15] : 1'b1;
+// Port input feedback — REMOVED.
 //
-  assign    p1_in[ 0] = p1_out_en_mux[ 0] ? p1_out_mux[ 0] : 1'b1;
-  assign    p1_in[ 1] = p1_out_en_mux[ 1] ? p1_out_mux[ 1] : 1'b1;
-  assign    p1_in[ 2] = p1_out_en_mux[ 2] ? p1_out_mux[ 2] : 1'b1;
-  assign    p1_in[ 3] = p1_out_en_mux[ 3] ? p1_out_mux[ 3] : 1'b1;
-  assign    p1_in[ 4] = p1_out_en_mux[ 4] ? p1_out_mux[ 4] : 1'b1;
-  assign    p1_in[ 5] = p1_out_en_mux[ 5] ? p1_out_mux[ 5] : 1'b1;
-  assign    p1_in[ 6] = p1_out_en_mux[ 6] ? p1_out_mux[ 6] : 1'b1;
-  assign    p1_in[ 7] = p1_out_en_mux[ 7] ? p1_out_mux[ 7] : 1'b1;
-  assign    p1_in[ 8] = p1_out_en_mux[ 8] ? p1_out_mux[ 8] : 1'b1;
-  assign    p1_in[ 9] = p1_out_en_mux[ 9] ? p1_out_mux[ 9] : 1'b1;
-  assign    p1_in[10] = p1_out_en_mux[10] ? p1_out_mux[10] : 1'b1;
-  assign    p1_in[11] = p1_out_en_mux[11] ? p1_out_mux[11] : 1'b1;
-  assign    p1_in[12] = p1_out_en_mux[12] ? p1_out_mux[12] : 1'b1;
-  assign    p1_in[13] = p1_out_en_mux[13] ? p1_out_mux[13] : 1'b1;
-  assign    p1_in[14] = p1_out_en_mux[14] ? p1_out_mux[14] : 1'b1;
-  assign    p1_in[15] = p1_out_en_mux[15] ? p1_out_mux[15] : 1'b1;
+// This block used to synthesize p0_in/p1_in itself:
+//
+//   assign p0_in[N] = p0_out_en_mux[N] ? p0_out_mux[N] : 1'b1;
+//   assign p1_in[N] = p1_out_en_mux[N] ? p1_out_mux[N] : 1'b1;
+//
+// i.e. an internal pad model: read back whatever the SoC drove, else a
+// pull-up '1'. That was correct when this block owned the pads.
+//
+// It is now WRONG, and was actively harmful: the SoC takes real pad inputs
+// and nanosoc_ss_systemctrl had stopped connecting these ports, so the
+// feedback network kept driving them from the SoC's own outputs — while
+// `uart2_rxd` (above) is derived from p1_in[4]. UART2's receive line was
+// therefore a loopback of the SoC's own GPIO drive, never the pad, and no
+// host byte could reach the console receiver on FPGA or ASIC.
+//
+// p0_in/p1_in are now true inputs, driven from the sampled pads. See
+// mps3-nanosoc-platform tests/uart2_rx_path for the bench that pins this down.
 
 endmodule

@@ -50,9 +50,30 @@
 //      bit [  1]  WDOGRESETREQ
 //      bit [  0]  SYSRESETREQ
 //
+// 0x014 RO    BOOT_CFG - boot configuration (hardwired from RTL parameters)
+//      bit [7:4]  CORE_ID      - hardwired core identifier (CORE_ID param)
+//      bit [3:1]  BOOT_MODE    - 0=ADP (external load), 1=QSPI 2-stage flash
+//                                boot (BOOT_MODE param)
+//      bit [  0]  QSPI_PRESENT - QSPI flash controller fitted (QSPI_PRESENT
+//                                param, driven from the SoC-level
+//                                QSPI_FLASH_PRESENT parameter)
+//      Read-only: writes are ignored. Reads 0x00000000 when every parameter
+//      is left at its default of 0, which is the pre-existing behaviour of
+//      this offset (it used to be in the read-as-zero list).
+//
 //-------------------------------------
 
-module nanosoc_sysctrl (
+module nanosoc_sysctrl #(
+  // Boot configuration (BOOT_CFG @ 0x014). These are PARAMETERS, not input
+  // ports, on purpose: the read-mux always block below uses an explicit
+  // Verilog-95 sensitivity list, so a run-time input would have to be added
+  // to that list or sim and synthesis would disagree. As constants they are
+  // folded into the BOOT_CFG_VALUE localparam and need no sensitivity entry
+  // (exactly like the PID/CID localparams already read in that block).
+  parameter QSPI_PRESENT = 0,  // 1 bit  : QSPI flash controller present
+  parameter BOOT_MODE    = 0,  // 3 bits : 0=ADP, 1=QSPI 2-stage flash boot
+  parameter CORE_ID      = 0   // 4 bits : hardwired core identifier
+) (
   // AHB Inputs
   input  wire         HCLK,      // system bus clock
   input  wire         HRESETn,   // system bus reset
@@ -106,6 +127,17 @@ module nanosoc_sysctrl (
   // - jep106 value (www.jedec.org)
   // - part number (customer define)
   // - Optional revision and modification number (e.g. rXpY)
+
+  // BOOT_CFG (0x014) read value, folded from the boot-configuration
+  // parameters. Built with masks and shifts rather than a concatenation of
+  // parameter bit-selects so it stays a plain integer-constant expression
+  // (portable across every simulator/synthesiser in the flow) and so an
+  // out-of-range parameter override cannot bleed into a neighbouring field.
+  // All parameters default to 0 => BOOT_CFG_VALUE == 32'h00000000, i.e. the
+  // previous read-as-zero behaviour of this offset is preserved exactly.
+  localparam [31:0] BOOT_CFG_VALUE = ((CORE_ID      & 32'h0000_000F) << 4)  // [7:4]
+                                   | ((BOOT_MODE    & 32'h0000_0007) << 1)  // [3:1]
+                                   |  (QSPI_PRESENT & 32'h0000_0001);       // [  0]
 
   // --------------------------------------------------------------------------
   // Internal wires
@@ -172,7 +204,10 @@ module nanosoc_sysctrl (
             3'b001: read_mux = {{31{1'b0}}, reg_pmuenable};
             3'b010: read_mux = {{31{1'b0}}, reg_lockupreset};
             3'b100: read_mux = {{29{1'b0}}, reg_resetinfo};
-            3'b011, 3'b101, 3'b110, 3'b111: read_mux = {32{1'b0}};
+            // 0x014 BOOT_CFG — read-only, hardwired from parameters. Constant,
+            // so it needs no entry in this block's explicit sensitivity list.
+            3'b101: read_mux = BOOT_CFG_VALUE;
+            3'b011, 3'b110, 3'b111: read_mux = {32{1'b0}};
             default: read_mux = {32{1'bx}};
           endcase
         end else if (reg_addr[11:6] == 6'h3F) begin

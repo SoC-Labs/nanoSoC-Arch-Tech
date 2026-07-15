@@ -30,6 +30,14 @@ module:
     APB_DATA_W:      { type: int, default: 32, desc: "APB data width" }
     CLKGATE_PRESENT: { type: int, default: 0,  desc: "Clock gating present" }
 
+    # Boot configuration — threaded down to nanosoc_sysctrl's read-only
+    # BOOT_CFG register @ 0x4001F014, which the stage-0 bootloader reads to
+    # decide between ADP and QSPI flash boot. Defaults of 0 => BOOT_CFG reads
+    # zero, i.e. unchanged behaviour for every existing consumer.
+    QSPI_PRESENT:    { type: int, default: 0,  desc: "BOOT_CFG.QSPI_PRESENT [0]: QSPI flash controller fitted (1 bit)" }
+    BOOT_MODE:       { type: int, default: 0,  desc: "BOOT_CFG.BOOT_MODE [3:1]: 0=ADP external load, 1=QSPI 2-stage flash boot (3 bits)" }
+    CORE_ID:         { type: int, default: 0,  desc: "BOOT_CFG.CORE_ID [7:4]: hardwired core identifier (4 bits)" }
+
   interfaces:
     # Clock inputs and outputs
     - { name: SYS_CLK,         type: wire, direction: in,  params: { WIDTH: 1 }, desc: "System input clock (free-running)" }
@@ -113,6 +121,7 @@ module:
     - instance_name: u_region_soc_peripheral
       module: nanosoc_region_soc_peripheral
       addressable: True
-      params: { SYS_ADDR_W: $SYS_ADDR_W, SYS_DATA_W: $SYS_DATA_W, APB_ADDR_W: $APB_ADDR_W, APB_DATA_W: $APB_DATA_W }
+      params: { SYS_ADDR_W: $SYS_ADDR_W, SYS_DATA_W: $SYS_DATA_W, APB_ADDR_W: $APB_ADDR_W, APB_DATA_W: $APB_DATA_W,
+                QSPI_PRESENT: $QSPI_PRESENT, BOOT_MODE: $BOOT_MODE, CORE_ID: $CORE_ID }
       connections:
         - { port: ahb_slave, conn: SOC_PERIPHERAL }

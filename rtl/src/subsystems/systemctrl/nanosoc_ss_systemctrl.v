@@ -17,8 +17,15 @@ module nanosoc_ss_systemctrl #(
     parameter    SYS_DATA_W    = 32,  // System Data Width
     parameter    APB_ADDR_W    = 12,  // APB Peripheral Address Width
     parameter    APB_DATA_W    = 32,  // APB Peripheral Data Width
-    
-    parameter    CLKGATE_PRESENT = 0
+
+    parameter    CLKGATE_PRESENT = 0,
+
+    // Boot configuration — hardwired into the system controller's read-only
+    // BOOT_CFG register at 0x4001F014, consumed by the stage-0 bootloader.
+    // Defaults of 0 reproduce the previous behaviour (BOOT_CFG reads zero).
+    parameter    QSPI_PRESENT  = 0,   // 1 bit  : QSPI flash controller present
+    parameter    BOOT_MODE     = 0,   // 3 bits : 0=ADP, 1=QSPI 2-stage flash boot
+    parameter    CORE_ID       = 0    // 4 bits : hardwired core identifier
 )(
     // Free-running and Crystal Clock Output
     input  wire                   SYS_CLK,              // System Input Clock
@@ -179,12 +186,26 @@ module nanosoc_ss_systemctrl #(
         .timer1_extin     (timer1_extin),
 
         // IO Ports
-        .p0_in            ( ), // was (p0_in) now from pad inputs),
+        //
+        // p0_in/p1_in ARE the pad inputs — connect them. They were previously
+        // left unconnected here, on the reasoning that the GPIO blocks now
+        // take pad inputs directly ("now from pad inputs"). That is true of
+        // the GPIO blocks, but nanosoc_pin_mux ALSO derives the UART receive
+        // lines from p1_in (uart2_rxd = p1_in[4]) — so disconnecting them
+        // silently severed the host->DUT console path, leaving UART2's RXD
+        // fed by the pin mux's internal self-feedback (a loopback of the SoC's
+        // own P1[4] drive, or a constant '1'). No host byte could ever reach
+        // UART2 on any target. See mps3-nanosoc-platform tests/uart2_rx_path.
+        //
+        // P1_IN here is the post-hostio4-mux bus (nanosoc.sv passes sys_p1_in);
+        // in FT1248/UART2 mode nanosoc_ss_hostio4.v:214 passes the real pad
+        // through to bit 4, which is what UART2's RXD needs.
+        .p0_in            (P0_IN),
         .p0_out           (P0_OUT),
         .p0_outen         (P0_OUTEN),
         .p0_altfunc       (P0_ALTFUNC),
 
-        .p1_in            ( ), // was(p1_in) now from pad inputs),
+        .p1_in            (P1_IN),
         .p1_out           (P1_OUT),
         .p1_outen         (P1_OUTEN),
         .p1_altfunc       (P1_ALTFUNC),
@@ -201,7 +222,11 @@ module nanosoc_ss_systemctrl #(
         .SYS_ADDR_W(SYS_ADDR_W),
         .SYS_DATA_W(SYS_DATA_W),
         .APB_ADDR_W(APB_ADDR_W),
-        .APB_DATA_W(APB_DATA_W)
+        .APB_DATA_W(APB_DATA_W),
+        // Boot configuration -> sysctrl BOOT_CFG @ 0x4001F014
+        .QSPI_PRESENT(QSPI_PRESENT),
+        .BOOT_MODE(BOOT_MODE),
+        .CORE_ID(CORE_ID)
     ) u_region_soc_peripheral (
         // Clock and Reset
         .FCLK(SYS_FCLK),

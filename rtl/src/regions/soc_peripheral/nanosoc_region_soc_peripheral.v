@@ -14,7 +14,14 @@ module nanosoc_region_soc_peripheral #(
     parameter    SYS_ADDR_W=32,  // System Address Width
     parameter    SYS_DATA_W=32,  // System Data Width
     parameter    APB_ADDR_W=12,  // APB Peripheral Address Width
-    parameter    APB_DATA_W=32   // APB Peripheral Data Width
+    parameter    APB_DATA_W=32,  // APB Peripheral Data Width
+
+    // Boot configuration — hardwired into the system controller's read-only
+    // BOOT_CFG register at 0x4001F014. Defaults of 0 reproduce the previous
+    // behaviour (BOOT_CFG read as constant zero).
+    parameter    QSPI_PRESENT=0, // 1 bit  : QSPI flash controller present
+    parameter    BOOT_MODE=0,    // 3 bits : 0=ADP, 1=QSPI 2-stage flash boot
+    parameter    CORE_ID=0       // 4 bits : hardwired core identifier
   )(
     input  wire                   FCLK,             // Free-running system clock
     input  wire                   PORESETn,         // Power-On-Reset reset (active-low)
@@ -259,7 +266,12 @@ module nanosoc_region_soc_peripheral #(
   // Peripherals
   // -------------------------------
 
-  nanosoc_sysctrl u_sysctrl (
+  nanosoc_sysctrl #(
+    // Boot configuration, exposed read-only via BOOT_CFG @ 0x4001F014
+    .QSPI_PRESENT (QSPI_PRESENT),
+    .BOOT_MODE    (BOOT_MODE),
+    .CORE_ID      (CORE_ID)
+  ) u_sysctrl (
     // AHB Inputs
     .HCLK         (HCLK),
     .HRESETn      (HRESETn),

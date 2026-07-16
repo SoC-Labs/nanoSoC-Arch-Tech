@@ -78,7 +78,21 @@ module nanosoc_region_soc_peripheral #(
     output wire         [15:0]  SYS_GPIO1_IRQ,    // GPIO 0 irqs
     
     // CPU power/reset control
-    output wire          [3:0]  REMAP_CTRL,       // REMAP control bit
+    // 1 bit, NOT [3:0]. The MEM_CTRL.REMAP register field IS 4 bits (see
+    // nanosoc_sysctrl's programmer's model) and b2d0911 widened this port to
+    // match it -- but that widening was incomplete: the driver
+    // (nanosoc_sysctrl.REMAP) and BOTH consumers (nanosoc_ss_systemctrl's
+    // SYS_REMAP_CTRL, and nanosoc_gen's model, which declares WIDTH: 1) are all
+    // 1 bit, and no consumer anywhere uses above bit 0 -- the generated
+    // interconnect binds `.remapping_dec(REMAP[0])` into a `[0:0]` port. So the
+    // port has been mismatched with its own driver since 2026-03. Verilog
+    // truncates silently, so VCS never complained; Design Compiler raises LINK-3
+    // then LINK-25 and BLACK-BOXES this entire region -- silently deleting all
+    // the UARTs, the GPIO, the timers and nanosoc_sysctrl from the netlist.
+    // Widening the driver instead would break every generated top. The 4-bit
+    // register field stays: it reads as "REMAP is a 4-bit field; this SoC
+    // implements remap region 0 only".
+    output wire                 REMAP_CTRL,       // REMAP control bit
     output wire                 APBACTIVE,        // APB bus active (for clock gating of PCLKG)
     input  wire                 SYSRESETREQ,      // Processor control - system reset request
     output wire                 WDOGRESETREQ,     // Watchdog reset request

@@ -28,3 +28,6 @@
 [submodule "rtl/extio8x4-axis"]
 	path = rtl/extio8x4-axis
 	url = https://git.soton.ac.uk/soclabs/extio8x4-axis.git
+[submodule "rtl/coresight_soc400_tech"]
+	path = rtl/coresight_soc400_tech
+	url = git@github.com:SoC-Labs/SoC-Labs-SoC400-Tech.git

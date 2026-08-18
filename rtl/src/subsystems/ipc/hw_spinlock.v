@@ -115,7 +115,7 @@ module hw_spinlock #(
     wire        diag_force     = HADDR[2];          // within DIAG page: 1 => 0x304
 
     // Map a requester page to its owner code (only valid for the 3 acquire pages).
-    function [1:0] page_owner;
+    function automatic [1:0] page_owner;
         input [1:0] p;
         begin
             case (p)

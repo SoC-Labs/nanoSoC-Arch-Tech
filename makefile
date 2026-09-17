@@ -40,9 +40,6 @@ TESTNAME   ?= hello
 # Is an accelerator subsystem present in the design?
 ACCELERATOR ?= no
 
-# Is the Arm QuickStart being used?
-QUICKSTART ?= no
-
 # IS this for an ASIC Flow?
 ASIC ?= no
 
@@ -225,29 +222,25 @@ endif
 
 
 # System Design Filelist
-ifeq ($(QUICKSTART),yes)
-	DESIGN_VC            ?= $(SOCLABS_PROJECT_DIR)/flist/project/top_qs.flist
-	TBENCH_VC            ?= $(SOCLABS_PROJECT_DIR)/flist/project/top_qs.flist
-	ARM_CORSTONE_101_DIR ?= $(ARM_IP_LIBRARY_PATH)/latest/Cortex-M0-QS/Corstone-101-logical
-	ARM_CORTEX_M0_DIR    ?= $(ARM_IP_LIBRARY_PATH)/latest/Cortex-M0-QS/Cortex-M0-logical
-	TB_TOP               ?= nanosoc_tb_qs
+# The Arm IP roots. A project overrides these in its nanosoc.config (the Arm
+# Quickstart download nests them differently); everything below the root is
+# identical in both releases, so the filelists are shared.
+ARM_CORSTONE_101_DIR ?= $(ARM_IP_LIBRARY_PATH)/latest/Corstone-101/logical
+ARM_CORTEX_M0_DIR    ?= $(ARM_IP_LIBRARY_PATH)/latest/Cortex-M0/logical
+
+ifeq ($(ASIC),yes)
+	DESIGN_VC            	?= $(SOCLABS_PROJECT_DIR)/flist/project/top_ASIC.flist
+	NANOSOC_DEFINES      	+= ASIC_TEST_PORTS
 else
-	ifeq ($(ASIC),yes)
-		DESIGN_VC            	?= $(SOCLABS_PROJECT_DIR)/flist/project/top_ASIC.flist
-		ARM_CORSTONE_101_DIR 	?= $(ARM_IP_LIBRARY_PATH)/latest/Corstone-101/logical
-		ARM_CORTEX_M0_DIR    	?= $(ARM_IP_LIBRARY_PATH)/latest/Cortex-M0/logical
-		NANOSOC_DEFINES      	+= ASIC_TEST_PORTS
+	ifeq ($(GATE),yes)
+		DESIGN_VC		 	?= $(SOCLABS_PROJECT_DIR)/flist/project/top_GATE.flist
+		TBENCH_VC 		 	?= $(SOCLABS_PROJECT_DIR)/flist/project/top_GATE.flist
+		TB_TOP 				?= nanosoc_tb
+		NANOSOC_DEFINES 	+= GATE_SIM ARM_UD_MODEL INITIALISE_MEMORY ARM_POWER_AWARE POWER_PINS MR74125_GATE_PW_SIM MR74127_GATE_PW_SIM
 	else
-		ifeq ($(GATE),yes)
-			DESIGN_VC		 	?= $(SOCLABS_PROJECT_DIR)/flist/project/top_GATE.flist
-			TBENCH_VC 		 	?= $(SOCLABS_PROJECT_DIR)/flist/project/top_GATE.flist
-			TB_TOP 				?= nanosoc_tb
-			NANOSOC_DEFINES 	+= GATE_SIM ARM_UD_MODEL INITIALISE_MEMORY ARM_POWER_AWARE POWER_PINS MR74125_GATE_PW_SIM MR74127_GATE_PW_SIM
-		else
-			DESIGN_VC       	?= $(SOCLABS_PROJECT_DIR)/flist/project/top.flist
-			TBENCH_VC       	?= $(SOCLABS_PROJECT_DIR)/flist/project/top.flist
-			TB_TOP          	?= nanosoc_tb
-		endif
+		DESIGN_VC       	?= $(SOCLABS_PROJECT_DIR)/flist/project/top.flist
+		TBENCH_VC       	?= $(SOCLABS_PROJECT_DIR)/flist/project/top.flist
+		TB_TOP          	?= nanosoc_tb
 	endif
 endif
 

@@ -10,26 +10,34 @@
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 // Abstract : Verilog Command File for Arm Corstone-101 VIP
+//
+// The IP root comes from ARM_CORSTONE_101_DIR, so one filelist serves both the
+// AAA release and the Arm Quickstart download.
 //-----------------------------------------------------------------------------
 
 // ============= Verilog library extensions ===========
 +libext+.v+.vlib
 
 // =============    DMA-230 search path    =============
-+incdir+$(ARM_IP_LIBRARY_PATH)/latest/Corstone-101/logical/cmsdk_debug_tester/verilog
-+incdir+$(ARM_IP_LIBRARY_PATH)/latest/Corstone-101/logical/models/protocol_checkers/AhbLitePC/verilog
-+incdir+$(ARM_IP_LIBRARY_PATH)/latest/Corstone-101/logical/models/protocol_checkers/ApbPC/verilog
++incdir+$(ARM_CORSTONE_101_DIR)/cmsdk_debug_tester/verilog
++incdir+$(ARM_CORSTONE_101_DIR)/models/protocol_checkers/AhbLitePC/verilog
++incdir+$(ARM_CORSTONE_101_DIR)/models/protocol_checkers/ApbPC/verilog
 
 // CMSDK Debug Tester VIP
--y $(ARM_IP_LIBRARY_PATH)/latest/Corstone-101/logical/cmsdk_debug_tester/verilog
-//$(ARM_IP_LIBRARY_PATH)/latest/Corstone-101/logical/cmsdk_debug_tester/verilog/cmsdk_debug_tester_ahb_interconnect.v
-//$(ARM_IP_LIBRARY_PATH)/latest/Corstone-101/logical/cmsdk_debug_tester/verilog/cmsdk_debug_tester_trace_capture.v
-//$(ARM_IP_LIBRARY_PATH)/latest/Corstone-101/logical/cmsdk_debug_tester/verilog/cmsdk_debug_tester.v
+//
+// Resolved by library search, not by an explicit list. nanosoc_vip.flist compiles
+// nanosoc_tb_debug_tester.v, which instantiates cmsdk_debug_tester; that module in
+// turn instantiates cmsdk_debug_tester_ahb_interconnect and
+// cmsdk_debug_tester_trace_capture. Each of the three lives in a file named after
+// itself in the directory below, so -y plus the +libext+ above pulls in exactly the
+// same three files the explicit list would have. Keeping -y means a testbench that
+// drops the tester compiles none of them, which the explicit form cannot do.
+-y $(ARM_CORSTONE_101_DIR)/cmsdk_debug_tester/verilog
 
 // CMSDK AHB Lite Protocol Checker VIP
-//-y $(ARM_IP_LIBRARY_PATH)/latest/Corstone-101/logical/models/protocol_checkers/AhbLitePC/verilog
-//$(ARM_IP_LIBRARY_PATH)/latest/Corstone-101/logical/models/protocol_checkers/AhbLitePC/verilog/AhbLitePC.v
+//-y $(ARM_CORSTONE_101_DIR)/models/protocol_checkers/AhbLitePC/verilog
+//$(ARM_CORSTONE_101_DIR)/models/protocol_checkers/AhbLitePC/verilog/AhbLitePC.v
 
 // CMSDK APB Protocol Checker VIP
-//-y $(ARM_IP_LIBRARY_PATH)/latest/Corstone-101/logical/models/protocol_checkers/ApbPC/verilog
-// $(ARM_IP_LIBRARY_PATH)/latest/Corstone-101/logical/models/protocol_checkers/ApbPC/verilog/ApbPC.v
+//-y $(ARM_CORSTONE_101_DIR)/models/protocol_checkers/ApbPC/verilog
+// $(ARM_CORSTONE_101_DIR)/models/protocol_checkers/ApbPC/verilog/ApbPC.v

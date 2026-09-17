@@ -18,7 +18,16 @@
 // =============    NanoSoC IP search path    =============
 
 // NanoSoC Chip Level (in nanosoc_m0_soc)
-$(SOCLABS_NANOSOC_SOC_DIR)/chip/chip/verilog/nanosoc_chip.v
+// Use the GENERATED chip and pad-ring, not the checked-in copies under chip/.
+// The checked-in chip/chip/verilog/nanosoc_chip.v still carries four SPI ports
+// (spi_sclk_o, spi_ss_o, spi_mosi_o, spi_miso_i) and passes them to
+// nanosoc_system, which no longer has them -- 4 x UPIMI-E and no simv. The two
+// files live in different repos, which is how they drifted apart unnoticed.
+// The generated pair in build_soc/ is self-consistent with nanosoc_system and is
+// otherwise port-identical, so this is a drop-in.
+$(SOCLABS_NANOSOC_SOC_DIR)/build_soc/rtl/nanosoc_chip.v
+// Still required: the GENERATED pad-ring instantiates nanosoc_chip_cfg even
+// though the generated chip does not. Dropping it gives URMI on that module.
 $(SOCLABS_NANOSOC_SOC_DIR)/chip/chip/verilog/nanosoc_chip_cfg.v
 
 // NanoSoC Core (generated top-level + glue logic helpers)

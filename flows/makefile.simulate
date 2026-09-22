@@ -76,7 +76,8 @@ MAKEFILE_FILELIST     := $(COCOTB_DIR)/makefile.flist
 MODULE ?= test_adp
 
 # Create a List of PHONY Targets
-.PHONY: compile_$(SIMULATOR) run_$(SIMULATOR) sim_$(SIMULATOR)
+.PHONY: compile_$(SIMULATOR) run_$(SIMULATOR) sim_$(SIMULATOR) sim_gui_$(SIMULATOR)
+.PHONY: compile run sim sim_gui
 
 # ------- Simulator redirect -----------
 
@@ -84,7 +85,26 @@ compile: compile_$(SIMULATOR)
 
 run: run_$(SIMULATOR)
 
+# sim = compile + headless run in the foreground; its exit code is the run's.
+# The interactive (GUI) session that 'sim' used to launch in the background
+# is 'sim_gui'. A backgrounded GUI returned 0 whatever the compile did.
 sim: sim_$(SIMULATOR)
+
+sim_gui: sim_gui_$(SIMULATOR)
+
+# Optional pass/fail gate on the run log, using the regression convention
+# (makefile.regression: ' TEST PASSED ' / ' TEST SKIPPED ', else failed).
+# Off by default so a test that does not print the marker keeps today's
+# behaviour: run_* returns the simulator's exit code only.
+#   make run SIM_CHECK_PASS=yes
+SIM_CHECK_PASS ?= no
+define check_sim_log
+	@if [ "$(SIM_CHECK_PASS)" = "yes" ]; then \
+	  if grep -q " TEST PASSED " $(1); then echo "run_$(TESTNAME): TEST PASSED ($(1))"; \
+	  elif grep -q " TEST SKIPPED " $(1); then echo "run_$(TESTNAME): TEST SKIPPED ($(1))"; \
+	  else echo "run_$(TESTNAME): FAILED - no ' TEST PASSED ' in $(1)" >&2; exit 1; fi; \
+	fi
+endef
 
 # Preload IMEM in Simulation
 compile_mti: NANOSOC_DEFINES += RAM_PRELOAD
@@ -111,13 +131,17 @@ compile_vcs : gen_defs flist_vfiles_nanosoc
 	cd $(SIM_DIR); vcs $(VCS_OPTIONS) -f tbench.vc  $(DEFINES_VC)  | tee compile_vcs.log
 
 
-# Run simulation in batch mode
+# Run simulation in batch mode (exit code is simv's; see SHELL/pipefail in makefile)
 run_vcs : code compile_vcs
 	@echo quit > $(SIM_DIR)/quit.do
 	cd $(SIM_DIR); ./simv $(VCS_SIM_OPTION) -define ADP_FILE=adp.cmd < quit.do | tee logs/run_$(TESTNAME).log ;
+	$(call check_sim_log,$(SIM_DIR)/logs/run_$(TESTNAME).log)
 
-# Run simulation in interactive mode
-sim_vcs : code compile_vcs
+# Headless simulation in the foreground; exit code is the run's
+sim_vcs : run_vcs
+
+# Run simulation in interactive mode (backgrounded GUI; exit code says nothing about the run)
+sim_gui_vcs : code compile_vcs
 	cd $(SIM_DIR); ./simv -gui +vcs+lic+wait +vcs+flush+log &
 
 # ------- XM -----------
@@ -138,9 +162,13 @@ run_xm : code compile_xm
 	@echo exit >> $(SIM_DIR)/run.tcl.tmp
 	@mv  $(SIM_DIR)/run.tcl.tmp $(SIM_DIR)/run.tcl
 	cd $(SIM_DIR); xmsim $(XMSIM_OPTIONS) -input run.tcl  | tee logs/run_$(TESTNAME).log ;
+	$(call check_sim_log,$(SIM_DIR)/logs/run_$(TESTNAME).log)
+
+# Headless simulation in the foreground; exit code is the run's
+sim_xm : run_xm
 
 # Run simulation in interactive mode
-sim_xm : code compile_xm
+sim_gui_xm : code compile_xm
 	cd $(SIM_DIR); xmsim -gui $(XMSIM_OPTIONS)
 
 # ------- MTI -----------
@@ -156,6 +184,7 @@ run_mti : code compile_mti
 	@echo "quit -f" >> $(SIM_DIR)/run.tcl.tmp
 	@mv  $(SIM_DIR)/run.tcl.tmp $(SIM_DIR)/run.tcl
 	cd $(SIM_DIR); vsim $(MTI_RUN_OPTIONS) -c $(TB_TOP) -do run.tcl | tee $(SIM_DIR)/logs/run_$(TESTNAME).log ;
+	$(call check_sim_log,$(SIM_DIR)/logs/run_$(TESTNAME).log)
 
 run_mti_to:
 	timeout 2s $(MAKE) run_mti >> /dev/null 2>&1 
@@ -163,8 +192,11 @@ run_mti_to:
 run_mti_wrap:
 	$(MAKE) run_mti_to
 	
-# Run simulation in interactive mode
-sim_mti : code compile_mti
+# Headless simulation in the foreground; exit code is the run's
+sim_mti : run_mti
+
+# Run simulation in interactive mode (backgrounded GUI; exit code says nothing about the run)
+sim_gui_mti : code compile_mti
 	cd $(SIM_DIR); vsim $(MTI_RUN_OPTIONS) -gui $(TB_TOP) &
 
 # Create work directory
@@ -183,8 +215,13 @@ compile_iverilog: bootrom gen_defs flist_vfiles_nanosoc
 
 run_iverilog: code compile_iverilog
 	cd $(SIM_DIR); vvp -l $(SIM_DIR)/logs/run_$(TESTNAME).log nanosoc_chip_pads;
+	$(call check_sim_log,$(SIM_DIR)/logs/run_$(TESTNAME).log)
 
+# Headless simulation in the foreground; exit code is the run's
 sim_iverilog: run_iverilog
+
+# Run, then open the waveform viewer
+sim_gui_iverilog: run_iverilog
 	cd $(SIM_DIR); gtkwave waves.vcd
 
 # Generate Make filelist from flists

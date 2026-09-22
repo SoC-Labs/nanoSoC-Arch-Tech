@@ -47,16 +47,32 @@ else
     BOOTLOADER_TESTCODES_DIR := $(NANOSOC_TESTCODES_DIR)
 endif
 
-# Run the bootrom flow from the other makefile
+# Run the bootrom flow from the other makefile.
+# Makefile.bootrom is a standalone makefile (it never includes this chain), so
+# a project's BOOTROM_ADDRW (nanosoc.config) is passed on its command line
+# whenever it is set; unset, the flow default in Makefile.bootrom applies and
+# the command line is exactly what it was.
+BOOTROM_ADDRW_ARG = $(if $(BOOTROM_ADDRW), BOOTROM_ADDRW=$(BOOTROM_ADDRW))
+
 bootrom:
 	@$(MAKE) -f $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/flows/Makefile.bootrom bootrom \
 		SIM_TOP_DIR=$(SIM_TOP_DIR) \
-		TESTCODES_DIR=$(BOOTLOADER_TESTCODES_DIR)
+		TESTCODES_DIR=$(BOOTLOADER_TESTCODES_DIR)$(BOOTROM_ADDRW_ARG)
+
+# Compare the flow's BOOTROM_ADDRW with the RTL's BOOTROM_ADDR_W (also a
+# prerequisite of bootrom; see Makefile.bootrom)
+check_bootrom_addrw:
+	@$(MAKE) -f $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/flows/Makefile.bootrom check_bootrom_addrw \
+		SIM_TOP_DIR=$(SIM_TOP_DIR) \
+		TESTCODES_DIR=$(BOOTLOADER_TESTCODES_DIR)$(BOOTROM_ADDRW_ARG)
 
 # Compile test code
 # Note : The use of ls after compile allows the computing server to sync up
 TEST_BUILD_DIR := $(SOCLABS_PROJECT_DIR)/build/firmware
-OUTPUT_DIR := $(TEST_BUILD_DIR)/$(TESTNAME)/out
+# Namespaced: this file is included before flows/makefile.fpga, whose
+# 'OUTPUT_DIR ?=' (the bitstream directory) was silently overridden by an
+# unnamespaced ':=' here, so build_fpga wrote the .bit under build/firmware/.
+SW_OUTPUT_DIR := $(TEST_BUILD_DIR)/$(TESTNAME)/out
 
 # Check if the there is a directory in the nanosoc testcodes directory for a test
 # - if not test TESTCODES_DIR to that of the porject software directory
@@ -67,7 +83,7 @@ else
 endif
 
 # Testcode hex is built into the project-level build directory
-TESTCODE_HEX := $(OUTPUT_DIR)/$(TESTNAME).hex
+TESTCODE_HEX := $(SW_OUTPUT_DIR)/$(TESTNAME).hex
 
 # image.hex in the sim dir is what the IMEM reads at simulation time
 IMAGE_HEX := $(SIM_DIR)/image.hex

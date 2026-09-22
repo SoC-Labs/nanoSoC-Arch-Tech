@@ -75,8 +75,24 @@ module nanosoc_region_exp #(
     input  wire             [1:0] EXP_DLAST
 );
 
+  // Effective accelerator select.
+  // Two switches reach this point: the ACCELERATOR_SUBSYSTEM parameter (the
+  // generated system's config, default 0) and the ACCELERATOR_SUBSYSTEM
+  // macro that 'make ... ACCELERATOR=yes' adds (+define+ACCELERATOR_SUBSYSTEM,
+  // makefile) and gen_defines.v repeats. The macro used to be read by nothing,
+  // so ACCELERATOR=yes built the default slave. Either switch now selects the
+  // accelerator; with neither, the default slave is generated exactly as
+  // before. The macro is tested for presence: the generated
+  // nanosoc_soc_config.vh defines it with the value 0 and is not compiled by
+  // any flow; do not add it to a filelist without revisiting this.
+`ifdef ACCELERATOR_SUBSYSTEM
+  localparam ACCELERATOR_SUBSYSTEM_SEL = 1;
+`else
+  localparam ACCELERATOR_SUBSYSTEM_SEL = ACCELERATOR_SUBSYSTEM;
+`endif
+
   generate
-    if (ACCELERATOR_SUBSYSTEM) begin : gen_accelerator_subsystem
+    if (ACCELERATOR_SUBSYSTEM_SEL) begin : gen_accelerator_subsystem
       // Instantiate Accelerator Subsystem
       accelerator_subsystem #(
         .SYS_ADDR_W (SYS_ADDR_W),

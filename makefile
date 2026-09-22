@@ -9,6 +9,20 @@
 #
 # Copyright (C) 2021-6, SoC Labs (www.soclabs.org)
 #-----------------------------------------------------------------------------
+
+#-------------------------------------
+# - Shell
+#-------------------------------------
+# Several recipes pipe a tool through tee (vcs ... | tee compile_vcs.log,
+# ./simv ... | tee logs/run_x.log). Under /bin/sh a pipeline's status is the
+# LAST stage's, so a failed compile or simulation returned 0 and the target
+# reported success. bash -o pipefail fails the recipe when any stage fails.
+# Every recipe in this file and flows/* is plain POSIX sh, so bash runs them
+# unchanged. Sub-makes (Makefile.bootrom, the firmware makefiles) are separate
+# invocations and keep their own shell; none of their recipes pipe.
+SHELL       := /bin/bash
+.SHELLFLAGS := -o pipefail -c
+
 include $(SOCLABS_PROJECT_DIR)/nanosoc.config
 
 #-------------------------------------
@@ -305,17 +319,45 @@ docs:
 	mv $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/doc/doc/tex/nanosoc_datasheet.pdf $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/doc/doc/nanosoc_datasheet.pdf
 	mv $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/doc/doc/tex/nanosoc_configuration_manual.pdf $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/doc/doc/nanosoc_configuration_manual.pdf
 
-# Run SoC model generation tool
+# SoC model generation belongs to the SoC repository: the YAML and build_soc/
+# live in $(SOCLABS_NANOSOC_SOC_DIR), and its Makefile owns the generator
+# invocation. (The target here used to point at a YAML that does not exist.)
+# Delegate when that Makefile provides soc_model, otherwise say where to run it.
+.PHONY: soc_model
 soc_model:
-	cd $(SOCLABS_NANOSOC_GEN_DIR) && python -m soc_model \
-		$(SOCLABS_NANOSOC_ARCH_TECH_DIR)/sys_desc/nanosoc_m0_soc.yaml \
-		--lib-dir $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/sys_desc \
-		--build-dir $(SOCLABS_NANOSOC_SOC_DIR)/build_soc \
-		--system-yaml $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/sys_desc/nanosoc_m0_system.yaml
+	@if grep -qs '^soc_model:' $(SOCLABS_NANOSOC_SOC_DIR)/Makefile; then \
+	  echo "soc_model: delegating to make -C $(SOCLABS_NANOSOC_SOC_DIR) soc_model"; \
+	  $(MAKE) -C $(SOCLABS_NANOSOC_SOC_DIR) soc_model; \
+	else \
+	  echo "soc_model: not provided by nanosoc_arch_tech. run: make -C $(SOCLABS_NANOSOC_SOC_DIR) soc_model" >&2; \
+	  exit 2; \
+	fi
 
 TEST_AMS:
 	$(info AMS is $(AMS))
 	$(info VCS OPTIONS is $(VCS_OPTIONS))
+
+#------------------------------------------
+# - Environment and health checks
+#------------------------------------------
+# env: every resolved SOCLABS_*/ARM_*/NANOSOC_*/BOOTROM_* variable the flow
+# reads (environment and makefile chain), one per line, sorted. Expanded here
+# so what is printed is what the recipes see.
+.PHONY: env doctor
+ENV_VAR_PATTERNS := SOCLABS_% ARM_% NANOSOC_% BOOTROM_%
+env:
+	@true $(foreach v,$(sort $(filter $(ENV_VAR_PATTERNS),$(.VARIABLES))),$(info $(v)=$($(v))))
+
+# doctor: tool versions, IP roots, Python packages. The script lives in
+# soctools_flow (bin/soclabs_doctor.sh); its exit code is the verdict.
+SOCLABS_DOCTOR := $(SOCLABS_SOCTOOLS_FLOW_DIR)/bin/soclabs_doctor.sh
+doctor:
+	@if [ ! -f "$(SOCLABS_DOCTOR)" ]; then \
+	  echo "doctor: $(SOCLABS_DOCTOR) not found." >&2; \
+	  echo "        Update the soctools_flow submodule, or check SOCLABS_SOCTOOLS_FLOW_DIR (make env)." >&2; \
+	  exit 2; \
+	fi
+	@if [ -x "$(SOCLABS_DOCTOR)" ]; then "$(SOCLABS_DOCTOR)"; else bash "$(SOCLABS_DOCTOR)"; fi
 # Remove RTL compile files, log files, software compile files
 clean : clean_all_code
 	@rm -rf $(SIM_TOP_DIR)

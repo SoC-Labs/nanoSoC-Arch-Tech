@@ -47,9 +47,18 @@ module:
     LVL_WIDTH:       { type: int, default: 4,  desc: "Interrupt priority bits (3..8)" }
     TRACE_LVL:       { type: int, default: 1,  desc: "0=none,1=ITM/DWT,2=+ETM(license),3=+HTM" }
     DEBUG_LVL:       { type: int, default: 3,  desc: "0=none(no DAP)..3=full" }
-    WIC_PRESENT:     { type: int, default: 0,  desc: "Wake-up interrupt controller" }
     BB_PRESENT:      { type: int, default: 1,  desc: "Bit-banding" }
-    CLKGATE_PRESENT: { type: int, default: 0,  desc: "Architectural clock gating" }
+    # WIC_PRESENT and CLKGATE_PRESENT are GONE from the wrapper (f968b94): at 0
+    # cm4_wic's outputs are all constants and the four cm4_clk_gate instances
+    # collapse to wires, so both were replaced by those constants rather than
+    # carried as dead knobs. Declaring them here made gen-soc emit overrides for
+    # parameters that no longer exist -> CDFG-214.
+    # DEFAULT 0 IS DELIBERATE AND SAFETY-CRITICAL. At 1 the wrapper does NOT
+    # instantiate DAPSWJDP and ties CORE_SWDO/CORE_SWDOEN to constants, so unless
+    # a SoC-400 DP elsewhere in the design drives DAP_*, the die has NO debug
+    # ingress at all — and it elaborates cleanly while doing it. Internal DP is
+    # the safe default; opt IN to external, never inherit it.
+    EXTERNAL_DAP:    { type: int, default: 0,  desc: "0 = internal DAPSWJDP on the CORE_SW*/TDI/TDO pins (SAFE DEFAULT). 1 = CORTEXM4 instantiated directly with its DAP bus exported on DAP_* for an external CoreSight DP — ONLY valid if such a DP exists and is wired" }
     RESET_ALL_REGS:  { type: int, default: 0,  desc: "Reset all registers" }
     BE:              { type: int, default: 0,  desc: "Endianness: 0=little (BIGEND), 1=big" }
 
@@ -81,15 +90,31 @@ module:
     - { name: CORE_SLEEPDEEP,   type: wire, direction: out, params: { WIDTH: 1 },        desc: "CPU deep sleep status" }
     - { name: CORE_FPU_FLAGS,   type: wire, direction: out, params: { WIDTH: 6 },        desc: "FPU cumulative exception flags {IXC,OFC,UFC,IOC,DZC,IDC}" }
 
-    # Debug AHB-AP slave bus (wrapper normalises the M4 debug to this DBGAHB
-    # group so the SoC's existing CoreSight DAP / matrix bridge drives it; the
-    # M4's own SW/JTAG-DP is tied off inside the wrapper). Same shape as the M0+
-    # EXTERNAL_DAP=1 bus -> drop-in for the SoC debug wiring.
-    - { name: DBGAHB_SLVADDR,  type: wire, direction: in,  params: { WIDTH: 32 }, desc: "Debug slave address from system DAP" }
-    - { name: DBGAHB_SLVWDATA, type: wire, direction: in,  params: { WIDTH: 32 }, desc: "Debug slave write data" }
-    - { name: DBGAHB_SLVTRANS, type: wire, direction: in,  params: { WIDTH: 2 },  desc: "Debug slave transfer type" }
-    - { name: DBGAHB_SLVWRITE, type: wire, direction: in,  params: { WIDTH: 1 },  desc: "Debug slave write enable" }
-    - { name: DBGAHB_SLVSIZE,  type: wire, direction: in,  params: { WIDTH: 2 },  desc: "Debug slave transfer size" }
-    - { name: DBGAHB_SLVRDATA, type: wire, direction: out, params: { WIDTH: 32 }, desc: "Debug slave read data to system DAP" }
-    - { name: DBGAHB_SLVREADY, type: wire, direction: out, params: { WIDTH: 1 },  desc: "Debug slave ready to system DAP" }
-    - { name: DBGAHB_SLVRESP,  type: wire, direction: out, params: { WIDTH: 1 },  desc: "Debug slave response to system DAP" }
+    # The M4 has NO debug slave port, so there is no DBGAHB group. CORTEXM0PLUS
+    # exposes SLV* (ten ports); CORTEXM4INTEGRATION exposes none. The old
+    # DBGAHB_SLV* declarations here described a bus the wrapper only ever stubbed,
+    # and they outlived the ports themselves in f968b94 -> eight UPIMI-E
+    # "Port DBGAHB_SLVADDR is not defined in module slcorem4".
+    #
+    # What replaces them is the core's OWN AHB-AP, whose slave side is a standard
+    # CoreSight DAPBUS. Active only at EXTERNAL_DAP=1; at the default 0 these are
+    # unused and the internal DAPSWJDP drives the CORE_SW* pins instead.
+    - { name: DAP_CLK,    type: wire, direction: in,  params: { WIDTH: 1 },  desc: "AP-slave bus clock (EXTERNAL_DAP=1)" }
+    - { name: DAP_CLKEN,  type: wire, direction: in,  params: { WIDTH: 1 },  desc: "AP-slave bus clock enable" }
+    - { name: DAP_RESETn, type: wire, direction: in,  params: { WIDTH: 1 },  desc: "AP-slave bus reset" }
+    - { name: DAP_SEL,    type: wire, direction: in,  params: { WIDTH: 1 },  desc: "This AP's decoded select from the DP" }
+    - { name: DAP_ENABLE, type: wire, direction: in,  params: { WIDTH: 1 },  desc: "DAP access phase strobe" }
+    - { name: DAP_WRITE,  type: wire, direction: in,  params: { WIDTH: 1 },  desc: "DAP write not read" }
+    - { name: DAP_ABORT,  type: wire, direction: in,  params: { WIDTH: 1 },  desc: "DAP abort" }
+    - { name: DAP_ADDR,   type: wire, direction: in,  params: { WIDTH: 6 },  desc: "AP register address, dapcaddr[7:2]" }
+    - { name: DAP_WDATA,  type: wire, direction: in,  params: { WIDTH: 32 }, desc: "DAP write data" }
+    - { name: DAP_READY,  type: wire, direction: out, params: { WIDTH: 1 },  desc: "DAP transfer ready" }
+    - { name: DAP_SLVERR, type: wire, direction: out, params: { WIDTH: 1 },  desc: "DAP slave error" }
+    - { name: DAP_RDATA,  type: wire, direction: out, params: { WIDTH: 32 }, desc: "DAP read data" }
+    # Debug authentication / power-up, and debug sideband promoted from tie-offs.
+    - { name: DBG_EN,            type: wire, direction: in,  params: { WIDTH: 1 }, desc: "DBGEN — debug enable" }
+    - { name: DBG_PWRUP,         type: wire, direction: in,  params: { WIDTH: 1 }, desc: "Debug power-up ack (CDBGPWRUPACK-equivalent)" }
+    - { name: CORE_EDBGRQ,       type: wire, direction: in,  params: { WIDTH: 1 }, desc: "External debug request (was tied 0)" }
+    - { name: CORE_DBGRESTART,   type: wire, direction: in,  params: { WIDTH: 1 }, desc: "Synchronised restart request" }
+    - { name: CORE_DBGRESTARTED, type: wire, direction: out, params: { WIDTH: 1 }, desc: "Restart acknowledge" }
+    - { name: CORE_HALTED,       type: wire, direction: out, params: { WIDTH: 1 }, desc: "Core is halted in debug state" }

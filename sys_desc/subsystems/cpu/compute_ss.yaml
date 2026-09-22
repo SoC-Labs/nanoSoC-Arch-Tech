@@ -88,8 +88,13 @@ module:
     - { name: cpu_0_sleepdeep,   type: wire, direction: out, params: { WIDTH: 1 },        desc: "CPU deep sleep status" }
     - { name: cpu_0_fpu_flags,   type: wire, direction: out, params: { WIDTH: 6 },        desc: "FPU cumulative exception flags" }
 
-    # Debug AHB-AP slave bus (driven by the SoC CoreSight DAP via a matrix bridge)
-    - { name: cpu_0_dbgahb, type: dbg_ahb, direction: receiver, params: {}, desc: "Cortex-M4 debug-slave bus (wrapper-normalised; driven by system DAP)" }
+    # NO DBGAHB GROUP. The Cortex-M4 has no debug slave port of any kind —
+    # CORTEXM0PLUS exposes ten SLV* ports, CORTEXM4INTEGRATION exposes none — so
+    # the dbg_ahb receiver here described a bus the wrapper only ever stubbed.
+    # Debug on this subsystem is the M4's own SWJ-DP on the CORE_SW*/TDI/TDO
+    # pins (EXTERNAL_DAP=0, the default), or the core's own AHB-AP exported on
+    # slcorem4's DAP_* group (EXTERNAL_DAP=1) when a SoC-400 DP exists to drive
+    # it. Removing this is what forces the matching top-level connections out.
 
   # Internal instances
   instances:
@@ -120,15 +125,9 @@ module:
         - { port: CORE_SLEEPING,    conn: cpu_0_sleeping }
         - { port: CORE_SLEEPDEEP,   conn: cpu_0_sleepdeep }
         - { port: CORE_FPU_FLAGS,   conn: cpu_0_fpu_flags }
-        # Debug AHB-AP slave bus — driven by the system DAP via matrix bridge
-        - { port: DBGAHB_SLVADDR,  conn: cpu_0_dbgahb_slvaddr }
-        - { port: DBGAHB_SLVWDATA, conn: cpu_0_dbgahb_slvwdata }
-        - { port: DBGAHB_SLVTRANS, conn: cpu_0_dbgahb_slvtrans }
-        - { port: DBGAHB_SLVWRITE, conn: cpu_0_dbgahb_slvwrite }
-        - { port: DBGAHB_SLVSIZE,  conn: cpu_0_dbgahb_slvsize }
-        - { port: DBGAHB_SLVRDATA, conn: cpu_0_dbgahb_slvrdata }
-        - { port: DBGAHB_SLVREADY, conn: cpu_0_dbgahb_slvready }
-        - { port: DBGAHB_SLVRESP,  conn: cpu_0_dbgahb_slvresp }
+        # No DBGAHB connections — those ports do not exist on slcorem4. At the
+        # default EXTERNAL_DAP=0 the wrapper's internal DAPSWJDP drives the
+        # CORE_SW*/TDI/TDO pins and no SoC-side debug wiring is needed here.
 
     - instance_name: u_region_bootrom_0
       # Distinct module name from the M0+ manager's nanosoc_region_bootrom so a

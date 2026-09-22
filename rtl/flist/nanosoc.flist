@@ -19,9 +19,13 @@
 // =============    NanoSoC IP search path    =============
 
 // NanoSoC Chip Pads Level (in nanosoc_m0_soc)
-// Generated pad-ring: port-identical to chip/pads/glib minus the four SPI
-// pads the generated chip no longer has. See nanosoc_ip.flist.
-$(SOCLABS_NANOSOC_SOC_DIR)/build_soc/rtl/nanosoc_chip_pads.v
+// NANOSOC_CHIP_PADS_DIR is set in the nanosoc_arch_tech makefile and defaults
+// to the checked-in chip/pads/glib/verilog. A project overrides it in its
+// nanosoc.config, together with NANOSOC_CHIP_DIR (see nanosoc_ip.flist), when
+// its generated pad-ring is the one that matches its chip -- e.g.
+// build_soc/rtl, whose nanosoc_chip_pads.v is port-identical to the checked-in
+// copy minus the four SPI pads.
+$(NANOSOC_CHIP_PADS_DIR)/nanosoc_chip_pads.v
 $(SOCLABS_HOSTIO4_TECH_DIR)/soc_rtl/hostio4_controller.v
 $(SOCLABS_HOSTIO4_TECH_DIR)/soc_rtl/hostio4_controller_fsm.v
 $(SOCLABS_HOSTIO4_TECH_DIR)/soc_rtl/hostio4_controller_sync.v

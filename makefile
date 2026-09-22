@@ -228,6 +228,17 @@ endif
 ARM_CORSTONE_101_DIR ?= $(ARM_IP_LIBRARY_PATH)/latest/Corstone-101/logical
 ARM_CORTEX_M0_DIR    ?= $(ARM_IP_LIBRARY_PATH)/latest/Cortex-M0/logical
 
+# The directories holding the chip and pad-ring sources named by
+# rtl/flist/nanosoc_ip.flist (nanosoc_chip.v) and rtl/flist/nanosoc.flist
+# (nanosoc_chip_pads.v). Default to the checked-in copies in nanosoc_m0_soc, so
+# every project that does not set them builds exactly as before. A project whose
+# generated build_soc/rtl pair is the one that matches its nanosoc_system (e.g.
+# one that has removed SPI) overrides both in its nanosoc.config.
+# Directories, not file paths: filelist_compile.py classifies a flist line by
+# the extension of its UNEXPANDED text, so a bare "$(VAR)" line is dropped.
+NANOSOC_CHIP_DIR      ?= $(SOCLABS_NANOSOC_SOC_DIR)/chip/chip/verilog
+NANOSOC_CHIP_PADS_DIR ?= $(SOCLABS_NANOSOC_SOC_DIR)/chip/pads/glib/verilog
+
 ifeq ($(ASIC),yes)
 	DESIGN_VC            	?= $(SOCLABS_PROJECT_DIR)/flist/project/top_ASIC.flist
 	NANOSOC_DEFINES      	+= ASIC_TEST_PORTS
@@ -248,6 +259,8 @@ DESIGN_VC_FPGA ?= $(SOCLABS_PROJECT_DIR)/flist/project/top_FPGA.flist
 # Make variables visible to target shells
 export ARM_CORTEX_M0_DIR
 export ARM_CORSTONE_101_DIR
+export NANOSOC_CHIP_DIR
+export NANOSOC_CHIP_PADS_DIR
 export FLIST_INCLUDES
 export AMS
 export GATE

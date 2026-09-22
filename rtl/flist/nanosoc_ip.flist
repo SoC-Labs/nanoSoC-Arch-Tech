@@ -18,16 +18,21 @@
 // =============    NanoSoC IP search path    =============
 
 // NanoSoC Chip Level (in nanosoc_m0_soc)
-// Use the GENERATED chip and pad-ring, not the checked-in copies under chip/.
-// The checked-in chip/chip/verilog/nanosoc_chip.v still carries four SPI ports
-// (spi_sclk_o, spi_ss_o, spi_mosi_o, spi_miso_i) and passes them to
-// nanosoc_system, which no longer has them -- 4 x UPIMI-E and no simv. The two
-// files live in different repos, which is how they drifted apart unnoticed.
-// The generated pair in build_soc/ is self-consistent with nanosoc_system and is
-// otherwise port-identical, so this is a drop-in.
-$(SOCLABS_NANOSOC_SOC_DIR)/build_soc/rtl/nanosoc_chip.v
-// Still required: the GENERATED pad-ring instantiates nanosoc_chip_cfg even
-// though the generated chip does not. Dropping it gives URMI on that module.
+// NANOSOC_CHIP_DIR is set in the nanosoc_arch_tech makefile and defaults to the
+// checked-in chip/chip/verilog, so this list resolves exactly as it always has
+// for a project that does not set it.
+// A project overrides it (and NANOSOC_CHIP_PADS_DIR in nanosoc.flist) in its
+// nanosoc.config when the checked-in chip no longer matches its nanosoc_system.
+// The checked-in chip carries four SPI ports (spi_sclk_o, spi_ss_o, spi_mosi_o,
+// spi_miso_i) and passes them to nanosoc_system; a project that has removed SPI
+// from its system gets 4 x UPIMI-E and no simv from it, and points both
+// variables at build_soc/rtl instead. The two files live in different repos,
+// which is how they can drift apart unnoticed; the generated pair is
+// self-consistent with nanosoc_system and otherwise port-identical.
+$(NANOSOC_CHIP_DIR)/nanosoc_chip.v
+// nanosoc_chip_cfg stays in the list for both choices: the generated pad-ring
+// instantiates it even though the generated chip does not, and dropping it
+// trades the UPIMI errors for one URMI.
 $(SOCLABS_NANOSOC_SOC_DIR)/chip/chip/verilog/nanosoc_chip_cfg.v
 
 // NanoSoC Core (generated top-level + glue logic helpers)

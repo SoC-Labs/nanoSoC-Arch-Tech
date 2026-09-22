@@ -88,6 +88,25 @@ module:
     - { name: cpu_0_sleepdeep,   type: wire, direction: out, params: { WIDTH: 1 },        desc: "CPU deep sleep status" }
     - { name: cpu_0_fpu_flags,   type: wire, direction: out, params: { WIDTH: 6 },        desc: "FPU cumulative exception flags" }
 
+    # The M4's OWN SWJ-DP, exported to the subsystem boundary. These are the
+    # debug path at EXTERNAL_DAP=0 (the default), where the wrapper instantiates
+    # DAPSWJDP and drives them. WITHOUT THESE DECLARATIONS the wrapper's
+    # CORE_SW*/CORE_TD* pins have no route out of compute_ss and the M4 has no
+    # debug at all — which is the same outcome as EXTERNAL_DAP=1 with no external
+    # DP, reached from the other side, and equally silent: on a lineage whose SoC
+    # does not reference them there is no undefined-port error to catch it.
+    # At EXTERNAL_DAP=1 the wrapper ties the outputs off
+    # (cortexm4_ahb_wrap.v:291-295) and debug moves to slcorem4's DAP_* group.
+    - { name: cpu_0_ntrst,    type: wire, direction: in,  params: { WIDTH: 1 }, desc: "JTAG nTRST" }
+    - { name: cpu_0_swclktck, type: wire, direction: in,  params: { WIDTH: 1 }, desc: "SWCLK / TCK" }
+    - { name: cpu_0_swditms,  type: wire, direction: in,  params: { WIDTH: 1 }, desc: "SWDIO in / TMS" }
+    - { name: cpu_0_tdi,      type: wire, direction: in,  params: { WIDTH: 1 }, desc: "JTAG TDI" }
+    - { name: cpu_0_tdo,      type: wire, direction: out, params: { WIDTH: 1 }, desc: "JTAG TDO" }
+    - { name: cpu_0_ntdoen,   type: wire, direction: out, params: { WIDTH: 1 }, desc: "JTAG TDO output enable, active low" }
+    - { name: cpu_0_swdo,     type: wire, direction: out, params: { WIDTH: 1 }, desc: "SWDIO out" }
+    - { name: cpu_0_swdoen,   type: wire, direction: out, params: { WIDTH: 1 }, desc: "SWDIO output enable" }
+    - { name: cpu_0_jtagnsw,  type: wire, direction: out, params: { WIDTH: 1 }, desc: "JTAG / not-SerialWire mode" }
+
     # NO DBGAHB GROUP. The Cortex-M4 has no debug slave port of any kind —
     # CORTEXM0PLUS exposes ten SLV* ports, CORTEXM4INTEGRATION exposes none — so
     # the dbg_ahb receiver here described a bus the wrapper only ever stubbed.
@@ -125,9 +144,17 @@ module:
         - { port: CORE_SLEEPING,    conn: cpu_0_sleeping }
         - { port: CORE_SLEEPDEEP,   conn: cpu_0_sleepdeep }
         - { port: CORE_FPU_FLAGS,   conn: cpu_0_fpu_flags }
-        # No DBGAHB connections — those ports do not exist on slcorem4. At the
-        # default EXTERNAL_DAP=0 the wrapper's internal DAPSWJDP drives the
-        # CORE_SW*/TDI/TDO pins and no SoC-side debug wiring is needed here.
+        # The M4's own SWJ-DP out to the boundary. No DBGAHB connections — those
+        # ports do not exist on slcorem4.
+        - { port: CORE_nTRST,    conn: cpu_0_ntrst }
+        - { port: CORE_SWCLKTCK, conn: cpu_0_swclktck }
+        - { port: CORE_SWDITMS,  conn: cpu_0_swditms }
+        - { port: CORE_TDI,      conn: cpu_0_tdi }
+        - { port: CORE_TDO,      conn: cpu_0_tdo }
+        - { port: CORE_nTDOEN,   conn: cpu_0_ntdoen }
+        - { port: CORE_SWDO,     conn: cpu_0_swdo }
+        - { port: CORE_SWDOEN,   conn: cpu_0_swdoen }
+        - { port: CORE_JTAGNSW,  conn: cpu_0_jtagnsw }
 
     - instance_name: u_region_bootrom_0
       # Distinct module name from the M0+ manager's nanosoc_region_bootrom so a

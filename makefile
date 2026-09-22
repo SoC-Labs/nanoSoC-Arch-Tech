@@ -323,6 +323,28 @@ soc_model:
 TEST_AMS:
 	$(info AMS is $(AMS))
 	$(info VCS OPTIONS is $(VCS_OPTIONS))
+
+#------------------------------------------
+# - Environment and health checks
+#------------------------------------------
+# env: every resolved SOCLABS_*/ARM_*/NANOSOC_*/BOOTROM_* variable the flow
+# reads (environment and makefile chain), one per line, sorted. Expanded here
+# so what is printed is what the recipes see.
+.PHONY: env doctor
+ENV_VAR_PATTERNS := SOCLABS_% ARM_% NANOSOC_% BOOTROM_%
+env:
+	@true $(foreach v,$(sort $(filter $(ENV_VAR_PATTERNS),$(.VARIABLES))),$(info $(v)=$($(v))))
+
+# doctor: tool versions, IP roots, Python packages. The script lives in
+# soctools_flow (bin/soclabs_doctor.sh); its exit code is the verdict.
+SOCLABS_DOCTOR := $(SOCLABS_SOCTOOLS_FLOW_DIR)/bin/soclabs_doctor.sh
+doctor:
+	@if [ ! -f "$(SOCLABS_DOCTOR)" ]; then \
+	  echo "doctor: $(SOCLABS_DOCTOR) not found." >&2; \
+	  echo "        Update the soctools_flow submodule, or check SOCLABS_SOCTOOLS_FLOW_DIR (make env)." >&2; \
+	  exit 2; \
+	fi
+	@if [ -x "$(SOCLABS_DOCTOR)" ]; then "$(SOCLABS_DOCTOR)"; else bash "$(SOCLABS_DOCTOR)"; fi
 # Remove RTL compile files, log files, software compile files
 clean : clean_all_code
 	@rm -rf $(SIM_TOP_DIR)

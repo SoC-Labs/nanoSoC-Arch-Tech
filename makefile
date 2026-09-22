@@ -9,6 +9,20 @@
 #
 # Copyright (C) 2021-6, SoC Labs (www.soclabs.org)
 #-----------------------------------------------------------------------------
+
+#-------------------------------------
+# - Shell
+#-------------------------------------
+# Several recipes pipe a tool through tee (vcs ... | tee compile_vcs.log,
+# ./simv ... | tee logs/run_x.log). Under /bin/sh a pipeline's status is the
+# LAST stage's, so a failed compile or simulation returned 0 and the target
+# reported success. bash -o pipefail fails the recipe when any stage fails.
+# Every recipe in this file and flows/* is plain POSIX sh, so bash runs them
+# unchanged. Sub-makes (Makefile.bootrom, the firmware makefiles) are separate
+# invocations and keep their own shell; none of their recipes pipe.
+SHELL       := /bin/bash
+.SHELLFLAGS := -o pipefail -c
+
 include $(SOCLABS_PROJECT_DIR)/nanosoc.config
 
 #-------------------------------------

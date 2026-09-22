@@ -56,7 +56,10 @@ bootrom:
 # Compile test code
 # Note : The use of ls after compile allows the computing server to sync up
 TEST_BUILD_DIR := $(SOCLABS_PROJECT_DIR)/build/firmware
-OUTPUT_DIR := $(TEST_BUILD_DIR)/$(TESTNAME)/out
+# Namespaced: this file is included before flows/makefile.fpga, whose
+# 'OUTPUT_DIR ?=' (the bitstream directory) was silently overridden by an
+# unnamespaced ':=' here, so build_fpga wrote the .bit under build/firmware/.
+SW_OUTPUT_DIR := $(TEST_BUILD_DIR)/$(TESTNAME)/out
 
 # Check if the there is a directory in the nanosoc testcodes directory for a test
 # - if not test TESTCODES_DIR to that of the porject software directory
@@ -67,7 +70,7 @@ else
 endif
 
 # Testcode hex is built into the project-level build directory
-TESTCODE_HEX := $(OUTPUT_DIR)/$(TESTNAME).hex
+TESTCODE_HEX := $(SW_OUTPUT_DIR)/$(TESTNAME).hex
 
 # image.hex in the sim dir is what the IMEM reads at simulation time
 IMAGE_HEX := $(SIM_DIR)/image.hex

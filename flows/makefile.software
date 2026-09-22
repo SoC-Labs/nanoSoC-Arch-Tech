@@ -47,11 +47,24 @@ else
     BOOTLOADER_TESTCODES_DIR := $(NANOSOC_TESTCODES_DIR)
 endif
 
-# Run the bootrom flow from the other makefile
+# Run the bootrom flow from the other makefile.
+# Makefile.bootrom is a standalone makefile (it never includes this chain), so
+# a project's BOOTROM_ADDRW (nanosoc.config) is passed on its command line
+# whenever it is set; unset, the flow default in Makefile.bootrom applies and
+# the command line is exactly what it was.
+BOOTROM_ADDRW_ARG = $(if $(BOOTROM_ADDRW), BOOTROM_ADDRW=$(BOOTROM_ADDRW))
+
 bootrom:
 	@$(MAKE) -f $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/flows/Makefile.bootrom bootrom \
 		SIM_TOP_DIR=$(SIM_TOP_DIR) \
-		TESTCODES_DIR=$(BOOTLOADER_TESTCODES_DIR)
+		TESTCODES_DIR=$(BOOTLOADER_TESTCODES_DIR)$(BOOTROM_ADDRW_ARG)
+
+# Compare the flow's BOOTROM_ADDRW with the RTL's BOOTROM_ADDR_W (also a
+# prerequisite of bootrom; see Makefile.bootrom)
+check_bootrom_addrw:
+	@$(MAKE) -f $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/flows/Makefile.bootrom check_bootrom_addrw \
+		SIM_TOP_DIR=$(SIM_TOP_DIR) \
+		TESTCODES_DIR=$(BOOTLOADER_TESTCODES_DIR)$(BOOTROM_ADDRW_ARG)
 
 # Compile test code
 # Note : The use of ls after compile allows the computing server to sync up

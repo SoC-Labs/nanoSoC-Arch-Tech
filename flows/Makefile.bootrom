@@ -32,7 +32,14 @@ SW_MAKE_OPTIONS = CPU_PRODUCT=CORTEX_M0 TOOL_CHAIN=$(TOOL_CHAIN)
 # Bootrom Parameters:
 # Stage 0 bootloader image
 BOOTLOADER            ?= stage0
+# Boot ROM size: phys bytes = 4 * 2^BOOTROM_ADDRW. The RTL carries the same
+# quantity as BOOTROM_ADDR_W in the SoC's generated config package; a project
+# sets BOOTROM_ADDRW in its nanosoc.config to track it (makefile.software
+# passes it through). The origin is recorded before the default is applied so
+# check_bootrom_addrw can tell "project said N" from "flow default".
+BOOTROM_ADDRW_ORIGIN  := $(origin BOOTROM_ADDRW)
 BOOTROM_ADDRW         ?= 8
+BOOTROM_CONFIG_PKG    ?= $(SOCLABS_NANOSOC_SOC_DIR)/build_soc/rtl/nanosoc_soc_config_pkg.sv
 BOOTROM_MODULE        ?= bootrom
 BOOTROM_REGION_MODULE ?= nanosoc_region_bootrom
 BOOTROM_OUT_DIR       ?= $(SOCLABS_PROJECT_DIR)/build/firmware/bootloader/$(BOOTLOADER)/out
@@ -51,7 +58,27 @@ BOOTROM_SIM_HEX := $(BOOTROM_SIM_DIR)/$(BOOTLOADER).hex
 # Tools
 BOOTROM_GEN_PY := $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/firmware/testcodes/bootloader/bootrom_gen.py
 
-bootrom: $(BOOTROM_SV) $(BOOTROM_BIN) $(BOOTROM_REGION_SV) $(BOOTROM_SIM_HEX)
+.PHONY: bootrom check_bootrom_addrw
+bootrom: check_bootrom_addrw $(BOOTROM_SV) $(BOOTROM_BIN) $(BOOTROM_REGION_SV) $(BOOTROM_SIM_HEX)
+
+# Fail when the project set BOOTROM_ADDRW to a value the RTL disagrees with.
+# When the project did not set it (flow default in use) only warn: the default
+# is shared by projects that size their ROM elsewhere, and the generated ROM
+# still works when the image fits. No config package: nothing to compare.
+check_bootrom_addrw:
+	@if [ -f "$(BOOTROM_CONFIG_PKG)" ]; then \
+	  rtl=$$(sed -nE '/BOOTROM_ADDR_W/{s/^[[:space:]]*localparam[[:space:]]+(int[[:space:]]+)?BOOTROM_ADDR_W[[:space:]]*=[[:space:]]*([0-9]+).*/\2/p;q;}' "$(BOOTROM_CONFIG_PKG)"); \
+	  if [ -z "$$rtl" ]; then \
+	    echo "WARNING: bootrom: no BOOTROM_ADDR_W found in $(BOOTROM_CONFIG_PKG); cannot check BOOTROM_ADDRW=$(BOOTROM_ADDRW)." >&2; \
+	  elif [ "$$rtl" != "$(BOOTROM_ADDRW)" ]; then \
+	    if [ "$(BOOTROM_ADDRW_ORIGIN)" = "undefined" ]; then \
+	      echo "WARNING: bootrom: flow default BOOTROM_ADDRW=$(BOOTROM_ADDRW) ($$((4<<$(BOOTROM_ADDRW))) bytes) but the RTL has BOOTROM_ADDR_W=$$rtl ($$((4<<$$rtl)) bytes) in $(BOOTROM_CONFIG_PKG). Set 'BOOTROM_ADDRW := $$rtl' in nanosoc.config." >&2; \
+	    else \
+	      echo "ERROR: bootrom: BOOTROM_ADDRW=$(BOOTROM_ADDRW) ($$((4<<$(BOOTROM_ADDRW))) bytes, from $(BOOTROM_ADDRW_ORIGIN)) but the RTL has BOOTROM_ADDR_W=$$rtl ($$((4<<$$rtl)) bytes) in $(BOOTROM_CONFIG_PKG). Make them agree." >&2; \
+	      exit 1; \
+	    fi; \
+	  fi; \
+	fi
 
 # Generate the Boot ROM Verilog, region wrapper, and Binary Text files from the bootloader hex file
 $(BOOTROM_SV) $(BOOTROM_BIN) $(BOOTROM_REGION_SV): $(BOOTROM_HEX) $(BOOTROM_GEN_PY) | $(BOOTROM_OUT_DIR)

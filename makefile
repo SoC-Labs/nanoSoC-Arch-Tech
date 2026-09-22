@@ -306,13 +306,19 @@ docs:
 	mv $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/doc/doc/tex/nanosoc_datasheet.pdf $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/doc/doc/nanosoc_datasheet.pdf
 	mv $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/doc/doc/tex/nanosoc_configuration_manual.pdf $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/doc/doc/nanosoc_configuration_manual.pdf
 
-# Run SoC model generation tool
+# SoC model generation belongs to the SoC repository: the YAML and build_soc/
+# live in $(SOCLABS_NANOSOC_SOC_DIR), and its Makefile owns the generator
+# invocation. (The target here used to point at a YAML that does not exist.)
+# Delegate when that Makefile provides soc_model, otherwise say where to run it.
+.PHONY: soc_model
 soc_model:
-	cd $(SOCLABS_NANOSOC_GEN_DIR) && python -m soc_model \
-		$(SOCLABS_NANOSOC_ARCH_TECH_DIR)/sys_desc/nanosoc_m0_soc.yaml \
-		--lib-dir $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/sys_desc \
-		--build-dir $(SOCLABS_NANOSOC_SOC_DIR)/build_soc \
-		--system-yaml $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/sys_desc/nanosoc_m0_system.yaml
+	@if grep -qs '^soc_model:' $(SOCLABS_NANOSOC_SOC_DIR)/Makefile; then \
+	  echo "soc_model: delegating to make -C $(SOCLABS_NANOSOC_SOC_DIR) soc_model"; \
+	  $(MAKE) -C $(SOCLABS_NANOSOC_SOC_DIR) soc_model; \
+	else \
+	  echo "soc_model: not provided by nanosoc_arch_tech. run: make -C $(SOCLABS_NANOSOC_SOC_DIR) soc_model" >&2; \
+	  exit 2; \
+	fi
 
 TEST_AMS:
 	$(info AMS is $(AMS))

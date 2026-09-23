@@ -114,8 +114,36 @@ $(FPGA_FLOW_DEFINES_TARGETS): NANOSOC_DEFINES += RAM_PRELOAD RAM_PRELOAD_WORD
 endif
 $(FPGA_FLOW_DEFINES_TARGETS): NANOSOC_DEFINE_IMEM_IMAGE = $(IMEM_FPGA_IMAGE)
 
+# THE IMAGE THE WORD LOADER READS MUST BE THERE, AND MUST BE WORDS. With
+# FPGA_RAM_PRELOAD=yes, sl_fpga_rom_word $readmemh's IMEM_FPGA_IMAGE one 32-bit
+# word per line. Unset, the path falls back to the parameter default
+# "image.hex", which nothing creates; missing, Vivado initialises the BRAM to
+# zero; byte format (what objcopy -O verilog writes), each byte lands in its own
+# word. All three synthesise, route and produce a bitstream whose CPU hard-faults
+# on its first fetch, and none of them says so. This refuses all three before the
+# filelist is written. FPGA_RAM_PRELOAD=no: the rule has no recipe, prints
+# nothing and runs nothing, so no existing build changes.
+.PHONY: check_fpga_image
+check_fpga_image:
+ifeq ($(FPGA_RAM_PRELOAD),yes)
+	@img='$(IMEM_FPGA_IMAGE)'; \
+	 if [ -z "$$img" ]; then \
+	   echo "ERROR: FPGA_RAM_PRELOAD=yes but IMEM_FPGA_IMAGE is unset: IMEM would preload the" >&2; \
+	   echo "       parameter default image.hex, which nothing creates. Set IMEM_FPGA_IMAGE to" >&2; \
+	   echo "       the absolute path of a WORD-format hex (one 32-bit word per line)." >&2; exit 1; fi; \
+	 if [ ! -s "$$img" ]; then \
+	   echo "ERROR: FPGA_RAM_PRELOAD=yes but IMEM_FPGA_IMAGE=$$img does not exist or is empty:" >&2; \
+	   echo "       Vivado would initialise IMEM to zero without an error." >&2; exit 1; fi; \
+	 bad=$$(grep -v '^[[:space:]]*@' "$$img" | tr -s ' \t\r' '\n\n\n' | grep -v '^$$' | grep -cvE '^[0-9A-Fa-f]{8}$$'); \
+	 if [ "$$bad" != 0 ]; then \
+	   echo "ERROR: FPGA_RAM_PRELOAD=yes but IMEM_FPGA_IMAGE=$$img is not WORD format:" >&2; \
+	   echo "       $$bad token(s) are not 8 hex digits (first: '$$(grep -v '^[[:space:]]*@' "$$img" | tr -s ' \t\r' '\n\n\n' | grep -v '^$$' | grep -vE '^[0-9A-Fa-f]{8}$$' | head -1)')." >&2; \
+	   echo "       sl_fpga_rom_word reads one 32-bit word per line; a byte image (objcopy -O" >&2; \
+	   echo "       verilog) puts one byte in each word and the CPU runs garbage. Convert it." >&2; exit 1; fi
+endif
+
 # Generate TCL filelist from flists
-flist_tcl_nanosoc: gen_defs
+flist_tcl_nanosoc: gen_defs check_fpga_image
 	@mkdir -p $(TCL_FLIST_DIR)
 	@(cd $(TCL_FLIST_DIR); \
 	$(SOCLABS_SOCTOOLS_FLOW_DIR)/bin/filelist_compile.py -t -f $(DESIGN_VC_FPGA) -o $(TCL_OUTPUT_FILELIST) -i $(FLIST_INCLUDES) -r $(IMP_NANOSOC_DIR)/src -d $(NANOSOC_DEFINES);)

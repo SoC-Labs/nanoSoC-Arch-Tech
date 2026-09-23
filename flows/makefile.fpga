@@ -85,6 +85,14 @@ endif
 # Default no, because that is what the Academic Access FPGA builds produce
 # today and this must not change their bitstreams. A project that wants a
 # preloaded IMEM sets FPGA_RAM_PRELOAD := yes in its nanosoc.config.
+#
+# RAM_PRELOAD ALONE IS NOT ENOUGH ON AN FPGA. It selects sl_ahb_rom, and
+# fpga_lib_tech's sl_ahb_rom loads its image through Arm's cmsdk_fpga_rom,
+# whose initial-block copy loop Vivado drops (Synth 8-311): the BRAM comes up
+# ZERO and nothing fails. RAM_PRELOAD_WORD (fpga_lib_tech fix/rom-preload)
+# selects sl_fpga_rom_word instead, which Vivado initialises from a WORD-format
+# hex. It is added here and never by the simulation flow, which also defines
+# RAM_PRELOAD and hands the ROM a BYTE-format image.hex.
 FPGA_RAM_PRELOAD ?= no
 
 # Absolute path to the word-format hex $readmemh should preload. Empty by
@@ -102,7 +110,7 @@ IMEM_FPGA_IMAGE ?=
 # RAM_PRELOAD once per level of the chain.
 FPGA_FLOW_DEFINES_TARGETS := flist_tcl_nanosoc
 ifeq ($(FPGA_RAM_PRELOAD),yes)
-$(FPGA_FLOW_DEFINES_TARGETS): NANOSOC_DEFINES += RAM_PRELOAD
+$(FPGA_FLOW_DEFINES_TARGETS): NANOSOC_DEFINES += RAM_PRELOAD RAM_PRELOAD_WORD
 endif
 $(FPGA_FLOW_DEFINES_TARGETS): NANOSOC_DEFINE_IMEM_IMAGE = $(IMEM_FPGA_IMAGE)
 

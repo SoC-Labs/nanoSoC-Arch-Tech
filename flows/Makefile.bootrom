@@ -77,11 +77,19 @@ BOOTROM_SRCS += $(wildcard $(SOCLABS_NANOSOC_SOC_DIR)/build_soc/firmware/*.ld) \
                 $(wildcard $(SOCLABS_NANOSOC_SOC_DIR)/build_soc/firmware/*.h) \
                 $(wildcard $(SOCLABS_NANOSOC_SOC_DIR)/build_soc/firmware/*.mk)
 
-# Post-generation guard: the ROM's depth, the decode's reach, the flow's
-# BOOTROM_ADDRW and the bootloader linker script must all be the same size.
-# check_bootrom_addrw (below) compares the flow against the RTL config package
-# BEFORE generation; this compares the generated files against each other AFTER
-# it, which is where the byte-vs-word confusion in the region wrapper lived.
+# Post-generation guard. check_bootrom_addrw (below) compares the flow against
+# the RTL config package BEFORE generation; this compares the generated files
+# against each other and against the ROM_ADDR_W the SoC actually passes AFTER it.
+#   HARD, always: the decode cannot reach every ROM word (the old byte-width
+#     slice, or a ROM_ADDR_W override smaller than the ROM), or the generated
+#     files disagree with each other.
+#   SIZE, MEM_SIZE_CHECK (warn by default, error opt-in -- the same knob and
+#     MEM_SIZE_WAIVE=BOOTROM waiver as check_mem_sizes): the ROM is smaller than
+#     the region the SoC decodes or the linker script offers. The Academic Access
+#     projects build a 1 KB ROM under an 8 KB region and linker script today;
+#     that is named on every build and must not fail it.
+# MEM_SIZE_CHECK/MEM_SIZE_WAIVE reach this standalone sub-make through the
+# environment (flows/makefile.software exports them).
 BOOTROM_REACH_CHECK := $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/flows/checks/check_bootrom_reach.sh
 BOOTROM_LD         ?= $(SOCLABS_NANOSOC_SOC_DIR)/build_soc/firmware/nanosoc_cmsdk_bootloader_memory.ld
 
@@ -90,7 +98,7 @@ bootrom: check_bootrom_addrw $(BOOTROM_SV) $(BOOTROM_BIN) $(BOOTROM_REGION_SV) $
 
 check_bootrom_reach: $(BOOTROM_SV) $(BOOTROM_REGION_SV)
 	@$(BOOTROM_REACH_CHECK) --self-test >/dev/null
-	@$(BOOTROM_REACH_CHECK) $(BOOTROM_SV) $(BOOTROM_REGION_SV) $(BOOTROM_ADDRW) $(BOOTROM_LD)
+	@$(BOOTROM_REACH_CHECK) $(BOOTROM_SV) $(BOOTROM_REGION_SV) $(BOOTROM_ADDRW) $(BOOTROM_LD) $(BOOTROM_CONFIG_PKG)
 
 # Fail when the project set BOOTROM_ADDRW to a value the RTL disagrees with.
 # When the project did not set it (flow default in use) only warn: the default

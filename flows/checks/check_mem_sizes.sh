@@ -28,6 +28,10 @@
 #   MEM_SIZE_CHECK=error  print and return 1            -- what a project should set
 #   MEM_SIZE_CHECK=off    say nothing
 #
+# A check that compared nothing is not a pass. A missing input, a width it
+# cannot evaluate, or zero regions compared (all unmatched or all waived) is a
+# finding with the same severity as a mismatch.
+#
 # Usage:
 #   check_mem_sizes.sh <config_pkg.sv> <nanosoc_memmap.mk> [ld_dir]
 #   check_mem_sizes.sh --self-test
@@ -53,73 +57,110 @@ report() {
   } >&2
 }
 
+# A finding that is not a mismatch but means "this check did not do its job":
+# an input missing, a width it could not evaluate, nothing compared at all. It
+# carries the same severity as a mismatch, so MEM_SIZE_CHECK=error can never
+# return 0 having checked nothing.
+unchecked() { echo "$(sev | tr a-z A-Z): mem-size: $1" >&2; shift; for l in "$@"; do echo "    $l" >&2; done; }
+
+# Every `localparam|parameter [type] [range] NAME = RHS` whose NAME is a memory
+# width, as "NAME VALUE", or "NAME ? RHS" when RHS is not a constant integer
+# expression. Any type (int, integer, int unsigned, logic [31:0], none) is
+# accepted; RHS may be arithmetic over integer literals, e.g. 12+2 or (1<<4)-2.
+pkg_widths() {
+  grep -oE '(localparam|parameter)[^;=]*[[:space:]]([A-Z0-9_]+_RAM_ADDR_W|BOOTROM_ADDR_W)[[:space:]]*=[^;,)]*' "$1" |
+  while IFS= read -r line; do
+    local name rhs
+    name=$(echo "$line" | sed -E 's/^.*[[:space:]]([A-Z0-9_]+)[[:space:]]*=.*/\1/')
+    rhs=$(echo "$line" | sed -E 's/^[^=]*=[[:space:]]*//; s#//.*##; s/[[:space:]]+$//')
+    if [[ "$rhs" =~ ^[0-9[:space:]+*/()\<\>-]+$ ]] && v=$(( rhs )) 2>/dev/null; then
+      echo "$name $v"
+    else
+      echo "$name ? $rhs"
+    fi
+  done
+}
+
+# Byte value of NAME in a make-syntax memory map; =, := and ?= all count.
+mm_value() {
+  sed -nE "s/^[[:space:]]*$1[[:space:]]*(::?|\?)?=[[:space:]]*(0[xX][0-9a-fA-F]+|[0-9]+).*/\2/p" "$2" | head -1
+}
+
 scan() {
   local pkg="$1" mm="$2" lddir="${3:-}"
-  local bad=0
+  local bad=0 checked=0
 
-  [ -f "$pkg" ] || { echo "check_mem_sizes: no config package at $pkg (nothing to check)" >&2; return 0; }
-  [ -f "$mm" ]  || { echo "check_mem_sizes: no memory map at $mm (nothing to check)" >&2; return 0; }
+  if [ ! -f "$pkg" ] || [ ! -f "$mm" ]; then
+    [ -f "$pkg" ] || unchecked "no SoC config package at $pkg: no memory size was checked"
+    [ -f "$mm" ]  || unchecked "no memory map at $mm: no memory size was checked"
+    return 1
+  fi
 
-  # ---- byte-width regions: <PREFIX>_RAM_ADDR_W ----
-  while read -r param width; do
-    [ -n "$param" ] || continue
-    local prefix="${param%_RAM_ADDR_W}"
-    local rtl_bytes=$(( 1 << width ))
-    local sw_name="" sw_val=""
-    for cand in "${prefix}_SIZE" "${prefix}_0_SIZE"; do
-      sw_val=$(sed -nE "s/^[[:space:]]*${cand}[[:space:]]*=[[:space:]]*(0[xX][0-9a-fA-F]+|[0-9]+).*/\1/p" "$mm" | head -1)
+  local widths; widths=$(pkg_widths "$pkg")
+  local w_name w_val w_rhs
+  while read -r w_name w_val w_rhs; do
+    [ -n "$w_name" ] || continue
+    if [ "$w_val" = "?" ]; then
+      unchecked "cannot evaluate $w_name = $w_rhs in $pkg; that memory was NOT checked"
+      bad=1
+    fi
+  done <<< "$widths"
+
+  # ---- memory map: <PREFIX>_RAM_ADDR_W (bytes = 1 << N) and BOOTROM_ADDR_W (4 << N) ----
+  while read -r w_name w_val w_rhs; do
+    [ -n "$w_name" ] && [ "$w_val" != "?" ] || continue
+    local prefix rtl_bytes cands
+    if [ "$w_name" = BOOTROM_ADDR_W ]; then
+      prefix=BOOTROM; rtl_bytes=$(( 4 << w_val )); cands="BOOTROM_0_SIZE BOOTROM_SIZE"
+    else
+      prefix="${w_name%_RAM_ADDR_W}"; rtl_bytes=$(( 1 << w_val )); cands="${prefix}_SIZE ${prefix}_0_SIZE"
+    fi
+    local sw_name="" sw_val="" cand
+    for cand in $cands; do
+      sw_val=$(mm_value "$cand" "$mm")
       if [ -n "$sw_val" ]; then sw_name="$cand"; break; fi
     done
     [ -n "$sw_name" ] || continue
     local sw_bytes=$(( sw_val ))
     [ "$sw_bytes" -gt 0 ] || continue
-    if [ "$sw_bytes" != "$rtl_bytes" ]; then
-      if waived "$prefix"; then
+    if waived "$prefix"; then
+      [ "$sw_bytes" != "$rtl_bytes" ] && \
         echo "note: mem-size: $prefix mismatch waived by MEM_SIZE_WAIVE ($(hex "$rtl_bytes") of hardware, $(hex "$sw_bytes") declared)" >&2
-        continue
-      fi
-      report "$prefix" "$param" "$width" "$rtl_bytes" "$sw_name" "$sw_bytes" "$pkg" "$mm"
+      continue
+    fi
+    checked=$((checked+1))
+    if [ "$sw_bytes" != "$rtl_bytes" ]; then
+      report "$prefix" "$w_name" "$w_val" "$rtl_bytes" "$sw_name" "$sw_bytes" "$pkg" "$mm"
       bad=1
     fi
-  done < <(sed -nE 's/^[[:space:]]*localparam[[:space:]]+(int[[:space:]]+)?([A-Z0-9_]+_RAM_ADDR_W)[[:space:]]*=[[:space:]]*([0-9]+).*/\2 \3/p' "$pkg")
-
-  # ---- word-width region: BOOTROM_ADDR_W (bytes = 4 << N) ----
-  local brw
-  brw=$(sed -nE 's/^[[:space:]]*localparam[[:space:]]+(int[[:space:]]+)?BOOTROM_ADDR_W[[:space:]]*=[[:space:]]*([0-9]+).*/\2/p' "$pkg" | head -1)
-  if [ -n "$brw" ]; then
-    local rtl_bytes=$(( 4 << brw ))
-    local sw_val
-    sw_val=$(sed -nE 's/^[[:space:]]*BOOTROM_0_SIZE[[:space:]]*=[[:space:]]*(0[xX][0-9a-fA-F]+|[0-9]+).*/\1/p' "$mm" | head -1)
-    if [ -n "$sw_val" ] && [ $(( sw_val )) -gt 0 ] && [ $(( sw_val )) != "$rtl_bytes" ]; then
-      report "BOOTROM" "BOOTROM_ADDR_W" "$brw" "$rtl_bytes" "BOOTROM_0_SIZE" "$(( sw_val ))" "$pkg" "$mm"
-      bad=1
-    fi
-  fi
+  done <<< "$widths"
 
   # ---- linker MEMORY blocks next to the memory map ----
   if [ -n "$lddir" ] && [ -d "$lddir" ]; then
+    local ld
     for ld in "$lddir"/*.ld; do
       [ -e "$ld" ] || continue
       # The debug tester is the ADP host model, not SoC firmware: its MEMORY
       # block is a deliberately oversized window onto the SoC (phys_size in the
       # system YAML), so it is not a claim about how much RAM exists.
       case "$(basename "$ld")" in *debugtester*) continue ;; esac
+      local region len
       while read -r region len; do
-        local prefix="${region%_0}"
-        local param="" width=""
+        local prefix="${region%_0}" param width rtl_bytes
         if [ "$region" = "BOOTROM_0" ]; then
-          [ -n "$brw" ] || continue
-          param=BOOTROM_ADDR_W; width="$brw"; local rtl_bytes=$(( 4 << brw ))
+          param=BOOTROM_ADDR_W
         else
-          width=$(sed -nE "s/^[[:space:]]*localparam[[:space:]]+(int[[:space:]]+)?${prefix}_RAM_ADDR_W[[:space:]]*=[[:space:]]*([0-9]+).*/\2/p" "$pkg" | head -1)
-          [ -n "$width" ] || continue
-          param="${prefix}_RAM_ADDR_W"; local rtl_bytes=$(( 1 << width ))
+          param="${prefix}_RAM_ADDR_W"
         fi
+        width=$(awk -v n="$param" '$1==n && $2!="?" {print $2; exit}' <<< "$widths")
+        [ -n "$width" ] || continue
+        if [ "$param" = BOOTROM_ADDR_W ]; then rtl_bytes=$(( 4 << width )); else rtl_bytes=$(( 1 << width )); fi
         local ld_bytes=$(( len ))
+        if waived "$prefix" || waived "$region"; then continue; fi
+        checked=$((checked+1))
         # A region may be deliberately trimmed (size_adjust in the YAML), so only
         # complain when the linker hands software MORE than the hardware has.
         if [ "$ld_bytes" -gt "$rtl_bytes" ]; then
-          if waived "$prefix" || waived "$region"; then continue; fi
           report "$region (linker)" "$param" "$width" "$rtl_bytes" "LENGTH" "$ld_bytes" "$pkg" "$ld"
           bad=1
         fi
@@ -127,6 +168,11 @@ scan() {
     done
   fi
 
+  if [ "$checked" -eq 0 ]; then
+    unchecked "compared ZERO memory sizes -- every region was unparsable, unmatched or waived." \
+              "config package: $pkg" "memory map:     $mm" "MEM_SIZE_WAIVE: '${MEM_SIZE_WAIVE:-}'"
+    bad=1
+  fi
   return $bad
 }
 
@@ -160,6 +206,29 @@ EOF
   else
     echo "FAIL  self-test: MEM_SIZE_WAIVE=IMEM did not waive IMEM" >&2; rc=1
   fi
+
+  # Each of these used to return 0 in error mode having checked nothing, or
+  # having missed the defect. Each must now fail.
+  # Asserts the REASON, not just the exit code: a specimen that fails for a
+  # different rule than the one under test proves nothing about that rule.
+  must_fail() { local label="$1" why="$2"; shift 2
+    if "$@" >"$t/o" 2>&1; then echo "FAIL  self-test: $label -- ACCEPTED" >&2; cat "$t/o" >&2; rc=1
+    elif ! grep -q -- "$why" "$t/o"; then echo "FAIL  self-test: $label -- rejected, but not for '$why'" >&2; cat "$t/o" >&2; rc=1
+    else echo "PASS  self-test: $label -- rejected ($why)"; fi; }
+  sed 's/localparam int /localparam integer /' "$t/pkg.sv" > "$t/pkg_integer.sv"
+  sed 's/= 14;/= 12+2;/' "$t/pkg.sv" > "$t/pkg_expr.sv"
+  sed 's/= 14;/= IMEM_W;/' "$t/pkg.sv" > "$t/pkg_ident.sv"
+  sed 's/IMEM_0_SIZE  = /IMEM_0_SIZE := /' "$t/bad.mk" > "$t/bad_colon.mk"
+  must_fail "every region waived"               "compared ZERO" env MEM_SIZE_CHECK=error MEM_SIZE_WAIVE="IMEM BOOTROM" "$0" "$t/pkg.sv" "$t/ok.mk"
+  must_fail "config package path wrong"         "no SoC config package" env MEM_SIZE_CHECK=error "$0" "$t/nope.sv" "$t/ok.mk"
+  must_fail "memory map path wrong"             "no memory map" env MEM_SIZE_CHECK=error "$0" "$t/pkg.sv" "$t/nope.mk"
+  must_fail "'localparam integer' + mismatch"   "IMEM is declared twice" env MEM_SIZE_CHECK=error "$0" "$t/pkg_integer.sv" "$t/bad.mk"
+  must_fail "memmap ':=' + mismatch"            "IMEM is declared twice" env MEM_SIZE_CHECK=error "$0" "$t/pkg.sv" "$t/bad_colon.mk"
+  must_fail "width '12+2' (=14) + mismatch"     "IMEM_RAM_ADDR_W = 14" env MEM_SIZE_CHECK=error "$0" "$t/pkg_expr.sv" "$t/bad.mk"
+  must_fail "width not a constant expression"   "cannot evaluate IMEM_RAM_ADDR_W" env MEM_SIZE_CHECK=error "$0" "$t/pkg_ident.sv" "$t/ok.mk"
+  if MEM_SIZE_CHECK=error "$0" "$t/pkg_expr.sv" "$t/ok.mk" >/dev/null 2>&1; then
+    echo "PASS  self-test: width '12+2' evaluated, agreeing sizes accepted"
+  else echo "FAIL  self-test: width '12+2' with agreeing sizes rejected" >&2; rc=1; fi
   rm -rf "$t"; return $rc
 }
 

@@ -307,9 +307,48 @@ include $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/flows/makefile.asic
 # - Common Targets Across Flows
 #------------------------------------------
 # Generate Defines File for NanoSoC
+#
+# WARNING, and the reason check_defs below exists: this is a phony rule with no
+# prerequisites that rewrites a SHARED file from whatever NANOSOC_DEFINES the
+# current goal carries, and make runs a phony rule at most once per invocation.
+# A goal list that mixes flows -- `make flist_dc_nanosoc compile_vcs`, or a
+# simulation flist goal followed by a compile -- therefore writes the file for
+# the FIRST goal and every later goal in the same run silently consumes it.
+# That is how a cold build produced a 121-module, 1,016,920-byte simulator that
+# stops retiring instructions inside the boot ROM: RAM_PRELOAD was missing and
+# nothing said so. Never rely on gen_defs alone to make the file right for the
+# goal that reads it; depend on check_defs as well.
+.PHONY: gen_defs check_defs
 gen_defs:
 	@mkdir -p $(DEFINES_DIR)
 	@$(SOCLABS_SOCTOOLS_FLOW_DIR)/bin/defines_compile.py -d $(NANOSOC_DEFINES) -o $(DEFINES_FILE)
+
+# Assert that the defines file on disk is the one THIS goal needs, before any
+# tool reads it. Compares both directions: a define this goal requires that is
+# absent, and a define present that this goal did not ask for (contamination
+# from another flow's goal in the same make run). Names every offending define
+# and both define sets, and fails. Costs one grep per define.
+check_defs:
+	@if [ ! -f $(DEFINES_FILE) ]; then \
+	  echo "ERROR: check_defs: $(DEFINES_FILE) does not exist. Run gen_defs first." >&2; exit 1; \
+	fi; \
+	want="$(strip $(NANOSOC_DEFINES))"; \
+	have=$$(sed -n 's/^`define[[:space:]]\{1,\}\([A-Za-z_][A-Za-z0-9_]*\).*/\1/p' $(DEFINES_FILE) | tr '\n' ' '); \
+	missing=""; for d in $$want; do \
+	  case " $$have " in *" $$d "*) ;; *) missing="$$missing $$d" ;; esac; done; \
+	extra=""; for d in $$have; do \
+	  case " $$want " in *" $$d "*) ;; *) extra="$$extra $$d" ;; esac; done; \
+	if [ -n "$$missing" ] || [ -n "$$extra" ]; then \
+	  echo "ERROR: check_defs: $(DEFINES_FILE) does not match the defines this goal needs." >&2; \
+	  [ -n "$$missing" ] && echo "       missing:$$missing" >&2; \
+	  [ -n "$$extra" ]   && echo "       unexpected:$$extra" >&2; \
+	  echo "       goal needs: $$want" >&2; \
+	  echo "       file has:   $$have" >&2; \
+	  echo "       Cause: gen_defs is phony and runs once per make invocation, so an" >&2; \
+	  echo "       earlier goal in this run (or MAKECMDGOALS='$(MAKECMDGOALS)') wrote it." >&2; \
+	  echo "       Fix: run each flow in its own make invocation." >&2; \
+	  exit 1; \
+	fi
 
 docs:
 	pdflatex --output-directory=$(SOCLABS_NANOSOC_ARCH_TECH_DIR)/doc/doc/tex/ $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/doc/doc/tex/nanosoc_datasheet.tex

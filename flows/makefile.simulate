@@ -107,10 +107,30 @@ define check_sim_log
 endef
 
 # Preload IMEM in Simulation
-compile_mti: NANOSOC_DEFINES += RAM_PRELOAD
-compile_vcs: NANOSOC_DEFINES += RAM_PRELOAD
-compile_xm:  NANOSOC_DEFINES += RAM_PRELOAD
-compile_iverilog: NANOSOC_DEFINES += RAM_PRELOAD
+#
+# RAM_PRELOAD is a property of the SIMULATION flow, not of the compile step:
+# the simulation image is loaded into IMEM from a hex file, which is what makes
+# nanosoc_region_imem instantiate sl_ahb_rom instead of sl_ahb_sram. It used to
+# be attached to the compile_* targets only, while flist_vfiles_nanosoc and
+# flist_makefile_nanosoc -- the other two goals in this flow that write the
+# shared defines file through gen_defs -- carried no such variable. Running a
+# simulation flist goal and a compile goal in one make invocation therefore
+# left the design without RAM_PRELOAD and compiled it without a word: a
+# 121-module, 1,016,920-byte simv whose core stops inside the boot ROM.
+#
+# Listing every goal in this flow here is what makes the defines file the same
+# whichever simulation goal runs. It is deliberately NOT a file-scope
+# `NANOSOC_DEFINES += RAM_PRELOAD`: makefile.simulate is included for every
+# goal, so a file-scope append would put RAM_PRELOAD into the FPGA and ASIC
+# flists as well and change what those flows build for every consumer.
+# flist_makefile_nanosoc (the cocotb filelist) is deliberately NOT in this list.
+# Its bench uploads the image over ADP, so RAM_PRELOAD -- which swaps IMEM's
+# sl_ahb_sram for a read-only sl_ahb_rom -- would change what that flow builds
+# for every consumer. Mixing it with a compile goal in one make invocation is
+# caught by check_defs instead of being silently allowed.
+SIM_FLOW_DEFINES_TARGETS := compile_mti compile_vcs compile_xm compile_iverilog \
+                            flist_vfiles_nanosoc
+$(SIM_FLOW_DEFINES_TARGETS): NANOSOC_DEFINES += RAM_PRELOAD
 
 
 # Generate verilog .vc filelist from flists
@@ -127,7 +147,7 @@ flist_vfiles_nanosoc: gen_defs
 # ------- VCS -----------
 
 # Compile RTL
-compile_vcs : gen_defs flist_vfiles_nanosoc
+compile_vcs : gen_defs flist_vfiles_nanosoc check_defs
 	cd $(SIM_DIR); vcs $(VCS_OPTIONS) -f tbench.vc  $(DEFINES_VC)  | tee compile_vcs.log
 
 
@@ -147,7 +167,7 @@ sim_gui_vcs : code compile_vcs
 # ------- XM -----------
 
 # Compile RTL
-compile_xm : bootrom gen_defs flist_vfiles_nanosoc
+compile_xm : bootrom gen_defs flist_vfiles_nanosoc check_defs
 	@echo ADP_FILE
 	@echo $(ADP_OPTIONS)
 	cd $(SIM_DIR); xmprep  +overwrite $(XM_VC_OPTIONS) $(DEFINES_VC) +debug -timescale 1ns/1ps -top $(TB_TOP) | tee compile_xm.log
@@ -174,7 +194,7 @@ sim_gui_xm : code compile_xm
 # ------- MTI -----------
 
 # Compile RTL
-compile_mti : bootrom gen_defs flist_vfiles_nanosoc lib_mti
+compile_mti : bootrom gen_defs flist_vfiles_nanosoc lib_mti check_defs
 	cd $(SIM_DIR); vlog -incr -lint +v2k -f tbench.vc $(ADP_OPTIONS) $(DEFINES_VC) | tee compile_mti.log
 
 # Run simulation in batch mode
@@ -210,7 +230,7 @@ lib_mti :
 # ------- Icarus -----------
 
 # Compile RTL
-compile_iverilog: bootrom gen_defs flist_vfiles_nanosoc
+compile_iverilog: bootrom gen_defs flist_vfiles_nanosoc check_defs
 	cd $(SIM_DIR); iverilog $(IVERILOG_OPTIONS) $(DEFINES_VC_IVERILOG) -o nanosoc_chip_pads -c tbench.vc
 
 run_iverilog: code compile_iverilog

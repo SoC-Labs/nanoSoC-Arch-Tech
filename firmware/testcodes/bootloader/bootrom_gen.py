@@ -123,13 +123,22 @@ def bootrom_gen(args):
 
     # Optionally generate the bootrom region wrapper
     if args.region_output and args.region_module_name:
-        region_verilog = generate_region_wrapper(args.region_module_name, module_name)
+        region_verilog = generate_region_wrapper(args.region_module_name, module_name,
+                                                 address_width)
         with open(args.region_output, "w") as f:
             f.write(region_verilog)
         print(f"Generated region wrapper: {args.region_output}")
 
-def generate_region_wrapper(region_module_name, rom_module_name):
-    """Generate a bootrom region wrapper using the Jinja2 template."""
+def generate_region_wrapper(region_module_name, rom_module_name, word_address_width):
+    """Generate a bootrom region wrapper using the Jinja2 template.
+
+    word_address_width is the SAME -a the ROM module was rendered with. It has
+    to be, because the wrapper's AHB decode slices HADDR[word_address_width+1:2]
+    to drive a word_addr port of exactly that width. The wrapper used to hard
+    code both the parameter default and a HADDR[ROM_ADDR_W-1:2] slice that read
+    the number as a byte width, so an 8 KB ROM was reachable only over its first
+    2 KB and the rest aliased with no message.
+    """
     template_dir = os.path.dirname(os.path.abspath(__file__))
     env = Environment(loader=FileSystemLoader(template_dir))
     template = env.get_template(REGION_TEMPLATE_NAME)
@@ -137,6 +146,7 @@ def generate_region_wrapper(region_module_name, rom_module_name):
     return template.render(
         region_module_name=region_module_name,
         rom_module_name=rom_module_name,
+        word_address_width=word_address_width,
         date=date_str
     )
 

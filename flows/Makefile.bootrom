@@ -77,8 +77,20 @@ BOOTROM_SRCS += $(wildcard $(SOCLABS_NANOSOC_SOC_DIR)/build_soc/firmware/*.ld) \
                 $(wildcard $(SOCLABS_NANOSOC_SOC_DIR)/build_soc/firmware/*.h) \
                 $(wildcard $(SOCLABS_NANOSOC_SOC_DIR)/build_soc/firmware/*.mk)
 
-.PHONY: bootrom check_bootrom_addrw
-bootrom: check_bootrom_addrw $(BOOTROM_SV) $(BOOTROM_BIN) $(BOOTROM_REGION_SV) $(BOOTROM_SIM_HEX)
+# Post-generation guard: the ROM's depth, the decode's reach, the flow's
+# BOOTROM_ADDRW and the bootloader linker script must all be the same size.
+# check_bootrom_addrw (below) compares the flow against the RTL config package
+# BEFORE generation; this compares the generated files against each other AFTER
+# it, which is where the byte-vs-word confusion in the region wrapper lived.
+BOOTROM_REACH_CHECK := $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/flows/checks/check_bootrom_reach.sh
+BOOTROM_LD         ?= $(SOCLABS_NANOSOC_SOC_DIR)/build_soc/firmware/nanosoc_cmsdk_bootloader_memory.ld
+
+.PHONY: bootrom check_bootrom_addrw check_bootrom_reach
+bootrom: check_bootrom_addrw $(BOOTROM_SV) $(BOOTROM_BIN) $(BOOTROM_REGION_SV) $(BOOTROM_SIM_HEX) check_bootrom_reach
+
+check_bootrom_reach: $(BOOTROM_SV) $(BOOTROM_REGION_SV)
+	@$(BOOTROM_REACH_CHECK) --self-test >/dev/null
+	@$(BOOTROM_REACH_CHECK) $(BOOTROM_SV) $(BOOTROM_REGION_SV) $(BOOTROM_ADDRW) $(BOOTROM_LD)
 
 # Fail when the project set BOOTROM_ADDRW to a value the RTL disagrees with.
 # When the project did not set it (flow default in use) only warn: the default

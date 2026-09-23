@@ -189,6 +189,42 @@ endif
 ALL_INCLUDES += $(EXTRA_INCLUDES)
 
 #=============================================================================
+# System clock (flows/fw_clk.mk has the whole story)
+#
+# SYS_CLK_FREQ_HZ set: NANOSOC_SYS_CLK_FREQ_HZ is defined on the command line,
+# for the application and the boot ROM alike, and the generated
+# nanosoc_memmap.h (#ifndef-wrapped by nanosoc_gen) yields to it.
+# Unset: nothing is added and the header's value is used, as before.
+#
+# check_fw_clk asks the preprocessor what NANOSOC_SYS_CLK_FREQ_HZ actually is
+# with these flags and this header, and fails naming both numbers if it is not
+# the requested clock. That catches the one way the override can be lost
+# silently: a header generated before the #ifndef wrapper, whose later
+# #define wins over -D with nothing but a "redefined" warning.
+#=============================================================================
+ifneq ($(strip $(SYS_CLK_FREQ_HZ)),)
+  FW_CLK_VALUE  := $(strip $(SYS_CLK_FREQ_HZ))UL
+  ALL_INCLUDES  += -DNANOSOC_SYS_CLK_FREQ_HZ=$(FW_CLK_VALUE)
+  # A C preprocessor that accepts -E -P -x c -. The GCC driver for gcc builds;
+  # the host's cpp otherwise (the header is plain #define/#ifndef).
+  FW_CLK_CPP    ?= $(if $(filter gcc,$(TOOL_CHAIN)),$(CC_TOOL),cpp)
+  FW_CLK_CHECK  := check_fw_clk
+endif
+
+.PHONY: check_fw_clk
+check_fw_clk:
+	@got=$$(printf '#include "nanosoc_memmap.h"\nFW_CLK=NANOSOC_SYS_CLK_FREQ_HZ\n' | \
+	   $(FW_CLK_CPP) -E -P $(ALL_INCLUDES) -x c - 2>/dev/null | sed -n 's/^FW_CLK=//p'); \
+	 if [ "$$got" != "$(FW_CLK_VALUE)" ]; then \
+	   echo "ERROR: SYS_CLK_FREQ_HZ=$(SYS_CLK_FREQ_HZ) asks for NANOSOC_SYS_CLK_FREQ_HZ = $(FW_CLK_VALUE)," >&2; \
+	   echo "       but this build would compile NANOSOC_SYS_CLK_FREQ_HZ = $${got:-<nothing: the preprocessor failed>}." >&2; \
+	   echo "       $(FIRMWARE_CONFIG_DIR)/nanosoc_memmap.h defines it without #ifndef, so its value" >&2; \
+	   echo "       replaces the -D. Regenerate build_soc/firmware with a nanosoc_gen that wraps it" >&2; \
+	   echo "       (fix/firmware-clock or later), or unset SYS_CLK_FREQ_HZ." >&2; \
+	   exit 1; \
+	 fi
+
+#=============================================================================
 # Source File Assembly
 #=============================================================================
 # Main source file (overridable for tests like dhry where TESTNAME != source filename)
@@ -300,8 +336,8 @@ all: all_$(TOOL_CHAIN)
 # ---------------------------------------------------------------------------------------
 # DS-5 / DS-6 Build
 # ---------------------------------------------------------------------------------------
-all_ds5 : $(OUTPUT_DIR)/$(TESTNAME).hex $(OUTPUT_DIR)/$(TESTNAME).lst
-all_ds6 : $(OUTPUT_DIR)/$(TESTNAME).hex $(OUTPUT_DIR)/$(TESTNAME).lst
+all_ds5 : $(FW_CLK_CHECK) $(OUTPUT_DIR)/$(TESTNAME).hex $(OUTPUT_DIR)/$(TESTNAME).lst
+all_ds6 : $(FW_CLK_CHECK) $(OUTPUT_DIR)/$(TESTNAME).hex $(OUTPUT_DIR)/$(TESTNAME).lst
 
 ifneq ($(TOOL_CHAIN),gcc)
 
@@ -353,7 +389,7 @@ ifeq ($(TOOL_CHAIN),gcc)
 STACK_SIZE ?= 0x200
 HEAP_SIZE  ?= 0x1000
 
-all_gcc: | $(COMPILE_DIR) $(OUTPUT_DIR)
+all_gcc: $(FW_CLK_CHECK) | $(COMPILE_DIR) $(OUTPUT_DIR)
 	$(CC_TOOL) $(GNU_CC_FLAGS) \
 		-x assembler-with-cpp $(filter %.s,$(GCC_ALL_SOURCES)) \
 		-x none $(filter-out %.s,$(GCC_ALL_SOURCES)) \

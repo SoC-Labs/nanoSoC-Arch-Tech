@@ -29,6 +29,10 @@ export TOOL_CHAIN
 # You can append additional make options for testcode here
 SW_MAKE_OPTIONS = CPU_PRODUCT=CORTEX_M0 TOOL_CHAIN=$(TOOL_CHAIN)
 
+# The system clock the boot ROM is compiled for (FW_CLK_ARG, FW_CLK_STAMP). The
+# same fragment as flows/makefile.software, so both images follow one value.
+include $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/flows/fw_clk.mk
+
 # Bootrom Parameters:
 # Stage 0 bootloader image
 BOOTLOADER            ?= stage0
@@ -140,8 +144,9 @@ $(BOOTROM_OUT_DIR) $(BOOTROM_SIM_DIR):
 # Prerequisites, for the same reason as $(TESTCODE_HEX) in flows/makefile.software:
 # with none at all this target could never be out of date, so an edited
 # bootloader source was silently not rebuilt and the boot ROM kept the old image.
-$(BOOTROM_HEX): $(BOOTROM_SRCS)
-	$(MAKE) -C $(TESTCODES_DIR)/$(BOOTLOADER) all_$(TOOL_CHAIN) $(SW_MAKE_OPTIONS)
+# FW_CLK_STAMP: a boot ROM built for another SYS_CLK_FREQ_HZ is stale (fw_clk.mk).
+$(BOOTROM_HEX): $(BOOTROM_SRCS) $(FW_CLK_STAMP)
+	$(MAKE) -C $(TESTCODES_DIR)/$(BOOTLOADER) all_$(TOOL_CHAIN) $(SW_MAKE_OPTIONS)$(FW_CLK_ARG)
 
 # Target to remove bootrom build outputs
 clean:

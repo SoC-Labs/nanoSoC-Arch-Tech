@@ -88,7 +88,25 @@ TESTCODE_HEX := $(SW_OUTPUT_DIR)/$(TESTNAME).hex
 # image.hex in the sim dir is what the IMEM reads at simulation time
 IMAGE_HEX := $(SIM_DIR)/image.hex
 
-$(TESTCODE_HEX):
+# The test's own makefile knows how to compile it; this rule decides whether to
+# ASK it. With no prerequisites at all the hex was built once and then never
+# again -- editing the C source changed nothing and the simulation silently ran
+# the PREVIOUS binary. (That cost the accelerator work two full runs in P3.)
+# List the test's own sources, the shared firmware it links against and the
+# generated linker/memory-map fragments, so an edit to any of them reaches the
+# simulator. Same defect class as gen_defs and $(BOOTROM_HEX): a target with no
+# prerequisites cannot be out of date.
+FW_SRC_PATTERNS := -name '*.c' -o -name '*.h' -o -name '*.s' -o -name '*.S' \
+                   -o -name '*.ld' -o -name '*.mk' -o -iname 'makefile' \
+                   -o -name '*.cmake' -o -name 'CMakeLists.txt'
+TESTCODE_SRCS := $(shell find -L $(TESTCODES_DIR)/$(TESTNAME) $(NANOSOC_SW_DIR) \
+                    $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/firmware/build \
+                    -type f \( $(FW_SRC_PATTERNS) \) 2>/dev/null)
+TESTCODE_SRCS += $(wildcard $(FIRMWARE_CONFIG_DIR)/*.ld) \
+                 $(wildcard $(FIRMWARE_CONFIG_DIR)/*.h) \
+                 $(wildcard $(FIRMWARE_CONFIG_DIR)/*.mk)
+
+$(TESTCODE_HEX): $(TESTCODE_SRCS)
 	@$(MAKE) -C $(TESTCODES_DIR)/$(TESTNAME) all $(SW_MAKE_OPTIONS)
 
 $(IMAGE_HEX): $(TESTCODE_HEX) | $(SIM_DIR)
@@ -153,7 +171,12 @@ DEBUGTESTER_OUTPUT_DIR := $(DEBUGTESTER_BUILD_DIR)/$(DEBUGTESTER)/out
 DEBUGTESTER_LE_HEX := $(DEBUGTESTER_OUTPUT_DIR)/$(DEBUGTESTER)_le.hex
 DEBUGTESTER_BE_HEX := $(DEBUGTESTER_OUTPUT_DIR)/$(DEBUGTESTER)_be.hex
 
-$(DEBUGTESTER_LE_HEX) $(DEBUGTESTER_BE_HEX):
+# Same defect class, same fix: no prerequisites meant an edited debug tester
+# was never rebuilt.
+DEBUGTESTER_SRCS := $(shell find -L $(NANOSOC_SW_DIR)/debug_tester \
+                       -type f \( $(FW_SRC_PATTERNS) \) 2>/dev/null)
+
+$(DEBUGTESTER_LE_HEX) $(DEBUGTESTER_BE_HEX): $(DEBUGTESTER_SRCS)
 	@$(MAKE) -C $(NANOSOC_SW_DIR)/debug_tester all $(SW_MAKE_OPTIONS)
 
 # Copy debugtester little-endian hex to SIM_DIR

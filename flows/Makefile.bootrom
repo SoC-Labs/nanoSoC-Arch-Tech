@@ -57,6 +57,25 @@ BOOTROM_SIM_HEX := $(BOOTROM_SIM_DIR)/$(BOOTLOADER).hex
 
 # Tools
 BOOTROM_GEN_PY := $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/firmware/testcodes/bootloader/bootrom_gen.py
+# The generator renders both outputs from these templates. They are real inputs,
+# so they are real prerequisites: editing a template used to change nothing
+# until the hex happened to be rebuilt.
+BOOTROM_GEN_TEMPLATES := \
+  $(wildcard $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/firmware/testcodes/bootloader/bootrom_templ.sv.jinja) \
+  $(wildcard $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/firmware/testcodes/bootloader/bootrom_region_templ.v.jinja)
+
+# Shared firmware the bootloader links against, plus the generated linker and
+# memory-map fragments. Used as prerequisites of $(BOOTROM_HEX) below.
+BOOTROM_FW_DIRS := $(TESTCODES_DIR)/$(BOOTLOADER) \
+                   $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/firmware/software \
+                   $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/firmware/build
+BOOTROM_SRCS := $(shell find -L $(BOOTROM_FW_DIRS) -type f \( \
+                   -name '*.c' -o -name '*.h' -o -name '*.s' -o -name '*.S' \
+                   -o -name '*.ld' -o -name '*.mk' -o -iname 'makefile' \
+                   -o -name '*.cmake' -o -name 'CMakeLists.txt' \) 2>/dev/null)
+BOOTROM_SRCS += $(wildcard $(SOCLABS_NANOSOC_SOC_DIR)/build_soc/firmware/*.ld) \
+                $(wildcard $(SOCLABS_NANOSOC_SOC_DIR)/build_soc/firmware/*.h) \
+                $(wildcard $(SOCLABS_NANOSOC_SOC_DIR)/build_soc/firmware/*.mk)
 
 .PHONY: bootrom check_bootrom_addrw
 bootrom: check_bootrom_addrw $(BOOTROM_SV) $(BOOTROM_BIN) $(BOOTROM_REGION_SV) $(BOOTROM_SIM_HEX)
@@ -81,7 +100,7 @@ check_bootrom_addrw:
 	fi
 
 # Generate the Boot ROM Verilog, region wrapper, and Binary Text files from the bootloader hex file
-$(BOOTROM_SV) $(BOOTROM_BIN) $(BOOTROM_REGION_SV): $(BOOTROM_HEX) $(BOOTROM_GEN_PY) | $(BOOTROM_OUT_DIR)
+$(BOOTROM_SV) $(BOOTROM_BIN) $(BOOTROM_REGION_SV): $(BOOTROM_HEX) $(BOOTROM_GEN_PY) $(BOOTROM_GEN_TEMPLATES) | $(BOOTROM_OUT_DIR)
 	@echo "Generating Boot ROM Verilog, region wrapper, and Binary Text files"
 	@echo "Toolchain: $(TOOL_CHAIN)"
 	@python3 $(BOOTROM_GEN_PY) -a $(BOOTROM_ADDRW) -i $(BOOTROM_HEX) -t $(TOOL_CHAIN) \
@@ -98,7 +117,10 @@ $(BOOTROM_OUT_DIR) $(BOOTROM_SIM_DIR):
 	@mkdir -p $@
 
 # Compile stage0 bootloader
-$(BOOTROM_HEX):
+# Prerequisites, for the same reason as $(TESTCODE_HEX) in flows/makefile.software:
+# with none at all this target could never be out of date, so an edited
+# bootloader source was silently not rebuilt and the boot ROM kept the old image.
+$(BOOTROM_HEX): $(BOOTROM_SRCS)
 	$(MAKE) -C $(TESTCODES_DIR)/$(BOOTLOADER) all_$(TOOL_CHAIN) $(SW_MAKE_OPTIONS)
 
 # Target to remove bootrom build outputs

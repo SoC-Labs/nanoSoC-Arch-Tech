@@ -65,9 +65,49 @@ endif
 # 	@echo Compiling Firmware
 # 	@$(MAKE) -C $(SOCLABS_NANOSOC_ARCH_TECH_DIR) bootrom
 
+#------------------------------------------------------------------------------
+# RAM_PRELOAD for the FPGA flow
+#------------------------------------------------------------------------------
+# On hardware IMEM has to come up holding an image, which is exactly what
+# RAM_PRELOAD selects in rtl/src/regions/imem/nanosoc_region_imem.v. Until now
+# RAM_PRELOAD existed only as a target-specific variable on the simulation
+# compile targets, so an FPGA build wrote a defines file containing nothing but
+# FAST_SIM and the bitstream came out with a plain SRAM. Nothing said so.
+#
+# The define has to travel in the generated defines FILE, not on a command line:
+# the SoC is packaged with ipx::package_project and a fileset +define+ is
+# dropped by packaging. fpga/fpga/vivado_ip/nanosoc_chip_vivado_wrapper.v:21
+# `include "gen_defines.v", which is why writing it there reaches the packaged
+# IP. RAM_PRELOAD is therefore attached to the FPGA flow's goals, the same way
+# makefile.simulate attaches it to the simulation flow's goals, so the defines
+# file is the same whichever goal in this flow runs.
+#
+# Default no, because that is what the Academic Access FPGA builds produce
+# today and this must not change their bitstreams. A project that wants a
+# preloaded IMEM sets FPGA_RAM_PRELOAD := yes in its nanosoc.config.
+FPGA_RAM_PRELOAD ?= no
+
+# Absolute path to the word-format hex $readmemh should preload. Empty by
+# default. When set, the FPGA flow appends `define IMEM_FPGA_IMAGE "<path>" to
+# the generated defines file, and nanosoc_region_imem.v uses it in place of the
+# MEM_FPGA_IMG parameter. That exists because the generated chip does not pass
+# IMEM_MEM_FPGA_IMG down from the top, and the alternative -- editing a path
+# into generated RTL -- works once and is not a mechanism.
+IMEM_FPGA_IMAGE ?=
+
+# flist_tcl_nanosoc is the ONLY goal in this flow that reaches gen_defs, and a
+# target-specific variable is inherited by prerequisites, so listing it here
+# covers build_fpga and both package_* goals. Listing those as well would append
+# RAM_PRELOAD once per level of the chain.
+FPGA_FLOW_DEFINES_TARGETS := flist_tcl_nanosoc
+ifeq ($(FPGA_RAM_PRELOAD),yes)
+$(FPGA_FLOW_DEFINES_TARGETS): NANOSOC_DEFINES += RAM_PRELOAD
+endif
+
 # Generate TCL filelist from flists
 flist_tcl_nanosoc: gen_defs
 	@mkdir -p $(TCL_FLIST_DIR)
+	$(if $(IMEM_FPGA_IMAGE),@printf '`define IMEM_FPGA_IMAGE "%s"\n' '$(IMEM_FPGA_IMAGE)' >> $(DEFINES_FILE))
 	@(cd $(TCL_FLIST_DIR); \
 	$(SOCLABS_SOCTOOLS_FLOW_DIR)/bin/filelist_compile.py -t -f $(DESIGN_VC_FPGA) -o $(TCL_OUTPUT_FILELIST) -i $(FLIST_INCLUDES) -r $(IMP_NANOSOC_DIR)/src -d $(NANOSOC_DEFINES);)
 

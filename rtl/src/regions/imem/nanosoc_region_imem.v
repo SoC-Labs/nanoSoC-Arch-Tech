@@ -38,11 +38,25 @@ module nanosoc_region_imem #(
 
 `ifdef RAM_PRELOAD
     // ROM Instantiation (preloadable for FPGA)
+    //
+    // Where the image path comes from. MEM_FPGA_IMG is a parameter, and on the
+    // FPGA path nothing ever overrides it: the generated nanosoc_chip.v does
+    // not pass IMEM_MEM_FPGA_IMG down to nanosoc_system, so the default is the
+    // only value this parameter takes in a toolkit build. Defining
+    // `IMEM_FPGA_IMAGE sets the path without editing generated RTL, and a
+    // `define is the only carrier that survives ipx::package_project (a
+    // fileset +define+ does not). The FPGA flow writes it into the generated
+    // defines file when IMEM_FPGA_IMAGE is set; see flows/makefile.fpga.
+    // Undefined, the parameter is used exactly as before.
     sl_ahb_rom #(
         .SYS_DATA_W (SYS_DATA_W),
         .RAM_ADDR_W (RAM_ADDR_W),
         .RAM_DATA_W (RAM_DATA_W),
+`ifdef IMEM_FPGA_IMAGE
+        .FILENAME   (`IMEM_FPGA_IMAGE)
+`else
         .FILENAME   (MEM_FPGA_IMG)
+`endif
     ) u_mem (
         // AHB Inputs
         .HCLK       (HCLK),

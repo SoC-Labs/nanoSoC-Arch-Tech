@@ -88,8 +88,9 @@ endif
 FPGA_RAM_PRELOAD ?= no
 
 # Absolute path to the word-format hex $readmemh should preload. Empty by
-# default. When set, the FPGA flow appends `define IMEM_FPGA_IMAGE "<path>" to
-# the generated defines file, and nanosoc_region_imem.v uses it in place of the
+# default. When set, gen_defs (the defines file's only writer, see makefile)
+# adds `define IMEM_FPGA_IMAGE "<path>" for this flow's goals, and
+# nanosoc_region_imem.v uses it in place of the
 # MEM_FPGA_IMG parameter. That exists because the generated chip does not pass
 # IMEM_MEM_FPGA_IMG down from the top, and the alternative -- editing a path
 # into generated RTL -- works once and is not a mechanism.
@@ -103,11 +104,11 @@ FPGA_FLOW_DEFINES_TARGETS := flist_tcl_nanosoc
 ifeq ($(FPGA_RAM_PRELOAD),yes)
 $(FPGA_FLOW_DEFINES_TARGETS): NANOSOC_DEFINES += RAM_PRELOAD
 endif
+$(FPGA_FLOW_DEFINES_TARGETS): NANOSOC_DEFINE_IMEM_IMAGE = $(IMEM_FPGA_IMAGE)
 
 # Generate TCL filelist from flists
 flist_tcl_nanosoc: gen_defs
 	@mkdir -p $(TCL_FLIST_DIR)
-	$(if $(IMEM_FPGA_IMAGE),@printf '`define IMEM_FPGA_IMAGE "%s"\n' '$(IMEM_FPGA_IMAGE)' >> $(DEFINES_FILE))
 	@(cd $(TCL_FLIST_DIR); \
 	$(SOCLABS_SOCTOOLS_FLOW_DIR)/bin/filelist_compile.py -t -f $(DESIGN_VC_FPGA) -o $(TCL_OUTPUT_FILELIST) -i $(FLIST_INCLUDES) -r $(IMP_NANOSOC_DIR)/src -d $(NANOSOC_DEFINES);)
 

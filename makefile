@@ -319,9 +319,32 @@ include $(SOCLABS_NANOSOC_ARCH_TECH_DIR)/flows/makefile.asic
 # nothing said so. Never rely on gen_defs alone to make the file right for the
 # goal that reads it; depend on check_defs as well.
 .PHONY: gen_defs check_defs
+#
+# gen_defs is the ONLY writer of $(DEFINES_FILE). The one valued define a flow
+# needs -- the FPGA preload image path -- is written here too, from
+# NANOSOC_DEFINE_IMEM_IMAGE (set target-specifically by flows/makefile.fpga),
+# rather than appended by some later recipe: check_defs is ordered after
+# gen_defs, and that ordering only means something if nothing writes the file
+# after gen_defs has run.
+#
+# The path becomes a Verilog string literal, so a double quote, a backslash or a
+# single quote (which would also break the shell quoting below) is rejected
+# here, naming the value, instead of producing a malformed `define that fails
+# only later inside Vivado.
 gen_defs:
+	$(if $(NANOSOC_DEFINE_IMEM_IMAGE),$(if $(or $(findstring ",$(NANOSOC_DEFINE_IMEM_IMAGE)),$(findstring \,$(NANOSOC_DEFINE_IMEM_IMAGE)),$(findstring ',$(NANOSOC_DEFINE_IMEM_IMAGE))),$(error gen_defs: IMEM_FPGA_IMAGE=$(NANOSOC_DEFINE_IMEM_IMAGE) contains a double quote, backslash or single quote; it becomes a Verilog string literal. Use a path without them)))
 	@mkdir -p $(DEFINES_DIR)
 	@$(SOCLABS_SOCTOOLS_FLOW_DIR)/bin/defines_compile.py -d $(NANOSOC_DEFINES) -o $(DEFINES_FILE)
+	$(if $(NANOSOC_DEFINE_IMEM_IMAGE),@printf '`define IMEM_FPGA_IMAGE "%s"\n' '$(NANOSOC_DEFINE_IMEM_IMAGE)' >> $(DEFINES_FILE))
+
+# ORDERING, and why it is not optional. check_defs reads the file gen_defs
+# writes, so it must run after gen_defs has finished. Listing both as siblings
+# of a compile target orders nothing under `make -j`: check_defs then read the
+# PREVIOUS run's file, passed, and the compiler read the file this run's first
+# goal had just written. Measured: `make -j8 flist_tcl_nanosoc compile_vcs`
+# compiled the wrong design 9 times in 10 with a green check. This edge is what
+# makes the check mean the same thing serial and parallel.
+check_defs: gen_defs
 
 # Assert that the defines file on disk is the one THIS goal needs, before any
 # tool reads it. Compares both directions: a define this goal requires that is

@@ -37,7 +37,7 @@ module:
     - { name: SYS_PRESETn, type: wire, direction: in, params: { WIDTH: 1 }, desc: "APB reset (active low)" }
 
     # AHB master port — ADP debug access to full system
-    - { name: DEBUG, type: ahb, direction: initiator, params: { ADDR_WIDTH: $SYS_ADDR_W, DATA_WIDTH: $SYS_DATA_W }, desc: "Debug AHB master port (full system access)" }
+    - { name: DEBUG, type: ahb, direction: initiator, params: { ADDR_WIDTH: $SYS_ADDR_W, DATA_WIDTH: $SYS_DATA_W, INST_PORT_PREFIXED: True }, desc: "Debug AHB master port (full system access)" }
 
     # AXI-Stream byte ports — ADP communication
     - { name: ADP_RXD, type: axis_byte, direction: out, params: {}, desc: "ADP receive byte stream output (to extio_ss)" }

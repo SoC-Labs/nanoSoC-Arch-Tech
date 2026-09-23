@@ -166,6 +166,18 @@ module:
         - { port: CORE_SWDO,     conn: cpu_0_swdo }
         - { port: CORE_SWDOEN,   conn: cpu_0_swdoen }
         - { port: CORE_JTAGNSW,  conn: cpu_0_jtagnsw }
+        # DEBUG AUTHORISATION + POWER-UP ACK (2026-09-23). slcorem4.yaml:115-118
+        # declares these four; compute_ss connected NONE of them, so gen-soc
+        # emitted them unconnected and Genus tied all four to 0 (syn.log:2864-2870).
+        # Consequence: SWD reads DPIDR fine, but cortexm4_ahb_wrap.v:319-320 uses
+        # DBG_PWRUP as CDBGPWRUPACK/CSYSPWRUPACK so power-up NEVER ACKs, :512 uses
+        # DBG_EN as DBGEN, and :257 gates dap_clk_en on it at EXTERNAL_DAP=0 —
+        # i.e. debug is dead while the die elaborates clean. Same failure shape as
+        # EXTERNAL_DAP: a declared port nobody connects is silently tied, not flagged.
+        - { port: DBG_EN,          conn: 1'b1 }   # DBGEN: debug permanently authorised
+        - { port: DBG_PWRUP,       conn: 1'b1 }   # CDBGPWRUPACK/CSYSPWRUPACK: always ACK
+        - { port: CORE_EDBGRQ,     conn: 1'b0 }   # no external debug request source
+        - { port: CORE_DBGRESTART, conn: 1'b0 }   # no synchronised-restart source
 
     - instance_name: u_region_bootrom_0
       # Distinct module name from the M0+ manager's nanosoc_region_bootrom so a

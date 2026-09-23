@@ -51,7 +51,16 @@ module nanosoc_soc_peripheral_apb_ss #(
   // that advances to its next transaction before the APB write completes
   // corrupts back-to-back writes. REGISTER_WDATA=1 also enables the
   // write-retire hold below. See the multicore-system local-override history.
-  parameter REGISTER_WDATA = 0
+  parameter REGISTER_WDATA = 0,
+  // 1 = instantiate the two socdebug_usrt_control debug byte-stream UARTs on
+  // the uart0/uart1 slots (0x4000/0x5000). 0 = omit them: the slots answer
+  // zero / PREADY high / no error, the usrt*_txd stream idles (tvalid 0), the
+  // usrt*_rxd stream is always accepted (tready 1) and every UART0/1 interrupt
+  // line is 0. Used by dies that tie the USRT streams off at the wrapper.
+  parameter USRT_PRESENT = 1,
+  // 1 = instantiate cmsdk_apb_test_slave on slot 0xB000 (validation only).
+  // 0 = omit it: the slot answers zero / PREADY high / no error.
+  parameter TEST_SLAVE_PRESENT = 1
 ) (
   // AHB interface for AHB to APB bridge
   input  wire           HCLK,
@@ -547,6 +556,8 @@ module nanosoc_soc_peripheral_apb_ss #(
 
   // -----------------------------------------------------------------
   // UARTs
+  generate
+  if (USRT_PRESENT) begin : gen_usrt_0
   socdebug_usrt_control u_apb_usrt_0 (
     .PCLK              (PCLK),     // Peripheral clock
     .PCLKG             (PCLKG),    // Gated PCLK for bus
@@ -580,7 +591,25 @@ module nanosoc_soc_peripheral_apb_ss #(
     .RXOVRINT          (uart0_rxovrint),    // Receive  Overrun Interrupt
     .UARTINT           (uart0_combined_int) // Combined Interrupt
   );
+  end else begin : gen_no_usrt_0
+  // USRT0 absent: APB slot answers zero/ready, streams idle, interrupts low.
+  assign uart0_prdata       = 32'h00000000;
+  assign uart0_pready       = 1'b1;
+  assign uart0_pslverr      = 1'b0;
+  assign usrt0_txd_tvalid   = 1'b0;
+  assign usrt0_txd_tdata    = 8'h00;
+  assign usrt0_rxd_tready   = 1'b1;
+  assign uart0_txint        = 1'b0;
+  assign uart0_rxint        = 1'b0;
+  assign uart0_txovrint     = 1'b0;
+  assign uart0_rxovrint     = 1'b0;
+  assign uart0_combined_int = 1'b0;
+  wire   _unused_usrt0 = &{1'b0, uart0_psel, usrt0_txd_tready, usrt0_rxd_tvalid, usrt0_rxd_tdata};
+  end
+  endgenerate
 
+  generate
+  if (USRT_PRESENT) begin : gen_usrt_1
   socdebug_usrt_control u_apb_usrt_1 (
     .PCLK              (PCLK),     // Peripheral clock
     .PCLKG             (PCLKG),    // Gated PCLK for bus
@@ -614,6 +643,22 @@ module nanosoc_soc_peripheral_apb_ss #(
     .RXOVRINT          (uart1_rxovrint),    // Receive  Overrun Interrupt
     .UARTINT           (uart1_combined_int) // Combined Interrupt
   );
+  end else begin : gen_no_usrt_1
+  // USRT1 absent: APB slot answers zero/ready, streams idle, interrupts low.
+  assign uart1_prdata       = 32'h00000000;
+  assign uart1_pready       = 1'b1;
+  assign uart1_pslverr      = 1'b0;
+  assign usrt1_txd_tvalid   = 1'b0;
+  assign usrt1_txd_tdata    = 8'h00;
+  assign usrt1_rxd_tready   = 1'b1;
+  assign uart1_txint        = 1'b0;
+  assign uart1_rxint        = 1'b0;
+  assign uart1_txovrint     = 1'b0;
+  assign uart1_rxovrint     = 1'b0;
+  assign uart1_combined_int = 1'b0;
+  wire   _unused_usrt1 = &{1'b0, uart1_psel, usrt1_txd_tready, usrt1_rxd_tvalid, usrt1_rxd_tdata};
+  end
+  endgenerate
 
   cmsdk_apb_uart u_apb_uart_2 (
     .PCLK              (PCLK),     // Peripheral clock
@@ -648,6 +693,8 @@ module nanosoc_soc_peripheral_apb_ss #(
 
   // -----------------------------------------------------------------
   // Test slave (for validation purpose)
+  generate
+  if (TEST_SLAVE_PRESENT) begin : gen_test_slave
   cmsdk_apb_test_slave u_apb_test_slave(
     .PCLK              (PCLKG),    // use Gated PCLK for bus
     .PRESETn           (PRESETn),  // Reset
@@ -663,6 +710,14 @@ module nanosoc_soc_peripheral_apb_ss #(
     .PREADY            (test_slave_pready),
     .PSLVERR           (test_slave_pslverr)
   );
+  end else begin : gen_no_test_slave
+  // Test slave absent: APB slot answers zero/ready.
+  assign test_slave_prdata  = 32'h00000000;
+  assign test_slave_pready  = 1'b1;
+  assign test_slave_pslverr = 1'b0;
+  wire   _unused_test_slave = &{1'b0, test_slave_psel, i_pstrb};
+  end
+  endgenerate
 
   // Connection to external
   assign PADDR   = i_paddr[11:0];

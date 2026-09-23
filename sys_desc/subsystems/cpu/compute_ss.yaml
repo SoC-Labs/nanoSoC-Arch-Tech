@@ -45,6 +45,7 @@ module:
     CLKGATE_PRESENT: { type: int, default: 0,          desc: "Architectural clock gating" }
     RESET_ALL_REGS:  { type: int, default: 0,          desc: "Reset all registers" }
     BE:              { type: int, default: 0,          desc: "Endianness: 0=little, 1=big" }
+    EXTERNAL_DAP:    { type: int, default: 0,          desc: "0 = the M4 keeps its OWN DAPSWJDP on the cpu_0_sw*/td* pins (SAFE DEFAULT, and what this subsystem exports). 1 = no internal DP; slcorem4's DAP_* AP-slave group must be driven by an external CoreSight DP." }
     # Local memory sizing. IMPORTANT: *_ADDR_W is a BYTE address width, so the
     # physical size is 2^N BYTES (it drives sl_ahb_sram HADDR[RAM_ADDR_W-1:0]).
     # The old "4 * 2^N" comments were WRONG: N=13 => 8 KB (not 32 KB), N=15 => 32 KB.
@@ -120,7 +121,17 @@ module:
     - instance_name: u_cpu_0
       module: slcorem4
       addressable: False
-      params: { FPU_PRESENT: $FPU_PRESENT, MPU_PRESENT: $MPU_PRESENT, NUM_IRQ: $NUM_IRQ, LVL_WIDTH: $LVL_WIDTH, TRACE_LVL: $TRACE_LVL, DEBUG_LVL: $DEBUG_LVL, WIC_PRESENT: $WIC_PRESENT, BB_PRESENT: $BB_PRESENT, CLKGATE_PRESENT: $CLKGATE_PRESENT, RESET_ALL_REGS: $RESET_ALL_REGS, BE: $BE }
+      # WIC_PRESENT and CLKGATE_PRESENT are NOT forwarded: f968b94 deleted both
+      # from the v2 slcorem4 (cm4_wic's outputs were all constants at 0 and the
+      # four cm4_clk_gate instances collapsed to wires), so forwarding them emits
+      # overrides for parameters the module no longer declares -> Genus CDFG-214.
+      # EXTERNAL_DAP IS FORWARDED EXPLICITLY AND MUST STAY 0. The yaml default in
+      # slcorem4.yaml is 0, but cortexm4_ahb_wrap.v:94 still defaults the RTL
+      # parameter to 1, and with no override it is the RTL default that binds. At
+      # 1 the wrapper does not instantiate DAPSWJDP and ties CORE_SWDO/CORE_SWDOEN
+      # to constants: with no external DP the die has NO debug ingress at all, and
+      # it elaborates cleanly while doing it.
+      params: { FPU_PRESENT: $FPU_PRESENT, MPU_PRESENT: $MPU_PRESENT, NUM_IRQ: $NUM_IRQ, LVL_WIDTH: $LVL_WIDTH, TRACE_LVL: $TRACE_LVL, DEBUG_LVL: $DEBUG_LVL, BB_PRESENT: $BB_PRESENT, RESET_ALL_REGS: $RESET_ALL_REGS, BE: $BE, EXTERNAL_DAP: $EXTERNAL_DAP }
       connections:
         # Three AHB masters (I/D/S) — arbitrated by the internal busmatrix
         - { port: mst_i, conn: nanosoc_compute_ss_ahb_interconnect.cpu_0_i }

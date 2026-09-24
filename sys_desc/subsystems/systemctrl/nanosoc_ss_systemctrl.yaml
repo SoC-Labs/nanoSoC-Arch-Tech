@@ -58,7 +58,7 @@ module:
     - { name: SYS_PCLKEN,  type: wire, direction: out, params: { WIDTH: 1 }, desc: "APB clock enable output" }
 
     # AHB slave port — SoC peripheral region
-    - { name: SOC_PERIPHERAL, type: ahb, direction: target, params: { ADDR_WIDTH: $SYS_ADDR_W, DATA_WIDTH: $SYS_DATA_W }, desc: "SoC peripheral AHB slave port (0x40000000-0x4FFFFFFF)" }
+    - { name: SOC_PERIPHERAL, type: ahb, direction: target, params: { ADDR_WIDTH: $SYS_ADDR_W, DATA_WIDTH: $SYS_DATA_W, INST_PORT_PREFIXED: True }, desc: "SoC peripheral AHB slave port (0x40000000-0x4FFFFFFF)" }
 
     # APB extension passthrough (directly wired from internal APB bridge)
     - { name: SOC_PERIPHERAL_PENABLE, type: wire, direction: out, params: { WIDTH: 1 },          desc: "APB enable passthrough for external APB slaves" }

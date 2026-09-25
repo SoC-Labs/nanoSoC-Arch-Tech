@@ -9,7 +9,7 @@
 	url = https://git.soton.ac.uk/soclabs/slcorem0_tech.git
 [submodule "rtl/sldma350_tech"]
 	path = rtl/sldma350_tech
-	url = https://git.soton.ac.uk/soclabs/sldma350_tech.git
+	url = https://github.com/SoC-Labs/SLDMA-350-Tech.git
 [submodule "rtl/sl_ams_tech"]
 	path = rtl/sl_ams_tech
 	url = https://git.soton.ac.uk/soclabs/sl_ams_tech.git

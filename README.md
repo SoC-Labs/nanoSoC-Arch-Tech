@@ -60,14 +60,14 @@ set `ARM_CORTEX_M0_DIR` and `ARM_CORSTONE_101_DIR` directly instead.
 | `nanosoc_gen` | SoC generator | git.soton.ac.uk |
 | `rtl/coresight_soc400_tech` | Wrapper around Arm CoreSight SoC-400 | [GitHub](https://github.com/SoC-Labs/SoC-Labs-SoC400-Tech) |
 | `rtl/socdebug_tech` | SoCDebug controller: system-bus access over FT1248 or USRT | git.soton.ac.uk |
-| `rtl/hostio4` | Host I/O controller and target | git.soton.ac.uk |
-| `rtl/extio8x4-axis` | EXTIO interface: 4 virtual channels over a 7-pin link | git.soton.ac.uk |
-| `rtl/slcorem0_tech` | SoC Labs wrapper around Arm Cortex-M0 | git.soton.ac.uk |
-| `rtl/slcorem0p_tech` | SoC Labs wrapper around Arm Cortex-M0+ | git.soton.ac.uk |
-| `rtl/sldma230_tech` | SoC Labs wrapper around Arm PL230 DMA | git.soton.ac.uk |
-| `rtl/sldma350_tech` | SoC Labs wrapper around Arm DMA-350 | git.soton.ac.uk |
-| `rtl/sl_ams_tech` | 8-bit ADC | git.soton.ac.uk |
-| `rtl/synopsys_28nm_slm_integration` | Synopsys 28 nm SLM IP integration | git.soton.ac.uk |
+| `rtl/hostio4` | Host I/O controller and target | [GitHub](https://github.com/SoC-Labs/HostIO4) |
+| `rtl/extio8x4-axis` | EXTIO interface: 4 virtual channels over a 7-pin link | [GitHub](https://github.com/SoC-Labs/EXTIO8x4-AXIS) |
+| `rtl/slcorem0_tech` | SoC Labs wrapper around Arm Cortex-M0 | [GitHub](https://github.com/SoC-Labs/SLCoreM0-Tech) |
+| `rtl/slcorem0p_tech` | SoC Labs wrapper around Arm Cortex-M0+ | [GitHub](https://github.com/SoC-Labs/SLCoreM0P-Tech) |
+| `rtl/sldma230_tech` | SoC Labs wrapper around Arm PL230 DMA | [GitHub](https://github.com/SoC-Labs/SLDMA-230-Tech) |
+| `rtl/sldma350_tech` | SoC Labs wrapper around Arm DMA-350 | [GitHub](https://github.com/SoC-Labs/SLDMA-350-Tech) |
+| `rtl/sl_ams_tech` | 8-bit ADC | [GitHub](https://github.com/SoC-Labs/SL-AMS-Tech) |
+| `rtl/synopsys_28nm_slm_integration` | Synopsys 28 nm SLM IP integration | [GitHub](https://github.com/SoC-Labs/Synopsys-28nm-SLM-Integration) |
 
 ## Working on this repository
 

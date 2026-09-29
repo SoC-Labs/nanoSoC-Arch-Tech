@@ -55,10 +55,13 @@
 
 
 // CM0 MCU's view of the memory shared with the debugtester
-// (4 words above stack top)
-// This macro uses the SP value from the vector table as stacktop
-// The stacktop can not be set to the top of the memory.
-#define DEBUGTESTERDATA ((volatile uint32_t *) *((uint32_t *) 0x0))
+// (4 words above stack top): DEBUGTESTERDATA, defined once, in
+// testcodes/generic/mcu_debugtester_interface.h (included before this file).
+// A second, plain copy here overrode it with the null read GCC -O3 turns
+// into `udf #255` ("DEBUGTESTERDATA" redefined, and debug_tests HardFaulted).
+#ifndef DEBUGTESTERDATA
+#error "include mcu_debugtester_interface.h before debug_tests.h"
+#endif
 
 
 // A convenient way to access the AHB Default Slave

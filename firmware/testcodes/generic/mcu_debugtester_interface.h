@@ -87,5 +87,19 @@ extern uint32_t CheckDebugTester(void);
 // (4 words above stack top)
 // This macro uses the SP value from the vector table as stacktop
 // The stacktop cannot be set to the top of the memory.
-#define DEBUGTESTERDATA ((volatile uint32_t *) *((uint32_t *) 0x0))
+//
+// Word 0 is read through an address the compiler cannot see is 0. A plain
+// *((uint32_t *) 0x0) is a null-pointer dereference to GCC: at -O3 (testcode.mk's
+// default) GCC 10.3 keeps the load and then plants `udf #255`, so the first
+// DEBUGTESTERDATA access traps. Making that pointer volatile does NOT help (same
+// code); hiding the constant does. On this CPU address 0 is the vector table.
+static inline uint32_t DebugTesterStackTop(void)
+{
+  uintptr_t addr = 0U;
+#if defined(__GNUC__) && !defined(__CC_ARM)
+  __asm__ volatile ("" : "+r" (addr));   // the optimiser no longer knows addr == 0
+#endif
+  return *((volatile uint32_t *) addr);
+}
+#define DEBUGTESTERDATA ((volatile uint32_t *) DebugTesterStackTop())
 

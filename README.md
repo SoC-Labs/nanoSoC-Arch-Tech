@@ -32,9 +32,12 @@ The flow targets then run from the project root, for example `make sim TESTNAME=
 `make regression`, `make lint_xm` and `make build_fpga`. They live in [`flows/`](flows/).
 
 **The Arm Cortex-M0 core and Corstone-101 (CMSDK) RTL are not in this repository.** By
-default the build looks for them under `ARM_IP_LIBRARY_PATH`, your own Arm Academic Access
-or Arm Quickstart delivery; `QUICKSTART=yes` selects the Quickstart layout. A project can
-set `ARM_CORTEX_M0_DIR` and `ARM_CORSTONE_101_DIR` directly instead.
+default the build looks for them under `ARM_IP_LIBRARY_PATH`, laid out as an Arm Academic
+Access library: `$(ARM_IP_LIBRARY_PATH)/latest/Cortex-M0/logical` and
+`$(ARM_IP_LIBRARY_PATH)/latest/Corstone-101/logical` (`makefile:242-243`). There is no
+Quickstart switch. A project built on Arm Quickstart IP sets `ARM_CORTEX_M0_DIR` and
+`ARM_CORSTONE_101_DIR` itself, before this makefile is read: the nanoSoC M0 Quickstart
+derives both from one variable, `ARM_QS_IP_DIR`, in its `nanosoc.config`.
 
 ## Layout
 

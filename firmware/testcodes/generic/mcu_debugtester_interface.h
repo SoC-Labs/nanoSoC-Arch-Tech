@@ -93,7 +93,7 @@ extern uint32_t CheckDebugTester(void);
 // default) GCC 10.3 keeps the load and then plants `udf #255`, so the first
 // DEBUGTESTERDATA access traps. Making that pointer volatile does NOT help (same
 // code); hiding the constant does. On this CPU address 0 is the vector table.
-static inline uint32_t DebugTesterStackTop(void)
+__STATIC_INLINE uint32_t DebugTesterStackTop(void)   // CMSIS: static inline, or static __inline for armcc (C90)
 {
   uintptr_t addr = 0U;
 #if defined(__GNUC__) && !defined(__CC_ARM)

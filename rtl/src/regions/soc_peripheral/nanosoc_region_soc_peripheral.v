@@ -176,10 +176,24 @@ module nanosoc_region_soc_peripheral #(
   wire     [SYS_DATA_W-1:0]   adcsys_hrdata;
   wire                        adcsys_hresp;
 
-  wire                        pvtsys_hsel;  // ADC subsystem AHB interface signals
+  wire                        pvtsys_hsel;  // PVT monitor subsystem AHB interface signals
   wire                        pvtsys_hreadyout;
   wire     [SYS_DATA_W-1:0]   pvtsys_hrdata;
   wire                        pvtsys_hresp;
+
+  // Slave-mux ports 5 (ADC) and 6 (PVT monitor) are disabled here (PORT5_ENABLE =
+  // PORT6_ENABLE = 0) and nothing drives these wires. The mux masks the ports by
+  // the parameter, so this changes no behaviour; it ties them to an idle, ready,
+  // OKAY slave so no input floats (Verilator UNDRIVEN adcsys_hsel/pvtsys_hsel,
+  // Xcelium HAL UNCONI x8 on u_ahb_slave_mux_sys_bus).
+  assign adcsys_hsel      = 1'b0;
+  assign adcsys_hreadyout = 1'b1;
+  assign adcsys_hrdata    = {SYS_DATA_W{1'b0}};
+  assign adcsys_hresp     = 1'b0;
+  assign pvtsys_hsel      = 1'b0;
+  assign pvtsys_hreadyout = 1'b1;
+  assign pvtsys_hrdata    = {SYS_DATA_W{1'b0}};
+  assign pvtsys_hresp     = 1'b0;
 
 
   // AHB address decode

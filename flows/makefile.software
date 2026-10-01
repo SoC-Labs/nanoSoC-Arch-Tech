@@ -210,8 +210,22 @@ DEBUGTESTER_BE_HEX := $(DEBUGTESTER_OUTPUT_DIR)/$(DEBUGTESTER)_be.hex
 # was never rebuilt.
 DEBUGTESTER_SRCS := $(shell find -L $(NANOSOC_SW_DIR)/debug_tester \
                        -type f \( $(FW_SRC_PATTERNS) \) 2>/dev/null)
+# It is also built from files outside its directory, which were not listed
+# (review R-TRAIN5): it links with common/scripts/debugtester.ld, which INCLUDEs
+# lib-nosys.ld, sections.ld and the generated nanosoc_debugtester_memory.ld, and
+# its makefile includes the generated nanosoc_memmap.mk. A RAM the generator
+# moved (nanosoc_debugtester_memory.ld, 2026-09-30) left the old image in use.
+DEBUGTESTER_SRCS += $(wildcard $(NANOSOC_SW_DIR)/common/scripts/*.ld) \
+                    $(wildcard $(FIRMWARE_CONFIG_DIR)/*.ld) \
+                    $(wildcard $(FIRMWARE_CONFIG_DIR)/*.mk)
+# The sub-make's GCC object rules have no prerequisites of their own (only the
+# order-only directories), so for an image that exists it answers "up to date"
+# whatever changed. This rule has already decided the image is stale: remove the
+# two linked objects so the sub-make rebuilds what was asked of it.
+DEBUGTESTER_COMPILE_DIR := $(DEBUGTESTER_BUILD_DIR)/$(DEBUGTESTER)/compile
 
 $(DEBUGTESTER_LE_HEX) $(DEBUGTESTER_BE_HEX): $(DEBUGTESTER_SRCS)
+	@rm -f $(DEBUGTESTER_COMPILE_DIR)/$(DEBUGTESTER)_le.o $(DEBUGTESTER_COMPILE_DIR)/$(DEBUGTESTER)_be.o
 	@$(MAKE) -C $(NANOSOC_SW_DIR)/debug_tester all $(SW_MAKE_OPTIONS)
 
 # Copy debugtester little-endian hex to SIM_DIR

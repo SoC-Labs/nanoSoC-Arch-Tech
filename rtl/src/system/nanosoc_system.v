@@ -27,7 +27,7 @@ module nanosoc_system #(
     parameter          APB_DATA_W           = 32,         // APB Peripheral Data Width
 
     // Bootrom 0 Parameters
-    parameter          BOOTROM_ADDR_W       = 11,         // Size of Bootrom (Based on Address Width) - Default 2KB
+    parameter          BOOTROM_ADDR_W       = 11,         // Size of Bootrom: WORD address width of the bootrom_gen.py wrapper rtl/flist/nanosoc_ip.flist compiles with this file (HADDR[N+1:2]), 4 * 2**N bytes - Default 8KB
 
     // IMEM 0 Parameters
     parameter          IMEM_RAM_ADDR_W      = 14,         // Width of IMEM RAM Address - Default 16KB

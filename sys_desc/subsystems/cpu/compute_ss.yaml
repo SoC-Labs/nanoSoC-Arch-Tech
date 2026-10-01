@@ -51,7 +51,7 @@ module:
     # IMEM must be >=32 KB so a RAM-exec OS (Zephyr: image+bss+stack in the
     # 0x10001000 region, ~28 KB) fits — at N=13 the 14.6 KB image wrapped the 8 KB
     # RAM and clobbered the SPL. See docs/BOOT_ARCHITECTURE.md.
-    BOOTROM_ADDR_W:  { type: int, default: 11,         desc: "Boot ROM address width (phys = 2^N bytes = 2 KB)" }
+    BOOTROM_ADDR_W:  { type: int, default: 11,         desc: "Boot ROM BYTE address width (compute_ss_region_bootrom.v slices HADDR[N-1:2]): phys = 2^N bytes = 2 KB" }
     IMEM_RAM_ADDR_W: { type: int, default: 15,         desc: "IMEM address width (phys = 2^N bytes = 32 KB)" }
     IMEM_RAM_DATA_W: { type: int, default: 32,         desc: "IMEM data width" }
     IMEM_MEM_FPGA_IMG: { type: str, default: "image.hex", desc: "FPGA image to preload into IMEM" }

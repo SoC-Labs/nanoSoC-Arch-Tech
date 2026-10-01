@@ -33,7 +33,7 @@
 module {{ region_module_name }} #(
     parameter    SYS_ADDR_W  = 32,  // System Address Width
     parameter    SYS_DATA_W  = 32,  // System Data Width
-    parameter    ROM_ADDR_W  = {{ word_address_width }}   // Boot ROM WORD address width: 4 * 2**ROM_ADDR_W bytes
+    parameter    ROM_ADDR_W  = {{ word_address_width }}   // Boot ROM WORD address width (4 * 2^N bytes): unlike the hand-written wrappers, NOT a byte width
 )(
     input  wire                   HCLK,       // Clock
 

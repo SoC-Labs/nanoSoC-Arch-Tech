@@ -2,6 +2,13 @@
 // Nanosoc Bootrom Region
 // - Generic, parameterisable boot ROM region
 // - Read-only memory containing boot code (no reset port)
+// - ROM_ADDR_W is a BYTE address width in THIS wrapper: it passes
+//   HADDR[ROM_ADDR_W-1:0] on, so the region holds 2**ROM_ADDR_W bytes (11 = 2 KB).
+//   bootrom_gen.py's generated wrapper has the same module name and reads its
+//   ROM_ADDR_W as a WORD width (HADDR[ROM_ADDR_W+1:2], 4 * 2**ROM_ADDR_W bytes,
+//   11 = 8 KB); rtl/flist/nanosoc_ip.flist compiles that one. A target's
+//   phys_size must follow the wrapper the build compiles (nanosoc_gen's
+//   discovery size guard checks it, given the build's file list).
 // A joint work commissioned on behalf of SoC Labs, under Arm Academic Access license.
 //
 // Contributors
@@ -14,7 +21,7 @@
 module nanosoc_region_bootrom #(
     parameter    SYS_ADDR_W  = 32,  // System Address Width
     parameter    SYS_DATA_W  = 32,  // System Data Width
-    parameter    ROM_ADDR_W  = 11   // Size of Bootrom (Based on Address Width) - Default 2KB
+    parameter    ROM_ADDR_W  = 11   // Size of Bootrom: BYTE address width, 2**ROM_ADDR_W bytes - Default 2KB
 )(
     input  wire                   HCLK,       // Clock
 

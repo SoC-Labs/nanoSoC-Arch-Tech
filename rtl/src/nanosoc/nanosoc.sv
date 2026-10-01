@@ -27,7 +27,7 @@ module nanosoc #(
     parameter          DMAC_1_CHANNEL_NUM   = 2,          // DMAC 1 Number of DMA Channels
 
     // Bootrom 0 Parameters
-    parameter          BOOTROM_ADDR_W       = 11,         // Size of Bootrom (Based on Address Width) - Default 2KB
+    parameter          BOOTROM_ADDR_W       = 11,         // Size of Bootrom, in the unit of the nanosoc_region_bootrom compiled with it: BYTE (2**N, Default 2KB) for rtl/src/regions/bootrom, WORD (4 * 2**N, Default 8KB) for bootrom_gen.py's
 
     // IMEM 0 Parameters
     parameter          IMEM_RAM_ADDR_W      = 14,         // Width of IMEM RAM Address - Default 16KB

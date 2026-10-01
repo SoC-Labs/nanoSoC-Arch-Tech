@@ -23,7 +23,12 @@ module:
   params:
     SYS_ADDR_W: { type: int, default: 32, desc: "System address width" }
     SYS_DATA_W: { type: int, default: 32, desc: "System data width" }
-    ROM_ADDR_W: { type: int, default: 11, desc: "Boot ROM address width (phys = 2^N bytes, default 2 KB)" }
+    # ROM_ADDR_W's unit is the WRAPPER's. This file describes the hand-written
+    # rtl/src/regions/bootrom/nanosoc_region_bootrom.v: a BYTE width, 2^N bytes.
+    # bootrom_gen.py's generated wrapper has the same module name and the same
+    # parameter, as a WORD width: 4 * 2^N bytes (HADDR[N+1:2]); it is the one
+    # rtl/flist/nanosoc_ip.flist compiles. phys_size must follow the wrapper built.
+    ROM_ADDR_W: { type: int, default: 11, desc: "Boot ROM BYTE address width in this (hand-written) wrapper: phys = 2^N bytes, default 2 KB; bootrom_gen.py's generated wrapper reads it as a WORD width (4 * 2^N bytes)" }
 
   interfaces:
     # Clock (no reset — ROM content is fixed)

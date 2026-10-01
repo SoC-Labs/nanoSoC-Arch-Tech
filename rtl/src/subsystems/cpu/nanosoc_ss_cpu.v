@@ -47,7 +47,7 @@ module nanosoc_ss_cpu #(
     parameter [31:0] ROMTABLE_BASE = 32'hE00FF003,  // Defaultly Points to Core ROM Table
 
     // Bootrom 0 Parameters
-    parameter    BOOTROM_ADDR_W    = 11,  // Size of Bootrom (Based on Address Width) - Default 2KB
+    parameter    BOOTROM_ADDR_W    = 11,  // Size of Bootrom, in the unit of the nanosoc_region_bootrom compiled with it: BYTE (2**N, Default 2KB) for rtl/src/regions/bootrom, WORD (4 * 2**N, Default 8KB) for bootrom_gen.py's
 
     // IMEM 0 Parameters
     parameter    IMEM_RAM_ADDR_W   = 14,          // Width of IMEM RAM Address - Default 16KB

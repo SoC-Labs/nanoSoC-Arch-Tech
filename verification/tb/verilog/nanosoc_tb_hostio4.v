@@ -75,14 +75,44 @@ module nanosoc_tb_hostio4 (
     .ioack_o         ( ioack           )
   );
 
+  // Pin values, as a board's pins would carry them: always a 0 or a 1.
+  //
+  // hostio4_target drives P1[6:3] from its data registers whenever its pad
+  // enable is on, and a data register no stimulus has written yet (an rx
+  // buffer, read back after the SoC resets itself and the model does not)
+  // is X in simulation. That X reached the pins: after the testbench's second
+  // reset of the SoC, P1[6:3] were X for whole microseconds, so every read of
+  // GPIO port 1 in that window returned 0000ffXX. stage0 reads its strap
+  // (P1[7]) there when it is built with Arm GNU 13.3 (a smaller boot ROM, so
+  // the read comes 6.1 us after the reset instead of 7.3 us), and the stage0
+  // trace check cannot compare an X. The SoC's own logic only ever looked at
+  // P1[7], which the pull-down keeps 0.
+  //
+  // A real host's register holds a 0 or a 1 (an FPGA flip-flop powers up 0),
+  // so the model drives 0 for a bit it does not know, and an enable it does
+  // not know leaves the pin undriven (the pull-up). Every bit the model does
+  // know is driven exactly as before: with defined values this is the same
+  // model.
+  function pin01;          // 1 only for a known 1: X/Z -> 0
+    input b;
+    pin01 = (b === 1'b1);
+  endfunction
+
+  wire       drive_ok = (FT1248MODE === 1'b0);              // EXTIO mode, known
+  wire       ioack_pin = pin01(ioack);
+  wire [3:0] data_pin  = {pin01(iodata4_o[3]), pin01(iodata4_o[2]),
+                          pin01(iodata4_o[1]), pin01(iodata4_o[0])};
+  wire [3:0] data_oe   = {4{drive_ok}} & {(iodata4_t[3] === 1'b0), (iodata4_t[2] === 1'b0),
+                                          (iodata4_t[1] === 1'b0), (iodata4_t[0] === 1'b0)};
+
   // Tristate buffer emulation
   assign ioreq1    = FT1248MODE ? 1'b0 : P1[0];
   assign ioreq2    = FT1248MODE ? 1'b0 : P1[1];
-  bufif0 #1 (P1[2], ioack,        FT1248MODE);
-  bufif0 #1 (P1[3], iodata4_o[0], (iodata4_t[0] | FT1248MODE));
-  bufif0 #1 (P1[4], iodata4_o[1], (iodata4_t[1] | FT1248MODE));
-  bufif0 #1 (P1[5], iodata4_o[2], (iodata4_t[2] | FT1248MODE));
-  bufif0 #1 (P1[6], iodata4_o[3], (iodata4_t[3] | FT1248MODE));
+  bufif1 #1 (P1[2], ioack_pin,   drive_ok);
+  bufif1 #1 (P1[3], data_pin[0], data_oe[0]);
+  bufif1 #1 (P1[4], data_pin[1], data_oe[1]);
+  bufif1 #1 (P1[5], data_pin[2], data_oe[2]);
+  bufif1 #1 (P1[6], data_pin[3], data_oe[3]);
   assign iodata4_i = {4{FT1248MODE}} | P1[6:3];
 
 endmodule

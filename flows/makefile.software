@@ -224,9 +224,21 @@ DEBUGTESTER_SRCS += $(wildcard $(NANOSOC_SW_DIR)/common/scripts/*.ld) \
 # two linked objects so the sub-make rebuilds what was asked of it.
 DEBUGTESTER_COMPILE_DIR := $(DEBUGTESTER_BUILD_DIR)/$(DEBUGTESTER)/compile
 
-$(DEBUGTESTER_LE_HEX) $(DEBUGTESTER_BE_HEX): $(DEBUGTESTER_SRCS)
-	@rm -f $(DEBUGTESTER_COMPILE_DIR)/$(DEBUGTESTER)_le.o $(DEBUGTESTER_COMPILE_DIR)/$(DEBUGTESTER)_be.o
+#
+# One sub-make writes both images. `LE BE: deps` would be two rules, and
+# make -j runs them at once: two sub-makes, one removing the objects the other
+# is linking. GNU Make 4.2.1 has no grouped targets (&:), so only the _le rule
+# runs the sub-make and _be waits for it; _be rebuilds on its own only when
+# its file is missing. Race-free at any -j.
+DEBUGTESTER_OBJS := $(DEBUGTESTER_COMPILE_DIR)/$(DEBUGTESTER)_le.o $(DEBUGTESTER_COMPILE_DIR)/$(DEBUGTESTER)_be.o
+
+$(DEBUGTESTER_LE_HEX): $(DEBUGTESTER_SRCS)
+	@rm -f $(DEBUGTESTER_OBJS)
 	@$(MAKE) -C $(NANOSOC_SW_DIR)/debug_tester all $(SW_MAKE_OPTIONS)
+
+$(DEBUGTESTER_BE_HEX): $(DEBUGTESTER_LE_HEX)
+	@if [ ! -f $@ ]; then rm -f $(DEBUGTESTER_OBJS); $(MAKE) -C $(NANOSOC_SW_DIR)/debug_tester all $(SW_MAKE_OPTIONS); fi
+	@touch $@
 
 # Copy debugtester little-endian hex to SIM_DIR
 DEBUGTESTER_LE_SIM := $(SIM_DIR)/$(DEBUGTESTER)_le.hex

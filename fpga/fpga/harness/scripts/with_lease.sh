@@ -146,6 +146,34 @@ _tcp_reachable() {
     timeout 2 bash -c "exec 3<>/dev/tcp/${host}/22" >/dev/null 2>&1
 }
 
+_member_status_json() {
+    # _member_status_json <name> -- echo the flat status object for one
+    # leasable board. fpgahub <= 0.1 answers `board status <member>` with
+    # that object. fpgahub 0.3.0 groups members under a board: `board status
+    # <member>` fails ("no such board"), and `board status <group>` returns
+    # {members: [{name, status: {host_ssh, ...}}]} with nothing at the top
+    # level. Try the name as given, then the group (name minus its last
+    # `_suffix`), and pick the member whose name matches.
+    local name="$1" json
+    json=$(fpgahub board status "$name" --json 2>/dev/null) \
+        || json=$(fpgahub board status "${name%_*}" --json) \
+        || return 1
+    python3 - "$json" "$name" <<'PY'
+import json, sys
+doc, name = json.loads(sys.argv[1]), sys.argv[2]
+members = doc.get("members")
+if members is None:
+    print(json.dumps(doc))
+    sys.exit(0)
+for m in members:
+    if m.get("name") == name:
+        print(json.dumps(m.get("status") or {}))
+        sys.exit(0)
+sys.stderr.write("with_lease.sh: no member '%s' in board status\n" % name)
+sys.exit(1)
+PY
+}
+
 resolve_env_for() {
     # Populate PYNQ_HOST / PYNQ_PROXY / PYNQ_DEV_HOST from board status.
     # Board IPs typically live on a private per-board subnet on the
@@ -154,7 +182,7 @@ resolve_env_for() {
     # override with PYNQ_PROXY= in the calling environment.
     local name="$1"
     local json
-    json=$(fpgahub board status "$name" --json) || return 1
+    json=$(_member_status_json "$name") || return 1
     PYNQ_HOST=$(_json_get "$json" host_ssh)
     PYNQ_PROXY=$(_json_get "$json" host_proxy)
     PYNQ_DEV_HOST=$(_json_get "$json" host_dev_host)
@@ -266,10 +294,12 @@ if [ -z "$FPGA_BOARD" ] || [ "$FPGA_BOARD" = "null" ]; then
 fi
 
 export FPGA_BOARD FPGA_LEASE_TOKEN
-resolve_env_for "$FPGA_BOARD"
 
 # Release on any exit path (success, error, signal). Clear traps inside
-# the handler so a signal taken mid-release can't re-enter us.
+# the handler so a signal taken mid-release can't re-enter us. Installed
+# BEFORE anything else can fail: the token exists only in this shell, so a
+# lease taken and then abandoned by `set -e` cannot be released by anyone
+# and is held until its TTL.
 release_lease() {
     local rc=$?
     trap - EXIT INT TERM HUP
@@ -277,6 +307,8 @@ release_lease() {
     exit "$rc"
 }
 trap release_lease EXIT INT TERM HUP
+
+resolve_env_for "$FPGA_BOARD"
 
 echo "with_lease.sh: leased $FPGA_BOARD (ttl=${TTL}s) ssh=$PYNQ_HOST proxy=${PYNQ_PROXY:-none}" >&2
 

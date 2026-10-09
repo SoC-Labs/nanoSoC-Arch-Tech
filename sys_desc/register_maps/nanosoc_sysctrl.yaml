@@ -36,7 +36,7 @@ register_map:
       offset: 0x000
       width: 32
       access: RW
-      reset_value: 0x00000001
+      reset_value: 0x00000000
       description: Memory remap control register
       fields:
         - name: REMAP

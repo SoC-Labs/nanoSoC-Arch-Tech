@@ -1,6 +1,6 @@
 [submodule "rtl/socdebug_tech"]
 	path = rtl/socdebug_tech
-	url = https://git.soton.ac.uk/soclabs/socdebug_tech.git
+	url = https://github.com/SoC-Labs/SoCDebug-Tech.git
 [submodule "rtl/sldma230_tech"]
 	path = rtl/sldma230_tech
 	url = https://github.com/SoC-Labs/SLDMA-230-Tech.git

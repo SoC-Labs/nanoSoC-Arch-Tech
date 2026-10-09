@@ -14,8 +14,8 @@ that builds without licence-gated Arm IP, start from
 git clone --recurse-submodules https://github.com/SoC-Labs/nanoSoC-Arch-Tech.git
 ```
 
-This works without credentials. Most submodules are still hosted on `git.soton.ac.uk`,
-and all of them can be read anonymously over https.
+This works without credentials. Every submodule but `nanosoc_gen` is hosted on GitHub;
+`nanosoc_gen` is on `git.soton.ac.uk`, and it too can be read anonymously over https.
 
 ## How a project uses it
 
@@ -62,7 +62,7 @@ derives both from one variable, `ARM_QS_IP_DIR`, in its `nanosoc.config`.
 |---|---|---|
 | `nanosoc_gen` | SoC generator | git.soton.ac.uk |
 | `rtl/coresight_soc400_tech` | Wrapper around Arm CoreSight SoC-400 | [GitHub](https://github.com/SoC-Labs/SoC-Labs-SoC400-Tech) |
-| `rtl/socdebug_tech` | SoCDebug controller: system-bus access over FT1248 or USRT | git.soton.ac.uk |
+| `rtl/socdebug_tech` | SoCDebug controller: system-bus access over FT1248 or USRT | [GitHub](https://github.com/SoC-Labs/SoCDebug-Tech) |
 | `rtl/hostio4` | Host I/O controller and target | [GitHub](https://github.com/SoC-Labs/HostIO4) |
 | `rtl/extio8x4-axis` | EXTIO interface: 4 virtual channels over a 7-pin link | [GitHub](https://github.com/SoC-Labs/EXTIO8x4-AXIS) |
 | `rtl/slcorem0_tech` | SoC Labs wrapper around Arm Cortex-M0 | [GitHub](https://github.com/SoC-Labs/SLCoreM0-Tech) |
